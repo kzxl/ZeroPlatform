@@ -14,6 +14,7 @@
     <Project Path="ZeroGraphics/src/ZeroGraphics.Direct2D/ZeroGraphics.Direct2D.csproj" />
     <Project Path="ZeroGraphics/src/ZeroGraphics.DirectX/ZeroGraphics.DirectX.csproj" />
     <Project Path="ZeroGraphics/src/ZeroGraphics.Imaging/ZeroGraphics.Imaging.csproj" />
+    <Project Path="ZeroGraphics/src/ZeroGraphics.Vision/ZeroGraphics.Vision.csproj" />
     <Project Path="ZeroGraphics/src/ZeroGraphics.Waveform/ZeroGraphics.Waveform.csproj" />
     <Project Path="ZeroGraphics/samples/ZeroGraphics.Samples.Demo/ZeroGraphics.Samples.Demo.csproj" />
     <Project Path="ZeroGraphics/tests/ZeroGraphics.Tests/ZeroGraphics.Tests.csproj" />
