@@ -8,4 +8,6 @@ dist/
 # Independent Git Repositories
 ZeroUI/
 ZeroGraphics/
+ZeroTensor/
+ZeroNeural/
 

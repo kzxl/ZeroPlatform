@@ -19,6 +19,10 @@
     <Project Path="ZeroGraphics/samples/ZeroGraphics.Samples.Demo/ZeroGraphics.Samples.Demo.csproj" />
     <Project Path="ZeroGraphics/tests/ZeroGraphics.Tests/ZeroGraphics.Tests.csproj" />
   </Folder>
+  <Folder Name="/ZeroTensor/">
+    <Project Path="ZeroTensor/src/ZeroTensor.Core/ZeroTensor.Core.csproj" />
+    <Project Path="ZeroTensor/tests/ZeroTensor.Tests/ZeroTensor.Tests.csproj" />
+  </Folder>
   <Folder Name="/Showcase/">
     <Project Path="samples/ZeroPlatform.Samples.Showcase/ZeroPlatform.Samples.Showcase.csproj" />
   </Folder>

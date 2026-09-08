@@ -12,35 +12,28 @@ Designed around the **Platform & Satellites (Core & Satellites)** architecture, 
 ZeroPlatform/                                  # Workspace Container
 ├── ZeroPlatform.slnx                          # Master XML Solution (debug & develop all projects)
 ├── README.md                                  # Platform overview & satellite guidelines
+├── docs/
+│   └── ZERO_PLATFORM_EXPANSION_PROPOSALS.md   # [MASTER STRATEGIC ROADMAP & PROGRESS TRACKER]
 ├── .gitignore
 │
-├── ZeroUI/                                    # [INDEPENDENT GIT REPO 1: UI SYSTEM]
-│   ├── .git/                                  # Standalone Git history & versioning
-│   ├── src/
-│   │   ├── ZeroUI.Core/                       # Layout engines, theme manager, base models
-│   │   ├── ZeroUI.WinForms/                   # Industrial controls, docking, grids, cards
-│   │   └── ZeroUI.Wpf/                        # Modern WPF parity controls
-│   ├── samples/                               # Interactive benchmark demos
-│   └── tests/                                 # 408 automated unit & integration tests
+├── ZeroUI/                                    # [PILLAR 1: INDUSTRIAL UI & WORKSPACE]
+│   ├── src/ (Core, WinForms, Wpf)
+│   └── tests/                                 # 408 automated unit tests
 │
-├── ZeroGraphics/                              # [INDEPENDENT GIT REPO 2: HARDWARE GRAPHICS]
-│   ├── .git/                                  # Standalone Git history & versioning
-│   ├── src/
-│   │   ├── ZeroGraphics.Core/                 # SDF Math, LTTB Decimation, GPU Telemetry
-│   │   ├── ZeroGraphics.Direct2D/             # DirectWrite ClearType Subpixel typography
-│   │   ├── ZeroGraphics.DirectX/              # Direct3D 11 SDF cards, drop shadows, glow
-│   │   └── ZeroGraphics.Waveform/             # Real-time LineStrip oscilloscope (100k pts)
-│   ├── samples/                               # GPU hardware acceleration demos
-│   └── tests/                                 # 16 hardware pipeline tests
+├── ZeroGraphics/                              # [PILLAR 2: HARDWARE GPU GRAPHICS & AOI VISION]
+│   ├── src/ (Core, DirectX, Direct2D, Waveform, Imaging, Vision)
+│   └── tests/                                 # 92 automated hardware & vision pipeline tests
 │
-├── Satellites/                                # [SATELLITE EXPANSION ZONE]
-│   └── README.md                              # Blueprint for adding future satellites
-│       ├── ZeroPlatform.Charts/               # (Planned) High-speed financial & telemetry charts
-│       ├── ZeroPlatform.IoT/                  # (Planned) Industrial protocol streaming (Modbus, OPC-UA)
-│       └── ZeroPlatform.Reports/              # (Planned) Document & thermal printing engine
+├── ZeroTensor/                                # [PILLAR 3: SCIENTIFIC NUMERICS & TENSOR - NUMPY]
+│   ├── src/ (Core, Blas, Math, Bridge)
+│   └── tests/                                 # Multidimensional tensor & GEMM test suite
+│
+├── ZeroNeural/                                # [PILLAR 4: DEEP LEARNING & AUTOGRAD - PYTORCH]
+│   ├── src/ (Autograd, nn, Compute, Vision)
+│   └── tests/                                 # Computational graph & backprop test suite
 │
 └── samples/
-    └── ZeroPlatform.Samples.Showcase/         # Full integration showcase (ZeroUI + ZeroGraphics)
+    └── ZeroPlatform.Samples.Showcase/         # Full integration showcase
 ```
 
 ---
