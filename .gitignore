@@ -1,0 +1,11 @@
+bin/
+obj/
+.vs/
+*.user
+*.suo
+dist/
+
+# Independent Git Repositories
+ZeroUI/
+ZeroGraphics/
+

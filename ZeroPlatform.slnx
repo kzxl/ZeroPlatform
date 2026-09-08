@@ -1,0 +1,23 @@
+<Solution>
+  <Folder Name="/ZeroUI/">
+    <Project Path="ZeroUI/src/ZeroUI.Core/ZeroUI.Core.csproj" />
+    <Project Path="ZeroUI/src/ZeroUI.WinForms/ZeroUI.WinForms.csproj" />
+    <Project Path="ZeroUI/src/ZeroUI.Wpf/ZeroUI.Wpf.csproj" />
+    <Project Path="ZeroUI/src/ZeroUI.Samples.BenchmarkDemo/ZeroUI.Samples.BenchmarkDemo.csproj" />
+    <Project Path="ZeroUI/src/ZeroUI.Samples.WpfDemo/ZeroUI.Samples.WpfDemo.csproj" />
+    <Project Path="ZeroUI/tests/ZeroUI.Benchmarks/ZeroUI.Benchmarks.csproj" />
+    <Project Path="ZeroUI/tests/ZeroUI.Core.Benchmarks/ZeroUI.Core.Benchmarks.csproj" />
+    <Project Path="ZeroUI/tests/ZeroUI.Core.Tests/ZeroUI.Core.Tests.csproj" />
+  </Folder>
+  <Folder Name="/ZeroGraphics/">
+    <Project Path="ZeroGraphics/src/ZeroGraphics.Core/ZeroGraphics.Core.csproj" />
+    <Project Path="ZeroGraphics/src/ZeroGraphics.Direct2D/ZeroGraphics.Direct2D.csproj" />
+    <Project Path="ZeroGraphics/src/ZeroGraphics.DirectX/ZeroGraphics.DirectX.csproj" />
+    <Project Path="ZeroGraphics/src/ZeroGraphics.Waveform/ZeroGraphics.Waveform.csproj" />
+    <Project Path="ZeroGraphics/samples/ZeroGraphics.Samples.Demo/ZeroGraphics.Samples.Demo.csproj" />
+    <Project Path="ZeroGraphics/tests/ZeroGraphics.Tests/ZeroGraphics.Tests.csproj" />
+  </Folder>
+  <Folder Name="/Showcase/">
+    <Project Path="samples/ZeroPlatform.Samples.Showcase/ZeroPlatform.Samples.Showcase.csproj" />
+  </Folder>
+</Solution>
