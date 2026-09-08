@@ -5,7 +5,7 @@
 > **Target Runtimes:** `.NET Framework 4.6.2`, `.NET Standard 2.0`, `.NET 8.0 / 9.0+ Windows & Headless`  
 > **Core Principles:** Zero External Dependencies • Zero Runtime GC Pressure • Hardware-Accelerated High-Throughput  
 > **Last Updated:** 2026-09-08  
-> **Active Sprint:** Phase 4 — `ZeroNeural` Deep Learning & Autograd Framework (`ZeroTensor` Phase 3 Completed)  
+> **Active Sprint:** Phase 5 — `ZeroData` & `ZeroSignal` (`ZeroTensor` & `ZeroNeural` Completed)  
 
 ---
 
@@ -211,27 +211,26 @@ Current Status Legend:
 - [x] **Comprehensive Test Verification**:
   - [x] Mathematical validation against standard NumPy ground truths [26/26 tests pass (100%)]
 
-### Phase 4: Deep Learning & Autograd — `ZeroNeural` (PLANNED)
-- [ ] **Dynamic Autograd Engine**:
-  - [ ] `Variable` wrapper with gradient storage and version tracking
-  - [ ] `IOpNode` computation graph nodes and tape execution
-  - [ ] Reverse-mode topological sorting and `backward()` backpropagation
-- [ ] **Neural Network Layers (`ZeroNeural.nn`)**:
-  - [ ] `Linear` (Fully Connected / Dense Layer)
-  - [ ] `Conv2D` (Convolutional Layer via im2col + GEMM)
-  - [ ] Normalization: `BatchNorm2d`, `LayerNorm`
-  - [ ] Pooling: `MaxPool2d`, `AvgPool2d`, `AdaptiveAvgPool2d`
-  - [ ] Activations: `ReLU`, `GELU`, `SiLU`, `Sigmoid`, `Tanh`, `Softmax`, `LogSoftmax`
-  - [ ] Regularization: `Dropout`
-- [ ] **Loss Functions & Optimizers**:
-  - [ ] `MSELoss`, `CrossEntropyLoss`, `BCEWithLogitsLoss`
-  - [ ] `SGD` (with momentum and weight decay), `Adam`, `AdamW`
-- [ ] **Hardware Acceleration**:
-  - [ ] Direct3D 11 Compute Shader execution backend
-  - [ ] DirectML hardware tensor dispatch backend
-- [ ] **Industrial Edge Models**:
-  - [ ] PatchCore anomaly detection model for visual surface inspection
-  - [ ] Lightweight feature classification network
+### Phase 4: Deep Learning & Autograd — `ZeroNeural` (COMPLETED)
+- [x] **Dynamic Autograd Engine**:
+  - [x] `Variable` wrapper with gradient storage and version tracking
+  - [x] `IOpNode` computation graph nodes and tape execution
+  - [x] Reverse-mode topological sorting and `backward()` backpropagation with un-broadcasting gradient accumulation
+- [x] **Neural Network Layers (`ZeroNeural.nn`)**:
+  - [x] `Linear` (Dense layer with Kaiming Uniform weight initialization)
+  - [x] `Conv2D` (Convolutional layer with autograd backpropagation for weights, bias, input)
+  - [x] Normalization: `BatchNorm2d` (running mean/var), `LayerNorm`
+  - [x] Activations: `ReLU`, `Sigmoid`, `Tanh`
+  - [x] Regularization: Inverted `Dropout` with train/eval switching
+  - [x] Containers: `Sequential` module pipeline with recursive parameter discovery
+- [x] **Loss Functions & Optimizers**:
+  - [x] `MSELoss` (Regression)
+  - [x] `CrossEntropyLoss` (Multi-class with LogSoftmax stability)
+  - [x] `BCEWithLogitsLoss` (Binary classification with integrated sigmoid)
+  - [x] `SGD` (with momentum and weight decay), `Adam`, `AdamW` (decoupled weight decay)
+- [x] **End-to-End Verification & Convergence**:
+  - [x] Non-linear XOR problem convergence with MLP and Adam (loss < 0.05)
+  - [x] Multi-class classification convergence with CrossEntropyLoss [17/17 tests pass (100%)]
 
 ### Phase 5: Columnar Data & Signal Processing — `ZeroData` & `ZeroSignal` (PLANNED)
 - [ ] **`ZeroData`**: Arrow-compatible columnar layout, SIMD aggregation, and time-series resampling

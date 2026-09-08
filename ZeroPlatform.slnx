@@ -23,6 +23,10 @@
     <Project Path="ZeroTensor/src/ZeroTensor.Core/ZeroTensor.Core.csproj" />
     <Project Path="ZeroTensor/tests/ZeroTensor.Tests/ZeroTensor.Tests.csproj" />
   </Folder>
+  <Folder Name="/ZeroNeural/">
+    <Project Path="ZeroNeural/src/ZeroNeural.Core/ZeroNeural.Core.csproj" />
+    <Project Path="ZeroNeural/tests/ZeroNeural.Tests/ZeroNeural.Tests.csproj" />
+  </Folder>
   <Folder Name="/Showcase/">
     <Project Path="samples/ZeroPlatform.Samples.Showcase/ZeroPlatform.Samples.Showcase.csproj" />
   </Folder>
