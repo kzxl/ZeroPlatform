@@ -12,24 +12,65 @@ namespace ZeroPrimitives.Text
         public static readonly VnWordsOptions Default = new VnWordsOptions();
 
         /// <summary>
-        /// When true, uses "lẻ" instead of "linh" (e.g. "lẻ năm" vs "linh năm"). Default is false ("linh").
+        /// Preconfigured options for Southern Vietnamese dialect ("ngàn", "lẻ", "tư").
         /// </summary>
-        public bool UseLe { get; set; } = false;
+        public static readonly VnWordsOptions SouthernDialect = new VnWordsOptions
+        {
+            UseSouthernThousands = true,
+            UseSouthernZeroTens = true,
+            UseTuForFour = true,
+            CapitalizeFirstLetter = true
+        };
 
         /// <summary>
-        /// When true, uses "ngàn" instead of "nghìn". Default is false ("nghìn").
+        /// When true, uses "lẻ" instead of "linh" for zero-tens position (e.g. "lẻ năm" vs "linh năm"). Default is false ("linh").
         /// </summary>
-        public bool UseNgan { get; set; } = false;
+        public bool UseSouthernZeroTens { get; set; } = false;
 
         /// <summary>
-        /// When true, uses "tư" for number 4 when tens >= 2 (e.g. "hai mươi tư" vs "hai mươi bốn"). Default is true.
+        /// When true, uses the Southern regional variant "ngàn" instead of "nghìn" for thousands scale. Default is false ("nghìn").
         /// </summary>
-        public bool UseTu { get; set; } = true;
+        public bool UseSouthernThousands { get; set; } = false;
+
+        /// <summary>
+        /// When true, uses "tư" instead of "bốn" when tens digit is 2 or greater (e.g. "hai mươi tư" vs "hai mươi bốn"). Default is true.
+        /// </summary>
+        public bool UseTuForFour { get; set; } = true;
 
         /// <summary>
         /// When true, capitalizes the first character of the generated text. Default is true.
         /// </summary>
         public bool CapitalizeFirstLetter { get; set; } = true;
+
+        /// <summary>
+        /// Backward-compatible alias for <see cref="UseSouthernThousands"/>.
+        /// </summary>
+        [Obsolete("Use UseSouthernThousands instead.")]
+        public bool UseNgan
+        {
+            get => UseSouthernThousands;
+            set => UseSouthernThousands = value;
+        }
+
+        /// <summary>
+        /// Backward-compatible alias for <see cref="UseSouthernZeroTens"/>.
+        /// </summary>
+        [Obsolete("Use UseSouthernZeroTens instead.")]
+        public bool UseLe
+        {
+            get => UseSouthernZeroTens;
+            set => UseSouthernZeroTens = value;
+        }
+
+        /// <summary>
+        /// Backward-compatible alias for <see cref="UseTuForFour"/>.
+        /// </summary>
+        [Obsolete("Use UseTuForFour instead.")]
+        public bool UseTu
+        {
+            get => UseTuForFour;
+            set => UseTuForFour = value;
+        }
     }
 
     /// <summary>
@@ -85,7 +126,7 @@ namespace ZeroPrimitives.Text
             this decimal amount,
             string currencyUnit = "đồng",
             string subunitUnit = "xu",
-            bool appendChan = true,
+            bool appendWholeNumberSuffix = true,
             VnWordsOptions? options = null)
         {
             options = options ?? VnWordsOptions.Default;
@@ -108,7 +149,7 @@ namespace ZeroPrimitives.Text
                 {
                     sb.Append("không ");
                     sb.Append(currencyUnit);
-                    if (appendChan) sb.Append(" chẵn");
+                    if (appendWholeNumberSuffix) sb.Append(" chẵn");
                 }
                 else
                 {
@@ -131,7 +172,7 @@ namespace ZeroPrimitives.Text
                             sb.Append(subunitUnit);
                         }
                     }
-                    else if (appendChan && integralPart > 0)
+                    else if (appendWholeNumberSuffix && integralPart > 0)
                     {
                         sb.Append(" chẵn");
                     }
@@ -235,9 +276,9 @@ namespace ZeroPrimitives.Text
         private static string? GetScaleName(int triadIndex, VnWordsOptions options)
         {
             int mod = triadIndex % 3;
-            int tyCount = triadIndex / 3;
+            int billionCount = triadIndex / 3;
 
-            string thousands = options.UseNgan ? "ngàn" : "nghìn";
+            string thousands = options.UseSouthernThousands ? "ngàn" : "nghìn";
 
             if (mod == 1)
             {
@@ -250,8 +291,8 @@ namespace ZeroPrimitives.Text
             if (triadIndex > 0 && mod == 0)
             {
                 // Multiples of billions
-                if (tyCount == 1) return "tỷ";
-                if (tyCount == 2) return "triệu tỷ";
+                if (billionCount == 1) return "tỷ";
+                if (billionCount == 2) return "triệu tỷ";
                 return "tỷ";
             }
 
@@ -283,7 +324,7 @@ namespace ZeroPrimitives.Text
                 }
                 else if (units == 4)
                 {
-                    sb.Append(options.UseTu ? " tư" : " bốn");
+                    sb.Append(options.UseTuForFour ? " tư" : " bốn");
                 }
                 else if (units == 5)
                 {
@@ -317,7 +358,7 @@ namespace ZeroPrimitives.Text
                     if (hundreds > 0 || readZeroHundreds)
                     {
                         sb.Append(' ');
-                        sb.Append(options.UseLe ? "lẻ " : "linh ");
+                        sb.Append(options.UseSouthernZeroTens ? "lẻ " : "linh ");
                         sb.Append(Digits[units]);
                     }
                     else

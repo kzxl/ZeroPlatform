@@ -27,14 +27,17 @@ namespace ZeroPrimitives.Tests
         [Fact]
         public void TestCustomOptions()
         {
-            var optionsLe = new VnWordsOptions { UseLe = true };
+            var optionsLe = new VnWordsOptions { UseSouthernZeroTens = true };
             Assert.Equal("Một trăm lẻ năm", 105L.ToVnWords(optionsLe));
 
-            var optionsNgan = new VnWordsOptions { UseNgan = true };
+            var optionsNgan = new VnWordsOptions { UseSouthernThousands = true };
             Assert.Equal("Hai ngàn", 2000L.ToVnWords(optionsNgan));
 
-            var optionsKhongHoa = new VnWordsOptions { CapitalizeFirstLetter = false };
-            Assert.Equal("hai mươi", 20L.ToVnWords(optionsKhongHoa));
+            var optionsNoCap = new VnWordsOptions { CapitalizeFirstLetter = false };
+            Assert.Equal("hai mươi", 20L.ToVnWords(optionsNoCap));
+
+            // Test SouthernDialect preset
+            Assert.Equal("Một trăm lẻ năm ngàn không trăm hai mươi tư", 105024L.ToVnWords(VnWordsOptions.SouthernDialect));
         }
 
         [Fact]
