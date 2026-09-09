@@ -61,6 +61,7 @@
   <Folder Name="/ZeroPipeline/">
     <Project Path="ZeroPipeline/src/ZeroPipeline.Core/ZeroPipeline.Core.csproj" />
     <Project Path="ZeroPipeline/src/ZeroPipeline.Nodes/ZeroPipeline.Nodes.csproj" />
+    <Project Path="ZeroPipeline/src/ZeroPipeline.Recipe/ZeroPipeline.Recipe.csproj" />
     <Project Path="ZeroPipeline/tests/ZeroPipeline.Tests/ZeroPipeline.Tests.csproj" />
   </Folder>
   <Folder Name="/Integration/">
