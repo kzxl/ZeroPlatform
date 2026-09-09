@@ -458,5 +458,120 @@ namespace ZeroPrimitives
         }
 
         #endregion
+
+        #region Standardized To* Aliases & Generic Conversion
+
+        public static int ToInt(object? value, int defaultValue = 0) => AsInt(value, defaultValue);
+        public static int? ToNullableInt(object? value, int? defaultValue = null) => AsNullableInt(value, defaultValue);
+
+        public static long ToLong(object? value, long defaultValue = 0) => AsLong(value, defaultValue);
+        public static long? ToNullableLong(object? value, long? defaultValue = null) => AsNullableLong(value, defaultValue);
+
+        public static decimal ToDecimal(object? value, decimal defaultValue = 0m) => AsDecimal(value, defaultValue);
+        public static decimal? ToNullableDecimal(object? value, decimal? defaultValue = null) => AsNullableDecimal(value, defaultValue);
+
+        public static double ToDouble(object? value, double defaultValue = 0.0) => AsDouble(value, defaultValue);
+        public static double? ToNullableDouble(object? value, double? defaultValue = null) => AsNullableDouble(value, defaultValue);
+
+        public static bool ToBool(object? value, bool defaultValue = false) => AsBool(value, defaultValue);
+        public static bool? ToNullableBool(object? value, bool? defaultValue = null) => AsNullableBool(value, defaultValue);
+
+        public static DateTime ToDateTime(object? value, DateTime defaultValue = default) => AsDateTime(value, defaultValue);
+        public static DateTime? ToNullableDateTime(object? value, DateTime? defaultValue = null) => AsNullableDateTime(value, defaultValue);
+
+        public static float ToFloat(object? value, float defaultValue = 0.0f)
+            => (float)AsDouble(value, defaultValue);
+        public static float? ToNullableFloat(object? value, float? defaultValue = null)
+        {
+            var d = AsNullableDouble(value);
+            return d.HasValue ? (float)d.Value : defaultValue;
+        }
+
+        public static string ToStringOrDefault(object? value, string defaultValue = "") => AsString(value, defaultValue);
+        public static string ToSafeString(object? value, string defaultValue = "") => AsString(value, defaultValue);
+
+        public static string ToDelimitedString<T>(System.Collections.Generic.IEnumerable<T>? items, string delimiter = ",")
+            => AsDelimitedString(items, delimiter);
+
+        public static Guid ToGuid(object? value, Guid defaultValue = default) => AsGuid(value, defaultValue);
+        public static Guid? ToNullableGuid(object? value, Guid? defaultValue = null) => AsNullableGuid(value, defaultValue);
+
+        public static TEnum ToEnum<TEnum>(object? value, TEnum defaultValue = default) where TEnum : struct, Enum
+            => AsEnum(value, defaultValue);
+        public static TEnum? ToNullableEnum<TEnum>(object? value) where TEnum : struct, Enum
+            => AsNullableEnum<TEnum>(value);
+
+        /// <summary>
+        /// Universal, high-performance generic type converter.
+        /// Unboxes primitives via CPU register casts with zero heap allocations.
+        /// </summary>
+        public static T To<T>(object? value, T defaultValue = default!)
+        {
+            if (value == null || value == DBNull.Value) return defaultValue;
+            var targetType = typeof(T);
+
+            if (value is T exact) return exact;
+
+            if (targetType == typeof(int)) return (T)(object)AsInt(value);
+            if (targetType == typeof(long)) return (T)(object)AsLong(value);
+            if (targetType == typeof(decimal)) return (T)(object)AsDecimal(value);
+            if (targetType == typeof(double)) return (T)(object)AsDouble(value);
+            if (targetType == typeof(float)) return (T)(object)(float)AsDouble(value);
+            if (targetType == typeof(bool)) return (T)(object)AsBool(value);
+            if (targetType == typeof(string)) return (T)(object)AsString(value);
+            if (targetType == typeof(DateTime)) return (T)(object)AsDateTime(value);
+            if (targetType == typeof(Guid)) return (T)(object)AsGuid(value);
+            if (targetType == typeof(short)) return (T)(object)(short)AsInt(value);
+            if (targetType == typeof(byte)) return (T)(object)(byte)AsInt(value);
+
+            if (targetType.IsEnum)
+            {
+#if NET8_0_OR_GREATER
+                if (value is string s && Enum.TryParse(targetType, s, true, out var parsedEnum))
+                    return (T)parsedEnum;
+#else
+                if (value is string s)
+                {
+                    try
+                    {
+                        return (T)Enum.Parse(targetType, s, true);
+                    }
+                    catch
+                    {
+                        return defaultValue;
+                    }
+                }
+#endif
+                try
+                {
+                    return (T)Enum.ToObject(targetType, AsLong(value));
+                }
+                catch
+                {
+                    return defaultValue;
+                }
+            }
+
+            try
+            {
+                return (T)Convert.ChangeType(value, targetType);
+            }
+            catch
+            {
+                return defaultValue;
+            }
+        }
+
+        /// <summary>
+        /// Universal generic nullable type converter.
+        /// </summary>
+        public static T? ToNullable<T>(object? value) where T : struct
+        {
+            if (value == null || value == DBNull.Value) return null;
+            if (value is string str && string.IsNullOrWhiteSpace(str)) return null;
+            return To<T>(value);
+        }
+
+        #endregion
     }
 }

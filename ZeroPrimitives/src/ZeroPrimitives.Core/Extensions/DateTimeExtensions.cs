@@ -12,47 +12,73 @@ namespace ZeroPrimitives.Extensions
 
         #region Month & Calendar Boundaries
 
-        public static DateTime FirstDayOfMonth(this DateTime date)
+        public static DateTime StartOfMonth(this DateTime date)
             => new DateTime(date.Year, date.Month, 1, 0, 0, 0, date.Kind);
 
-        public static DateTime? FirstDayOfMonth(this DateTime? date)
-            => date.HasValue ? date.Value.FirstDayOfMonth() : (DateTime?)null;
+        public static DateTime? StartOfMonth(this DateTime? date)
+            => date.HasValue ? date.Value.StartOfMonth() : (DateTime?)null;
 
-        public static DateTime LastDayOfMonth(this DateTime date)
+        public static DateTime EndOfMonth(this DateTime date)
             => new DateTime(date.Year, date.Month, DateTime.DaysInMonth(date.Year, date.Month), 23, 59, 59, 999, date.Kind);
 
-        public static DateTime? LastDayOfMonth(this DateTime? date)
-            => date.HasValue ? date.Value.LastDayOfMonth() : (DateTime?)null;
+        public static DateTime? EndOfMonth(this DateTime? date)
+            => date.HasValue ? date.Value.EndOfMonth() : (DateTime?)null;
 
-        public static DateTime FirstDayOfYear(this DateTime date)
+        public static DateTime StartOfYear(this DateTime date)
             => new DateTime(date.Year, 1, 1, 0, 0, 0, date.Kind);
 
-        public static DateTime? FirstDayOfYear(this DateTime? date)
-            => date.HasValue ? date.Value.FirstDayOfYear() : (DateTime?)null;
+        public static DateTime? StartOfYear(this DateTime? date)
+            => date.HasValue ? date.Value.StartOfYear() : (DateTime?)null;
 
-        public static DateTime LastDayOfYear(this DateTime date)
+        public static DateTime EndOfYear(this DateTime date)
             => new DateTime(date.Year, 12, 31, 23, 59, 59, 999, date.Kind);
 
-        public static DateTime? LastDayOfYear(this DateTime? date)
-            => date.HasValue ? date.Value.LastDayOfYear() : (DateTime?)null;
+        public static DateTime? EndOfYear(this DateTime? date)
+            => date.HasValue ? date.Value.EndOfYear() : (DateTime?)null;
 
-        public static DateTime FirstDayOfQuarter(this DateTime date)
+        public static DateTime StartOfQuarter(this DateTime date)
         {
             int quarterFirstMonth = ((date.Month - 1) / 3) * 3 + 1;
             return new DateTime(date.Year, quarterFirstMonth, 1, 0, 0, 0, date.Kind);
         }
 
-        public static DateTime LastDayOfQuarter(this DateTime date)
+        public static DateTime? StartOfQuarter(this DateTime? date)
+            => date.HasValue ? date.Value.StartOfQuarter() : (DateTime?)null;
+
+        public static DateTime EndOfQuarter(this DateTime date)
         {
             int quarterLastMonth = (((date.Month - 1) / 3) * 3) + 3;
             return new DateTime(date.Year, quarterLastMonth, DateTime.DaysInMonth(date.Year, quarterLastMonth), 23, 59, 59, 999, date.Kind);
         }
 
+        public static DateTime? EndOfQuarter(this DateTime? date)
+            => date.HasValue ? date.Value.EndOfQuarter() : (DateTime?)null;
+
         public static DateTime StartOfDay(this DateTime date)
             => new DateTime(date.Year, date.Month, date.Day, 0, 0, 0, date.Kind);
 
+        public static DateTime? StartOfDay(this DateTime? date)
+            => date.HasValue ? date.Value.StartOfDay() : (DateTime?)null;
+
         public static DateTime EndOfDay(this DateTime date)
             => new DateTime(date.Year, date.Month, date.Day, 23, 59, 59, 999, date.Kind);
+
+        public static DateTime? EndOfDay(this DateTime? date)
+            => date.HasValue ? date.Value.EndOfDay() : (DateTime?)null;
+
+        // Legacy aliases
+        public static DateTime FirstDayOfMonth(this DateTime date) => StartOfMonth(date);
+        public static DateTime? FirstDayOfMonth(this DateTime? date) => StartOfMonth(date);
+        public static DateTime LastDayOfMonth(this DateTime date) => EndOfMonth(date);
+        public static DateTime? LastDayOfMonth(this DateTime? date) => EndOfMonth(date);
+        public static DateTime FirstDayOfYear(this DateTime date) => StartOfYear(date);
+        public static DateTime? FirstDayOfYear(this DateTime? date) => StartOfYear(date);
+        public static DateTime LastDayOfYear(this DateTime date) => EndOfYear(date);
+        public static DateTime? LastDayOfYear(this DateTime? date) => EndOfYear(date);
+        public static DateTime FirstDayOfQuarter(this DateTime date) => StartOfQuarter(date);
+        public static DateTime? FirstDayOfQuarter(this DateTime? date) => StartOfQuarter(date);
+        public static DateTime LastDayOfQuarter(this DateTime date) => EndOfQuarter(date);
+        public static DateTime? LastDayOfQuarter(this DateTime? date) => EndOfQuarter(date);
 
         #endregion
 
@@ -83,20 +109,53 @@ namespace ZeroPrimitives.Extensions
         /// <summary>
         /// Formats date to Vietnamese format: dd/MM/yyyy.
         /// </summary>
-        public static string AsDateString_ddMMyyyy(this DateTime dt)
+        public static string ToVnDateString(this DateTime dt)
             => dt.ToString("dd/MM/yyyy", CultureInfo.InvariantCulture);
 
-        public static string AsDateString_ddMMyyyy(this DateTime? dt)
-            => dt.HasValue ? dt.Value.AsDateString_ddMMyyyy() : string.Empty;
+        public static string ToVnDateString(this DateTime? dt)
+            => dt.HasValue ? dt.Value.ToVnDateString() : string.Empty;
 
         /// <summary>
         /// Formats date to Vietnamese format with time: dd/MM/yyyy HH:mm:ss.
         /// </summary>
-        public static string AsDateString_ddMMyyyyHHmmss(this DateTime dt)
+        public static string ToVnDateTimeString(this DateTime dt)
             => dt.ToString("dd/MM/yyyy HH:mm:ss", CultureInfo.InvariantCulture);
 
-        public static string AsDateString_ddMMyyyyHHmmss(this DateTime? dt)
-            => dt.HasValue ? dt.Value.AsDateString_ddMMyyyyHHmmss() : string.Empty;
+        public static string ToVnDateTimeString(this DateTime? dt)
+            => dt.HasValue ? dt.Value.ToVnDateTimeString() : string.Empty;
+
+        /// <summary>
+        /// Formats date to ISO 8601 date format: yyyy-MM-dd.
+        /// </summary>
+        public static string ToIsoDateString(this DateTime dt)
+            => dt.ToString("yyyy-MM-dd", CultureInfo.InvariantCulture);
+
+        public static string ToIsoDateString(this DateTime? dt)
+            => dt.HasValue ? dt.Value.ToIsoDateString() : string.Empty;
+
+        /// <summary>
+        /// Formats date to ISO 8601 datetime format: yyyy-MM-dd HH:mm:ss.
+        /// </summary>
+        public static string ToIsoDateTimeString(this DateTime dt)
+            => dt.ToString("yyyy-MM-dd HH:mm:ss", CultureInfo.InvariantCulture);
+
+        public static string ToIsoDateTimeString(this DateTime? dt)
+            => dt.HasValue ? dt.Value.ToIsoDateTimeString() : string.Empty;
+
+        /// <summary>
+        /// Formats date with custom or default pattern.
+        /// </summary>
+        public static string ToDateString(this DateTime dt, string format = "dd/MM/yyyy")
+            => dt.ToString(format, CultureInfo.InvariantCulture);
+
+        public static string ToDateString(this DateTime? dt, string format = "dd/MM/yyyy")
+            => dt.HasValue ? dt.Value.ToDateString(format) : string.Empty;
+
+        // Backward compatibility aliases (deprecated underscore names)
+        public static string AsDateString_ddMMyyyy(this DateTime dt) => ToVnDateString(dt);
+        public static string AsDateString_ddMMyyyy(this DateTime? dt) => ToVnDateString(dt);
+        public static string AsDateString_ddMMyyyyHHmmss(this DateTime dt) => ToVnDateTimeString(dt);
+        public static string AsDateString_ddMMyyyyHHmmss(this DateTime? dt) => ToVnDateTimeString(dt);
 
         /// <summary>
         /// Converts to English ordinal date format string (e.g. "6th Jan, 2026" or "6&lt;sup&gt;th&lt;/sup&gt; Jan, 2026").

@@ -67,13 +67,50 @@ namespace ZeroPrimitives.Tests
         }
 
         [Fact]
+        public void StandardizedBoundaries_SymmetricAndPrecise()
+        {
+            var date = new DateTime(2026, 9, 15, 10, 20, 30);
+
+            Assert.Equal(new DateTime(2026, 9, 1, 0, 0, 0), date.StartOfMonth());
+            Assert.Equal(new DateTime(2026, 9, 30, 23, 59, 59, 999), date.EndOfMonth());
+            Assert.Equal(new DateTime(2026, 1, 1, 0, 0, 0), date.StartOfYear());
+            Assert.Equal(new DateTime(2026, 12, 31, 23, 59, 59, 999), date.EndOfYear());
+            Assert.Equal(new DateTime(2026, 7, 1, 0, 0, 0), date.StartOfQuarter());
+            Assert.Equal(new DateTime(2026, 9, 30, 23, 59, 59, 999), date.EndOfQuarter());
+            Assert.Equal(new DateTime(2026, 9, 15, 0, 0, 0), date.StartOfDay());
+            Assert.Equal(new DateTime(2026, 9, 15, 23, 59, 59, 999), date.EndOfDay());
+
+            // Nullable tests
+            DateTime? nullDate = null;
+            Assert.Null(nullDate.StartOfMonth());
+            Assert.Null(nullDate.EndOfMonth());
+            Assert.Null(nullDate.StartOfYear());
+            Assert.Null(nullDate.EndOfYear());
+            Assert.Null(nullDate.StartOfQuarter());
+            Assert.Null(nullDate.EndOfQuarter());
+            Assert.Null(nullDate.StartOfDay());
+            Assert.Null(nullDate.EndOfDay());
+        }
+
+        [Fact]
         public void VietnameseFormatters_ReturnExpectedStrings()
         {
             var dt = new DateTime(2026, 9, 9, 14, 30, 45);
+            Assert.Equal("09/09/2026", dt.ToVnDateString());
+            Assert.Equal("09/09/2026 14:30:45", dt.ToVnDateTimeString());
+            Assert.Equal("2026-09-09", dt.ToIsoDateString());
+            Assert.Equal("2026-09-09 14:30:45", dt.ToIsoDateTimeString());
+            Assert.Equal("09-09-2026", dt.ToDateString("dd-MM-yyyy"));
+
+            // Backward compatibility aliases
             Assert.Equal("09/09/2026", dt.AsDateString_ddMMyyyy());
             Assert.Equal("09/09/2026 14:30:45", dt.AsDateString_ddMMyyyyHHmmss());
 
             DateTime? nullDt = null;
+            Assert.Equal(string.Empty, nullDt.ToVnDateString());
+            Assert.Equal(string.Empty, nullDt.ToVnDateTimeString());
+            Assert.Equal(string.Empty, nullDt.ToIsoDateString());
+            Assert.Equal(string.Empty, nullDt.ToIsoDateTimeString());
             Assert.Equal(string.Empty, nullDt.AsDateString_ddMMyyyy());
             Assert.Equal(string.Empty, nullDt.AsDateString_ddMMyyyyHHmmss());
         }

@@ -69,9 +69,25 @@ namespace ZeroPrimitives.Extensions
         }
 
         /// <summary>
-        /// Extracts only digit characters (0-9) and converts them to an integer.
+        /// Extracts only digit characters (0-9) from a string.
         /// </summary>
-        public static int RemoveLetterToInt(this object? value, int defaultValue = 0)
+        public static string ExtractDigits(this string? text)
+        {
+            if (string.IsNullOrEmpty(text)) return string.Empty;
+            var sb = new StringBuilder(text!.Length);
+            for (int i = 0; i < text.Length; i++)
+            {
+                char c = text[i];
+                if (c >= '0' && c <= '9') sb.Append(c);
+            }
+            return sb.ToString();
+        }
+
+        /// <summary>
+        /// Extracts only digit characters (0-9) and converts them to an integer.
+        /// Standard replacement for legacy RemoveLetterToInt.
+        /// </summary>
+        public static int ExtractDigitsToInt(this object? value, int defaultValue = 0)
         {
             if (value == null) return defaultValue;
             string str = value.ToString() ?? string.Empty;
@@ -95,6 +111,12 @@ namespace ZeroPrimitives.Extensions
 
             return defaultValue;
         }
+
+        /// <summary>
+        /// Legacy alias for ExtractDigitsToInt.
+        /// </summary>
+        public static int RemoveLetterToInt(this object? value, int defaultValue = 0)
+            => ExtractDigitsToInt(value, defaultValue);
 
         /// <summary>
         /// Removes Vietnamese diacritical marks (accents) and maps đ/Đ to d/D.

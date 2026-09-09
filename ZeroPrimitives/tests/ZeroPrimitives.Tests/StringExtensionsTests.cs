@@ -50,8 +50,20 @@ namespace ZeroPrimitives.Tests
         }
 
         [Fact]
-        public void RemoveLetterToInt_ExtractsOnlyDigits()
+        public void ExtractDigits_And_ExtractDigitsToInt_WorkAccurately()
         {
+            Assert.Equal("12345", "ABC-12345-XYZ".ExtractDigits());
+            Assert.Equal("999", "Lot No: 999".ExtractDigits());
+            Assert.Equal(string.Empty, "NoDigitsHere".ExtractDigits());
+            Assert.Equal(string.Empty, ((string?)null).ExtractDigits());
+
+            // Standard ExtractDigitsToInt
+            Assert.Equal(12345, "ABC-12345-XYZ".ExtractDigitsToInt());
+            Assert.Equal(999, "Lot No: 999".ExtractDigitsToInt());
+            Assert.Equal(0, "NoDigitsHere".ExtractDigitsToInt());
+            Assert.Equal(0, ((object?)null).ExtractDigitsToInt());
+
+            // Legacy RemoveLetterToInt backward-compatibility alias
             Assert.Equal(12345, "ABC-12345-XYZ".RemoveLetterToInt());
             Assert.Equal(999, "Lot No: 999".RemoveLetterToInt());
             Assert.Equal(0, "NoDigitsHere".RemoveLetterToInt());
