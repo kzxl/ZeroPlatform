@@ -232,9 +232,23 @@ Current Status Legend:
   - [x] Non-linear XOR problem convergence with MLP and Adam (loss < 0.05)
   - [x] Multi-class classification convergence with CrossEntropyLoss [17/17 tests pass (100%)]
 
-### Phase 5: Columnar Data & Signal Processing — `ZeroData` & `ZeroSignal` (PLANNED)
-- [ ] **`ZeroData`**: Arrow-compatible columnar layout, SIMD aggregation, and time-series resampling
-- [ ] **`ZeroSignal`**: IIR/FIR filter design (Butterworth/Chebyshev), `FiltFilt`, and Wavelet transforms
+### Phase 5: Columnar Data & Signal Processing — `ZeroData` & `ZeroSignal` (COMPLETED)
+- [x] **`ZeroData` (Arrow-Compatible In-Memory Columnar Data Engine)**:
+  - [x] Contiguous typed chunk backing (`DataColumn<T>`) for primitive types (`double`, `float`, `int`, `long`, `DateTime`, `string`)
+  - [x] Vectorized SIMD aggregations (`Sum`, `Mean`, `Min`, `Max`, `StdDev`)
+  - [x] Zero-copy Boolean mask filtering (`df.Filter(mask)`)
+  - [x] High-performance relational `GroupBy` multi-column aggregations (`Count`, `Mean`, `Sum`)
+  - [x] Industrial time-series temporal window resampling (`Resample(timeCol, valCol, window, agg)`)
+  - [x] RFC-4180 CSV export and import with robust quotation parsing
+  - [x] `ZeroDataVirtualProvider`: Zero-copy virtual data source for 10M+ rows into ZeroUI grid controls [10/10 tests pass (100%)]
+- [x] **`ZeroSignal` (Industrial Digital Signal Processing & Non-linear Fitting)**:
+  - [x] `BiquadSection`: Second-Order Section (SOS) IIR biquad in Direct Form II Transposed with steady-state initialization
+  - [x] `DigitalFilter`: Cascaded biquads, in-place filtering, and zero-phase forward-backward filtering (`FiltFilt`) with boundary reflection
+  - [x] `FilterDesign`: Butterworth, Chebyshev Type I, Bandpass, and Notch synthesis via Bilinear Transform with frequency pre-warping
+  - [x] `Wavelet`: Orthonormal Discrete Wavelet Transform (DWT), Inverse DWT (IDWT) for Haar, Daubechies 2 (db2), and Daubechies 4 (db4)
+  - [x] `WaveletDecomposition`: Multi-level Mallat tree pyramid decomposition and VisuShrink soft/hard wavelet denoising
+  - [x] `LevenbergMarquardt`: Non-linear least squares solver with finite difference Jacobian, Marquardt diagonal scaling, and adaptive damping
+  - [x] `CurveFit`: Out-of-the-box parameter estimation for Gaussian peaks, exponential decay, sinusoidal oscillations, and custom non-linear models [13/13 tests pass (100%)]
 
 ---
 

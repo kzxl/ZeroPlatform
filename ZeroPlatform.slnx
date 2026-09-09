@@ -27,6 +27,14 @@
     <Project Path="ZeroNeural/src/ZeroNeural.Core/ZeroNeural.Core.csproj" />
     <Project Path="ZeroNeural/tests/ZeroNeural.Tests/ZeroNeural.Tests.csproj" />
   </Folder>
+  <Folder Name="/ZeroData/">
+    <Project Path="ZeroData/src/ZeroData.Core/ZeroData.Core.csproj" />
+    <Project Path="ZeroData/tests/ZeroData.Tests/ZeroData.Tests.csproj" />
+  </Folder>
+  <Folder Name="/ZeroSignal/">
+    <Project Path="ZeroSignal/src/ZeroSignal.Core/ZeroSignal.Core.csproj" />
+    <Project Path="ZeroSignal/tests/ZeroSignal.Tests/ZeroSignal.Tests.csproj" />
+  </Folder>
   <Folder Name="/Showcase/">
     <Project Path="samples/ZeroPlatform.Samples.Showcase/ZeroPlatform.Samples.Showcase.csproj" />
   </Folder>
