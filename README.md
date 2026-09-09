@@ -1,76 +1,55 @@
-# ZeroPlatform
+# ZeroPlatform: Unified Industrial .NET Ecosystem
 
-High-performance, enterprise-grade application ecosystem for .NET (Windows Forms / WPF / Modern .NET). 
+[![License: MIT](https://img.shields.io/badge/License-MIT-blue.svg)](LICENSE)
+[![.NET Multi-Targeting](https://img.shields.io/badge/.NET-8.0%20%7C%204.6.2%20%7C%20Standard%202.0-purple.svg)](https://dotnet.microsoft.com/)
+[![Zero External Dependencies](https://img.shields.io/badge/Dependencies-0%20(Pure%20C%23)-brightgreen.svg)]()
+[![Ecosystem Docs](https://img.shields.io/badge/Docs-Ecosystem%20Catalog-brightgreen.svg)](docs/ZERO_PLATFORM_ECOSYSTEM.md)
 
-Designed around the **Platform & Satellites (Core & Satellites)** architecture, unifying industrial UI controls and direct hardware-accelerated graphics under independent, highly-decoupled repositories.
+**ZeroPlatform** is a sovereign, enterprise-grade software ecosystem for industrial automation, computer vision, digital signal processing (DSP), edge AI, high-speed time-series persistence, and hardware-accelerated HMI/SCADA visual studio controls.
 
----
+Engineered around the **Multi-Repository Satellite Architecture**, all 12 subsystems operate as completely independent repositories with independent release lifecycles and CI/CD pipelines, unified under this workspace orchestrator.
 
-## 🏛️ Ecosystem Architecture
-
-```
-ZeroPlatform/                                  # Workspace Container
-├── ZeroPlatform.slnx                          # Master XML Solution (debug & develop all projects)
-├── README.md                                  # Platform overview & satellite guidelines
-├── docs/
-│   └── ZERO_PLATFORM_EXPANSION_PROPOSALS.md   # [MASTER STRATEGIC ROADMAP & PROGRESS TRACKER]
-├── .gitignore
-│
-├── ZeroUI/                                    # [PILLAR 1: INDUSTRIAL UI & WORKSPACE]
-│   ├── src/ (Core, WinForms, Wpf)
-│   └── tests/                                 # 408 automated unit tests
-│
-├── ZeroGraphics/                              # [PILLAR 2: HARDWARE GPU GRAPHICS & AOI VISION]
-│   ├── src/ (Core, DirectX, Direct2D, Waveform, Imaging, Vision)
-│   └── tests/                                 # 92 automated hardware & vision pipeline tests
-│
-├── ZeroTensor/                                # [PILLAR 3: SCIENTIFIC NUMERICS & TENSOR - NUMPY]
-│   ├── src/ (Core, Blas, Math, Bridge)
-│   └── tests/                                 # Multidimensional tensor & GEMM test suite
-│
-├── ZeroNeural/                                # [PILLAR 4: DEEP LEARNING & AUTOGRAD - PYTORCH]
-│   ├── src/ (Autograd, nn, Compute, Vision)
-│   └── tests/                                 # Computational graph & backprop test suite
-│
-└── samples/
-    └── ZeroPlatform.Samples.Showcase/         # Full integration showcase
-```
+👉 **[Read the Full Ecosystem Architecture & Repository Matrix](docs/ZERO_PLATFORM_ECOSYSTEM.md)**
 
 ---
 
-## 🚀 Key Architectural Pillars
+## 🏛️ Ecosystem Architecture & Subsystem Repositories
 
-1. **Dual Independent Repositories (Multi-Repo)**:
-   - `ZeroUI` and `ZeroGraphics` have **completely separate Git repositories**, release lifecycles, and commit histories.
-   - Core graphics developers work exclusively within `ZeroGraphics` without touching UI business logic.
-   - UI developers work within `ZeroUI` without needing C++ or HLSL shader compilers.
-
-2. **Unified Workspace Container (`ZeroPlatform.slnx`)**:
-   - The master solution `ZeroPlatform.slnx` allows developers to open, edit, build, and debug across the entire platform in a single IDE instance.
-
-3. **Zero External Dependencies**:
-   - Both `ZeroUI` and `ZeroGraphics` adhere to a pure .NET foundation with zero third-party runtime package requirements.
-   - Direct COM VTable P/Invoke is utilized for Direct3D 11 and Direct2D.
-
-4. **Dual-Targeting Support**:
-   - Fully supports **.NET Framework 4.6.2** for enterprise ERP/MDS systems and **.NET 8.0/9.0+ Windows** for next-generation apps.
+| Subsystem | Repository | Key Capabilities |
+| :--- | :--- | :--- |
+| **`ZeroTensor`** | [`kzxl/ZeroTensor`](https://github.com/kzxl/ZeroTensor) | N-D strided memory layout, zero-copy slicing, Level-3 BLAS, SVD/QR/Cholesky. |
+| **`ZeroCompute`** | [`kzxl/ZeroCompute`](https://github.com/kzxl/ZeroCompute) | Direct3D 11 Compute Shader dispatcher via COM VTable & CPU AVX2 SIMD fallback. |
+| **`ZeroData`** | [`kzxl/ZeroData`](https://github.com/kzxl/ZeroData) | Columnar DataFrame, relational hash joins (Inner/Left/Right/Outer), Arrow IPC. |
+| **`ZeroStorage`** | [`kzxl/ZeroStorage`](https://github.com/kzxl/ZeroStorage) | Embedded TSDB, Facebook Gorilla Delta-of-Delta + XOR float compression, CRC32 WAL. |
+| **`ZeroInference`** | [`kzxl/ZeroInference`](https://github.com/kzxl/ZeroInference) | Pure C# ONNX binary model parser, inference graph, Int8 quantizer, Vision NMS. |
+| **`ZeroNeural`** | [`kzxl/ZeroNeural`](https://github.com/kzxl/ZeroNeural) | PyTorch-like reverse-mode automatic differentiation (Autograd), neural layers, AdamW. |
+| **`ZeroSignal`** | [`kzxl/ZeroSignal`](https://github.com/kzxl/ZeroSignal) | In-place FFT, STFT spectrogram, zero-phase Butterworth `FiltFilt`, Extended Kalman Filter. |
+| **`ZeroGeometry`** | [`kzxl/ZeroGeometry`](https://github.com/kzxl/ZeroGeometry) | 3D ICP rigid cloud alignment, KdTree3D/RTree2D, polygon clipping, Delaunay triangulation. |
+| **`ZeroComm`** | [`kzxl/ZeroComm`](https://github.com/kzxl/ZeroComm) | Asynchronous TCP transport, Modbus TCP/RTU master, Mitsubishi 3E Binary, Omron FINS. |
+| **`ZeroGraphics`** | [`kzxl/ZeroGraphics`](https://github.com/kzxl/ZeroGraphics) | Direct3D 11 GPU rendering, Direct2D 60 FPS waveforms, analytical SDF cards, CV algorithms. |
+| **`ZeroUI`** | [`kzxl/ZeroUI`](https://github.com/kzxl/ZeroUI) | 10M+ rows virtual grid, 60 FPS SCADA/HMI controls, dark theme system (`#12151C`). |
+| **`ZeroPipeline`** | [`kzxl/ZeroPipeline`](https://github.com/kzxl/ZeroPipeline) | DAG scheduler (Kahn sort), industrial inspection nodes, JSON recipes, interactive node canvas. |
 
 ---
 
 ## ⚡ Quick Start
 
-### Build Entire Platform
+### 1. Synchronize All 12 Subsystems
+```powershell
+.\clone-ecosystem.ps1
+```
+
+### 2. Build Entire Solution
 ```bash
 dotnet build ZeroPlatform.slnx
 ```
 
-### Run All Unit & Integration Tests (424+ tests)
+### 3. Run Full Test Suite (629+ Tests, 100% Pass Rate)
 ```bash
-dotnet test ZeroUI/tests/ZeroUI.Core.Tests/ZeroUI.Core.Tests.csproj
-dotnet test ZeroGraphics/tests/ZeroGraphics.Tests/ZeroGraphics.Tests.csproj
+dotnet test ZeroPlatform.slnx
 ```
 
-### Launch Unified Showcase Application
+### 4. Launch Unified Showcase Application
 ```bash
 dotnet run --project samples/ZeroPlatform.Samples.Showcase/ZeroPlatform.Samples.Showcase.csproj -f net8.0-windows
 ```
@@ -79,4 +58,4 @@ dotnet run --project samples/ZeroPlatform.Samples.Showcase/ZeroPlatform.Samples.
 
 ## 📄 Authors & License
 
-Developed and engineered by Phong Võ. MIT License.
+Architected and developed by **Phong Võ** (`kzxl`). Released under the **MIT License**.

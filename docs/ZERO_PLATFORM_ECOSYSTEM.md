@@ -1,0 +1,106 @@
+# 🌌 ZeroPlatform Ecosystem: The Sovereign .NET Industrial Automation Suite
+
+> **Architectural Standard**: 100% Pure C#, Zero External Dependencies, Zero Commercial Licenses, Multi-Targeting across `.NET 8.0+`, `.NET Framework 4.6.2+`, and `.NET Standard 2.0`.
+
+The **ZeroPlatform** is a comprehensive, modular software suite engineered for mission-critical industrial automation, computer vision, digital signal processing (DSP), edge AI inference, high-speed time-series persistence, and hardware-accelerated HMI/SCADA visual studio controls.
+
+---
+
+## 🏛 Ecosystem Architecture
+
+```mermaid
+graph TD
+    subgraph "Layer 4: Orchestration & Visual Studio"
+        ZeroPipeline["🔗 ZeroPipeline<br/><i>DAG Engine, Metrology & Canvas</i>"]
+    end
+
+    subgraph "Layer 3: Hardware Graphics & Industrial UI"
+        ZeroGraphics["🎨 ZeroGraphics<br/><i>D3D11, D2D, Waveform & Vision</i>"]
+        ZeroUI["🖥️ ZeroUI<br/><i>Virtual Grid, HMI Controls & WPF/WinForms</i>"]
+    end
+
+    subgraph "Layer 2: Domain Math, AI, DSP & Hardware Comm"
+        ZeroInference["🧠 ZeroInference<br/><i>Pure C# ONNX Runtime & Int8</i>"]
+        ZeroNeural["⚡ ZeroNeural<br/><i>Autograd Tape & Layer Training</i>"]
+        ZeroSignal["📡 ZeroSignal<br/><i>FFT, STFT, FiltFilt & EKF</i>"]
+        ZeroGeometry["📐 ZeroGeometry<br/><i>ICP PointCloud, KdTree & Polygons</i>"]
+        ZeroComm["🔌 ZeroComm<br/><i>Modbus TCP/RTU, MC Protocol & FINS</i>"]
+    end
+
+    subgraph "Layer 1: Numerical Foundation & Storage"
+        ZeroTensor["🧱 ZeroTensor<br/><i>N-D Strided Tensors & SVD/BLAS</i>"]
+        ZeroCompute["⚙️ ZeroCompute<br/><i>Direct3D 11 Compute & CPU SIMD</i>"]
+        ZeroData["📊 ZeroData<br/><i>Columnar DataFrame, Joins & Arrow IPC</i>"]
+        ZeroStorage["💾 ZeroStorage<br/><i>Gorilla XOR TSDB & WAL</i>"]
+    end
+
+    %% Dependency Connections
+    ZeroTensor --> ZeroCompute
+    ZeroTensor --> ZeroInference
+    ZeroTensor --> ZeroNeural
+    ZeroTensor --> ZeroSignal
+    ZeroTensor --> ZeroGeometry
+
+    ZeroGraphics --> ZeroUI
+    ZeroGraphics --> ZeroPipeline
+    ZeroStorage --> ZeroPipeline
+    ZeroComm --> ZeroPipeline
+    ZeroInference --> ZeroPipeline
+    ZeroUI --> ZeroPipeline
+```
+
+---
+
+## 📦 Complete 12-Repository Matrix & Catalog
+
+| Repository | GitHub Remote | NuGet Packages | Key Capabilities | Dependencies |
+| :--- | :--- | :--- | :--- | :--- |
+| **`ZeroTensor`** | [`kzxl/ZeroTensor`](https://github.com/kzxl/ZeroTensor) | `ZeroTensor.Core` | N-D strided memory layout, zero-copy slicing, Level-3 BLAS (GEMM), SVD/QR/Cholesky matrix decompositions. | **Pure C#** (0 deps) |
+| **`ZeroCompute`** | [`kzxl/ZeroCompute`](https://github.com/kzxl/ZeroCompute) | `ZeroCompute.Core` | Unified compute abstraction (`IComputeContext`), Direct3D 11 Compute Shader dispatcher via COM VTable, CPU AVX2 SIMD fallback. | `ZeroTensor` |
+| **`ZeroData`** | [`kzxl/ZeroData`](https://github.com/kzxl/ZeroData) | `ZeroData.Core` | High-frequency columnar `DataFrame`, SIMD relational hash joins (Inner, Left, Right, Outer), temporal resampling, pure C# Apache Arrow IPC. | **Pure C#** (0 deps) |
+| **`ZeroStorage`** | [`kzxl/ZeroStorage`](https://github.com/kzxl/ZeroStorage) | `ZeroStorage.Core` | Embedded time-series database (TSDB), Facebook Gorilla Delta-of-Delta + XOR float compression (1.37 B/sample), MMF zero-copy persistence, CRC32 WAL. | **Pure C#** (0 deps) |
+| **`ZeroInference`** | [`kzxl/ZeroInference`](https://github.com/kzxl/ZeroInference) | `ZeroInference.Core` | Pure C# ONNX binary model parser (`ProtobufWireReader`), execution graph, Int8 symmetric quantization, and fast vision NMS post-processing. | `ZeroTensor` |
+| **`ZeroNeural`** | [`kzxl/ZeroNeural`](https://github.com/kzxl/ZeroNeural) | `ZeroNeural.Core` | PyTorch-like reverse-mode automatic differentiation (Autograd) DAG tape, neural layers (`Linear`, `Sequential`, `Conv2D`, `Dropout`), AdamW/SGD optimizers. | `ZeroTensor` |
+| **`ZeroSignal`** | [`kzxl/ZeroSignal`](https://github.com/kzxl/ZeroSignal) | `ZeroSignal.Core` | In-place Cooley-Tukey FFT, STFT spectrogram analysis, zero-phase Butterworth `FiltFilt` digital filtering, Extended Kalman Filter (EKF) sensor fusion. | `ZeroTensor` |
+| **`ZeroGeometry`** | [`kzxl/ZeroGeometry`](https://github.com/kzxl/ZeroGeometry) | `ZeroGeometry.Core` | 3D laser scan alignment (Arun's SVD ICP), KdTree3D/RTree2D spatial indexing, surface normal eigenanalysis, Sutherland-Hodgman clipping, 2D Delaunay triangulation. | `ZeroTensor` |
+| **`ZeroComm`** | [`kzxl/ZeroComm`](https://github.com/kzxl/ZeroComm) | `ZeroComm.Core` | Asynchronous TCP/Serial transport (`TCP_NODELAY`), circular ring buffers, transaction multiplexing, Modbus TCP/RTU master, Mitsubishi MELSEC 3E, Omron FINS. | **Pure C#** (0 deps) |
+| **`ZeroGraphics`** | [`kzxl/ZeroGraphics`](https://github.com/kzxl/ZeroGraphics) | `ZeroGraphics.Core`<br/>`ZeroGraphics.DirectX`<br/>`ZeroGraphics.Direct2D`<br/>`ZeroGraphics.Waveform`<br/>`ZeroGraphics.Imaging`<br/>`ZeroGraphics.Vision` | Direct3D 11 GPU rendering, Direct2D 60 FPS oscilloscope waveforms, analytical SDF cards, pure C# computer vision (Otsu, Sobel, Caliper, Code128, QR Code). | Direct COM VTable |
+| **`ZeroUI`** | [`kzxl/ZeroUI`](https://github.com/kzxl/ZeroUI) | `ZeroUI.Core`<br/>`ZeroUI.WinForms`<br/>`ZeroUI.Wpf` | 10M+ rows virtual data grid, 60 FPS SCADA/HMI controls, dark theme design system (`#12151C`), PackML state machine, OEE metrics, responsive layout panels. | `ZeroGraphics` |
+| **`ZeroPipeline`** | [`kzxl/ZeroPipeline`](https://github.com/kzxl/ZeroPipeline) | `ZeroPipeline.Core`<br/>`ZeroPipeline.Nodes`<br/>`ZeroPipeline.Recipe`<br/>`ZeroPipeline.UI` | Directed acyclic graph (DAG) scheduler (Kahn sort), backpressure buffers, domain inspection nodes, declarative JSON recipes, and infinite pan/zoom visual node studio. | All Subsystems |
+| **`ZeroPlatform`** | [`kzxl/ZeroPlatform`](https://github.com/kzxl/ZeroPlatform) | N/A (Orchestrator) | Root umbrella monorepo hosting multi-project solutions (`ZeroPlatform.slnx`), end-to-end cross-system integration test suites, and unified showcase demo. | Ecosystem Hub |
+
+---
+
+## 🚀 Cloning and Developing the Full Suite
+
+To clone the entire ZeroPlatform ecosystem into a single unified directory structure:
+
+```powershell
+# 1. Clone the root orchestrator repository
+git clone https://github.com/kzxl/ZeroPlatform.git
+cd ZeroPlatform
+
+# 2. Run the automated ecosystem sync script
+.\clone-ecosystem.ps1
+```
+
+Once cloned, open `ZeroPlatform.slnx` in Visual Studio 2022+ or Rider to build, test, and run the complete suite across all 12 subsystems simultaneously.
+
+---
+
+## 🔄 CI/CD Packaging & NuGet Publication
+
+Each individual repository contains `.github/workflows/publish-packages.yml` configured to:
+1. Trigger automatically when a version tag (`v*`) is pushed or a Release is created.
+2. Build and compile for all configured target frameworks in `Release` configuration.
+3. Package `.nupkg` with embedded symbols and source linking.
+4. Publish automatically to:
+   - **GitHub Packages**: `https://nuget.pkg.github.com/kzxl/index.json`
+   - **NuGet.org**: via OIDC Trusted Publishing or `NUGET_API_KEY`.
+
+---
+
+## 📄 Licensing & Governance
+
+All libraries within the ZeroPlatform ecosystem are released under the permissive **MIT License**.
+Copyright © 2026 Phong Võ. All rights reserved.
