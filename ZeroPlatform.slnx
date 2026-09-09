@@ -58,6 +58,10 @@
   <Folder Name="/Showcase/">
     <Project Path="samples/ZeroPlatform.Samples.Showcase/ZeroPlatform.Samples.Showcase.csproj" />
   </Folder>
+  <Folder Name="/ZeroPipeline/">
+    <Project Path="ZeroPipeline/src/ZeroPipeline.Core/ZeroPipeline.Core.csproj" />
+    <Project Path="ZeroPipeline/tests/ZeroPipeline.Tests/ZeroPipeline.Tests.csproj" />
+  </Folder>
   <Folder Name="/Integration/">
     <Project Path="tests/ZeroPlatform.Tests.Integration/ZeroPlatform.Tests.Integration.csproj" />
   </Folder>
