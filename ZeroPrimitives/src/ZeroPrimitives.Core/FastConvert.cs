@@ -523,7 +523,17 @@ namespace ZeroPrimitives
         /// Unboxes primitives via CPU register casts with zero heap allocations.
         /// </summary>
         [MethodImpl(MethodImplOptions.AggressiveInlining)]
-        public static T To<T>(object? value, T defaultValue = default!)
+        public static T To<T>(object? value)
+        {
+            return To<T>(value, default!);
+        }
+
+        /// <summary>
+        /// Universal, high-performance generic type converter with fallback default value.
+        /// Unboxes primitives via CPU register casts with zero heap allocations.
+        /// </summary>
+        [MethodImpl(MethodImplOptions.AggressiveInlining)]
+        public static T To<T>(object? value, T defaultValue)
         {
             if (value == null || value == DBNull.Value) return defaultValue;
 
