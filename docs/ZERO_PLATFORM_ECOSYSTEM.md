@@ -28,6 +28,7 @@ graph TD
     end
 
     subgraph "Layer 1: Numerical Foundation & Storage"
+        ZeroPrimitives["⚡ ZeroPrimitives<br/><i>Fast Parsing, Unboxing & Mapper</i>"]
         ZeroTensor["🧱 ZeroTensor<br/><i>N-D Strided Tensors & SVD/BLAS</i>"]
         ZeroCompute["⚙️ ZeroCompute<br/><i>Direct3D 11 Compute & CPU SIMD</i>"]
         ZeroData["📊 ZeroData<br/><i>Columnar DataFrame, Joins & Arrow IPC</i>"]
@@ -51,10 +52,11 @@ graph TD
 
 ---
 
-## 📦 Complete 12-Repository Matrix & Catalog
+## 📦 Complete 13-Repository Matrix & Catalog
 
 | Repository | GitHub Remote | NuGet Packages | Key Capabilities | Dependencies |
 | :--- | :--- | :--- | :--- | :--- |
+| **`ZeroPrimitives`** | [`kzxl/ZeroPrimitives`](https://github.com/kzxl/ZeroPrimitives) | `ZeroPrimitives.Core` | Pure C# ultra-fast, zero-allocation primitive conversions, low-level span/pointer number parsers, and compiled object mapping. | **Pure C#** (0 deps) |
 | **`ZeroTensor`** | [`kzxl/ZeroTensor`](https://github.com/kzxl/ZeroTensor) | `ZeroTensor.Core` | N-D strided memory layout, zero-copy slicing, Level-3 BLAS (GEMM), SVD/QR/Cholesky matrix decompositions. | **Pure C#** (0 deps) |
 | **`ZeroCompute`** | [`kzxl/ZeroCompute`](https://github.com/kzxl/ZeroCompute) | `ZeroCompute.Core` | Unified compute abstraction (`IComputeContext`), Direct3D 11 Compute Shader dispatcher via COM VTable, CPU AVX2 SIMD fallback. | `ZeroTensor` |
 | **`ZeroData`** | [`kzxl/ZeroData`](https://github.com/kzxl/ZeroData) | `ZeroData.Core` | High-frequency columnar `DataFrame`, SIMD relational hash joins (Inner, Left, Right, Outer), temporal resampling, pure C# Apache Arrow IPC. | **Pure C#** (0 deps) |

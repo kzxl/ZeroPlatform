@@ -17,6 +17,7 @@ Engineered around the **Multi-Repository Satellite Architecture**, all 12 subsys
 
 | Subsystem | Repository | Key Capabilities |
 | :--- | :--- | :--- |
+| **`ZeroPrimitives`** | [`kzxl/ZeroPrimitives`](https://github.com/kzxl/ZeroPrimitives) | Pure C# ultra-fast primitive conversions, span/pointer number parsers, compiled mapper. |
 | **`ZeroTensor`** | [`kzxl/ZeroTensor`](https://github.com/kzxl/ZeroTensor) | N-D strided memory layout, zero-copy slicing, Level-3 BLAS, SVD/QR/Cholesky. |
 | **`ZeroCompute`** | [`kzxl/ZeroCompute`](https://github.com/kzxl/ZeroCompute) | Direct3D 11 Compute Shader dispatcher via COM VTable & CPU AVX2 SIMD fallback. |
 | **`ZeroData`** | [`kzxl/ZeroData`](https://github.com/kzxl/ZeroData) | Columnar DataFrame, relational hash joins (Inner/Left/Right/Outer), Arrow IPC. |

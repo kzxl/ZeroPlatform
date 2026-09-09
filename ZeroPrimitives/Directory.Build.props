@@ -1,0 +1,26 @@
+<Project>
+  <PropertyGroup>
+    <Version>1.0.0</Version>
+    <AssemblyVersion>1.0.0.0</AssemblyVersion>
+    <FileVersion>1.0.0.0</FileVersion>
+    <InformationalVersion>1.0.0</InformationalVersion>
+    <Authors>Phong Võ</Authors>
+    <Company>ZeroPlatform</Company>
+    <Copyright>Copyright © 2026 Phong Võ</Copyright>
+    <PackageLicenseExpression>MIT</PackageLicenseExpression>
+    <PackageProjectUrl>https://github.com/kzxl/ZeroPrimitives</PackageProjectUrl>
+    <RepositoryUrl>https://github.com/kzxl/ZeroPrimitives.git</RepositoryUrl>
+    <RepositoryType>git</RepositoryType>
+    <PackageOutputPath>$(MSBuildThisFileDirectory)dist\packages</PackageOutputPath>
+    <PackageReadmeFile>README.md</PackageReadmeFile>
+  </PropertyGroup>
+
+  <PropertyGroup Condition="$(MSBuildProjectName.Contains('Tests')) Or $(MSBuildProjectName.Contains('Benchmarks')) Or $(MSBuildProjectName.Contains('Samples'))">
+    <IsPackable>false</IsPackable>
+  </PropertyGroup>
+
+  <ItemGroup Condition="'$(IsPackable)' != 'false'">
+    <None Condition="Exists('README.md')" Include="README.md" Pack="true" PackagePath="\" />
+    <None Condition="!Exists('README.md') And Exists('$(MSBuildThisFileDirectory)README.md')" Include="$(MSBuildThisFileDirectory)README.md" Pack="true" PackagePath="\" />
+  </ItemGroup>
+</Project>

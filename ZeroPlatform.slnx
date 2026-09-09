@@ -68,4 +68,8 @@
   <Folder Name="/Integration/">
     <Project Path="tests/ZeroPlatform.Tests.Integration/ZeroPlatform.Tests.Integration.csproj" />
   </Folder>
+  <Folder Name="/ZeroPrimitives/">
+    <Project Path="ZeroPrimitives/src/ZeroPrimitives.Core/ZeroPrimitives.Core.csproj" />
+    <Project Path="ZeroPrimitives/tests/ZeroPrimitives.Tests/ZeroPrimitives.Tests.csproj" />
+  </Folder>
 </Solution>
