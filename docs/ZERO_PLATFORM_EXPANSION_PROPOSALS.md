@@ -708,7 +708,7 @@ Current Status Legend:
 
 ---
 
-## 🔮 Next Strategic Expansion Proposals (Phases 16–18)
+## 🔮 Next Strategic Expansion Proposals (Phases 16–19)
 
 ### Phase 16: ZeroUI Visual Node Canvas & Interactive Pipeline Studio (`ZeroUI.PipelineCanvas`)
 - **Interactive Visual Node Editor**:
@@ -729,6 +729,45 @@ Current Status Legend:
 - **HLSL Compute Kernels**:
   - Canny edge detection, Gaussian blur, Sobel filter, and Morphological operations (Erode, Dilate, Open, Close) written in HLSL compute shaders (`cs_5_0`).
   - Sub-millisecond image preprocessing directly in GPU VRAM for 4K / 8K line-scan inspection cameras (1000+ FPS).
+
+### Phase 19: C/C++ Native Interop & Qt Industrial HMI Extension (`ZeroPlatform.Native` & `ZeroQt`)
+- **Strategic Motivation**:
+  - Deep penetration into high-speed machine vision stations (direct C/C++ camera SDKs: Basler Pylon, Hikrobot MVS, FLIR Spinnaker, Matrox MIL) and embedded Linux edge devices (NVIDIA Jetson, Raspberry Pi, Yocto IPCs) where Qt (C++ / QML) is the dominant industrial HMI standard.
+  - Avoid redundant re-implementation of mathematical, AI, and storage stacks by deploying a **Hybrid Data-Centric Architecture**: C# core engine compiled via Native AOT + Zero-copy shared memory IPC + Native Qt 6 UI controls.
+- **Sub-Component 1: `ZeroPlatform.Native` (.NET 8 Native AOT C-ABI Export)**:
+  - Native dynamic shared library (`ZeroPlatform.Native.dll` on Windows, `libzeroplatform_native.so` on Linux) with zero runtime dependencies via `[UnmanagedCallersOnly]`.
+  - Pure C-ABI header (`zero_platform.h`) with explicit memory lifecycle conventions (`zero_free_handle()`, `zero_free_buffer()`):
+    - **PLC Fieldbus C-API (`ZeroComm`)**: Thread-safe handles for Modbus TCP/RTU, Mitsubishi MELSEC 3E Binary, and Omron FINS (`zero_comm_modbus_create()`, `zero_comm_mc3e_read_words()`, `zero_comm_fins_write_bits()`).
+    - **TSDB Time-Series Persistence C-API (`ZeroStorage`)**: Gorilla DoD + XOR compressed metrics logging and range querying without managed runtime initialization overhead.
+    - **Digital Signal Processing C-API (`ZeroSignal`)**: Zero-phase Butterworth `FiltFilt` and Extended Kalman Filter (EKF) streaming handles.
+- **Sub-Component 2: Zero-Copy Arrow IPC & Shared Memory Bridge**:
+  - Process isolation between C# backend daemons and Qt/C++ frontend applications using Memory-Mapped Files (Windows Named MMF / Linux `/dev/shm`).
+  - Integration with `ZeroData.Core.Arrow.ArrowIpcWriter`: C++ header-only reader (`ZeroArrowReader.hpp`) parsing serialized RecordBatches directly in shared memory for 10M+ row dataset visualization without socket/JSON serialization cost.
+- **Sub-Component 3: `ZeroQt` Industrial Visualization & QML Controls Suite**:
+  - Native Qt 6 / C++20 component library (`libZeroQt`):
+    - `QZeroWaveform`: High-frequency (60+ FPS) oscilloscope waveform widget powered by `QRhi` (Qt Rendering Hardware Interface - Direct3D 11, Vulkan, Metal, OpenGL) with zero UI thread stutter.
+    - `QZeroVirtualTable`: High-throughput `QAbstractTableModel` binding directly to shared memory Arrow buffers for instant virtualized scrolling across tens of millions of records.
+    - `QZeroNodeCanvas`: Native Qt Quick / QML declarative node editor component consuming `ZeroPipeline` JSON recipe models.
+    - `QZeroPackMLIndicator` & `QZeroGauges`: Hardware-accelerated ISA-TR88.00.02 state machine and circular/linear gauge widgets for machine control dashboards.
+- **Toolchain Distribution & Packaging (CMake / vcpkg / Prebuilt SDK)**:
+  - **Rejection of NuGet for Native C++**: Native Qt/C++ ecosystems universally standardise on CMake and cross-platform package managers.
+  - **CMake Integration**: First-class support via `find_package(ZeroPlatform REQUIRED COMPONENTS Native Qt)`:
+    ```cmake
+    cmake_minimum_required(VERSION 3.20)
+    project(IndustrialInspectionApp)
+
+    find_package(Qt6 REQUIRED COMPONENTS Core Gui Quick Widgets)
+    find_package(ZeroPlatform REQUIRED COMPONENTS Native Qt)
+
+    add_executable(InspectionApp main.cpp)
+    target_link_libraries(InspectionApp PRIVATE
+        Qt6::Core Qt6::Gui Qt6::Quick Qt6::Widgets
+        ZeroPlatform::Native
+        ZeroPlatform::Qt
+    )
+    ```
+  - **Prebuilt SDK Archive**: Standalone distribution layout containing `include/`, `lib/`, `bin/`, and `cmake/ZeroPlatform/ZeroPlatformConfig.cmake`.
+  - **vcpkg Port Support**: Curated `vcpkg.json` port recipe for automated CI/CD dependency resolution in cross-platform industrial builds.
 
 ---
 
