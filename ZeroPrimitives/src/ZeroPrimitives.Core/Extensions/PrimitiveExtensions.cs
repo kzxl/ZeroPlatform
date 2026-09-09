@@ -62,6 +62,25 @@ namespace ZeroPrimitives.Extensions
         public static Guid? AsNullableGuid(this object? value, Guid? defaultValue = null)
             => FastConvert.AsNullableGuid(value, defaultValue);
 
+        public static bool AsBoolean(this object? value, bool defaultValue = false)
+            => FastConvert.AsBool(value, defaultValue);
+
+        public static bool? AsNullableBoolean(this object? value, bool? defaultValue = null)
+            => FastConvert.AsNullableBool(value, defaultValue);
+
+        public static TEnum AsEnum<TEnum>(this object? value, TEnum defaultValue = default) where TEnum : struct, Enum
+            => FastConvert.AsEnum(value, defaultValue);
+
+        public static TEnum? AsNullableEnum<TEnum>(this object? value) where TEnum : struct, Enum
+            => FastConvert.AsNullableEnum<TEnum>(value);
+
+        public static string AsNumberString(this object? value)
+        {
+            if (value == null || value == DBNull.Value) return string.Empty;
+            decimal d = FastConvert.AsDecimal(value);
+            return d.ToString(System.Globalization.CultureInfo.InvariantCulture);
+        }
+
         /// <summary>
         /// Converts to a SQL Server safe date string (yyyy-MM-dd) clamped between 1753 and 9999.
         /// </summary>

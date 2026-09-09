@@ -364,5 +364,99 @@ namespace ZeroPrimitives
         }
 
         #endregion
+
+        #region Enum & Collections
+
+        /// <summary>
+        /// Converts integer or string representation into an Enum value case-insensitively.
+        /// </summary>
+        public static TEnum AsEnum<TEnum>(object? value, TEnum defaultValue = default) where TEnum : struct, Enum
+        {
+            if (value == null || value == DBNull.Value) return defaultValue;
+
+            if (value is TEnum exact) return exact;
+
+            if (value is int i)
+            {
+                return (TEnum)Enum.ToObject(typeof(TEnum), i);
+            }
+            if (value is byte b)
+            {
+                return (TEnum)Enum.ToObject(typeof(TEnum), b);
+            }
+            if (value is short s)
+            {
+                return (TEnum)Enum.ToObject(typeof(TEnum), s);
+            }
+            if (value is long l)
+            {
+                return (TEnum)Enum.ToObject(typeof(TEnum), l);
+            }
+
+            if (value is string str)
+            {
+                var trimmed = str.Trim();
+                if (string.IsNullOrEmpty(trimmed)) return defaultValue;
+
+                if (Enum.TryParse<TEnum>(trimmed, ignoreCase: true, out var parsed))
+                    return parsed;
+            }
+
+            return defaultValue;
+        }
+
+        public static TEnum? AsNullableEnum<TEnum>(object? value) where TEnum : struct, Enum
+        {
+            if (value == null || value == DBNull.Value) return null;
+            if (value is TEnum exact) return exact;
+
+            if (value is string str && string.IsNullOrWhiteSpace(str)) return null;
+
+            return AsEnum<TEnum>(value);
+        }
+
+        /// <summary>
+        /// Parses a delimited string (e.g. "1,2,3,4") into an array of converted values.
+        /// </summary>
+        public static T[] FromDelimitedString<T>(string? text, char delimiter = ',')
+        {
+            if (string.IsNullOrWhiteSpace(text)) return Array.Empty<T>();
+
+            string[] parts = text!.Split(delimiter);
+            var result = new T[parts.Length];
+            var targetType = typeof(T);
+
+            for (int i = 0; i < parts.Length; i++)
+            {
+                string part = parts[i].Trim();
+                if (targetType == typeof(int))
+                    result[i] = (T)(object)AsInt(part);
+                else if (targetType == typeof(long))
+                    result[i] = (T)(object)AsLong(part);
+                else if (targetType == typeof(decimal))
+                    result[i] = (T)(object)AsDecimal(part);
+                else if (targetType == typeof(double))
+                    result[i] = (T)(object)AsDouble(part);
+                else if (targetType == typeof(string))
+                    result[i] = (T)(object)part;
+                else if (targetType.IsEnum)
+                    result[i] = (T)Enum.Parse(targetType, part, true);
+                else
+                    result[i] = (T)Convert.ChangeType(part, targetType);
+            }
+
+            return result;
+        }
+
+        /// <summary>
+        /// Joins an enumerable collection into a delimited string.
+        /// </summary>
+        public static string AsDelimitedString<T>(System.Collections.Generic.IEnumerable<T>? items, string delimiter = ",")
+        {
+            if (items == null) return string.Empty;
+            return string.Join(delimiter, items);
+        }
+
+        #endregion
     }
 }
