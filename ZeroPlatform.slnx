@@ -35,6 +35,26 @@
     <Project Path="ZeroSignal/src/ZeroSignal.Core/ZeroSignal.Core.csproj" />
     <Project Path="ZeroSignal/tests/ZeroSignal.Tests/ZeroSignal.Tests.csproj" />
   </Folder>
+  <Folder Name="/ZeroInference/">
+    <Project Path="ZeroInference/src/ZeroInference.Core/ZeroInference.Core.csproj" />
+    <Project Path="ZeroInference/tests/ZeroInference.Tests/ZeroInference.Tests.csproj" />
+  </Folder>
+  <Folder Name="/ZeroGeometry/">
+    <Project Path="ZeroGeometry/src/ZeroGeometry.Core/ZeroGeometry.Core.csproj" />
+    <Project Path="ZeroGeometry/tests/ZeroGeometry.Tests/ZeroGeometry.Tests.csproj" />
+  </Folder>
+  <Folder Name="/ZeroComm/">
+    <Project Path="ZeroComm/src/ZeroComm.Core/ZeroComm.Core.csproj" />
+    <Project Path="ZeroComm/tests/ZeroComm.Tests/ZeroComm.Tests.csproj" />
+  </Folder>
+  <Folder Name="/ZeroStorage/">
+    <Project Path="ZeroStorage/src/ZeroStorage.Core/ZeroStorage.Core.csproj" />
+    <Project Path="ZeroStorage/tests/ZeroStorage.Tests/ZeroStorage.Tests.csproj" />
+  </Folder>
+  <Folder Name="/ZeroCompute/">
+    <Project Path="ZeroCompute/src/ZeroCompute.Core/ZeroCompute.Core.csproj" />
+    <Project Path="ZeroCompute/tests/ZeroCompute.Tests/ZeroCompute.Tests.csproj" />
+  </Folder>
   <Folder Name="/Showcase/">
     <Project Path="samples/ZeroPlatform.Samples.Showcase/ZeroPlatform.Samples.Showcase.csproj" />
   </Folder>

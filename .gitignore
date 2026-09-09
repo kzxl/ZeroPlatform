@@ -12,4 +12,9 @@ ZeroTensor/
 ZeroNeural/
 ZeroData/
 ZeroSignal/
+ZeroInference/
+ZeroGeometry/
+ZeroComm/
+ZeroStorage/
+ZeroCompute/
 
