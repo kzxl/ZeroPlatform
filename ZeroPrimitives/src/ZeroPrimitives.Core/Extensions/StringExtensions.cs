@@ -84,32 +84,32 @@ namespace ZeroPrimitives.Extensions
         }
 
         /// <summary>
-        /// Extracts only digit characters (0-9) and converts them to an integer.
+        /// Extracts only digit characters (0-9) and converts them to an integer in a single zero-allocation pass.
         /// Standard replacement for legacy RemoveLetterToInt.
         /// </summary>
+        [System.Runtime.CompilerServices.MethodImpl(System.Runtime.CompilerServices.MethodImplOptions.AggressiveInlining)]
         public static int ExtractDigitsToInt(this object? value, int defaultValue = 0)
         {
             if (value == null) return defaultValue;
+            if (value is int i) return i;
             string str = value.ToString() ?? string.Empty;
             if (string.IsNullOrEmpty(str)) return defaultValue;
 
-            Span<char> digits = stackalloc char[str.Length];
-            int digitCount = 0;
+            long acc = 0;
+            bool hasDigits = false;
 
-            for (int i = 0; i < str.Length; i++)
+            for (int idx = 0; idx < str.Length; idx++)
             {
-                char c = str[i];
+                char c = str[idx];
                 if (c >= '0' && c <= '9')
                 {
-                    digits[digitCount++] = c;
+                    acc = (acc * 10) + (c - '0');
+                    hasDigits = true;
+                    if (acc > int.MaxValue) return int.MaxValue;
                 }
             }
 
-            if (digitCount == 0) return defaultValue;
-            if (FastConvert.AsNullableInt(digits.Slice(0, digitCount).ToString()) is int result)
-                return result;
-
-            return defaultValue;
+            return hasDigits ? (int)acc : defaultValue;
         }
 
         /// <summary>

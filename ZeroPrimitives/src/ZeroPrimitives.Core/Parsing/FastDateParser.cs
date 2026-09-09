@@ -1,5 +1,6 @@
 using System;
 using System.Globalization;
+using System.Runtime.CompilerServices;
 using ZeroPrimitives.Text;
 
 namespace ZeroPrimitives.Parsing
@@ -11,10 +12,12 @@ namespace ZeroPrimitives.Parsing
     {
         public static readonly DateTime SqlMinDate = new DateTime(1753, 1, 1, 0, 0, 0, DateTimeKind.Unspecified);
         public static readonly DateTime SqlMaxDate = new DateTime(9999, 12, 31, 23, 59, 59, DateTimeKind.Unspecified);
+        private static readonly byte[] DaysInMonthTable = { 0, 31, 28, 31, 30, 31, 30, 31, 31, 30, 31, 30, 31 };
 
         /// <summary>
         /// Ensures a DateTime falls within the valid range for Microsoft SQL Server DATETIME (1753-01-01 to 9999-12-31).
         /// </summary>
+        [MethodImpl(MethodImplOptions.AggressiveInlining)]
         public static DateTime EnsureSqlDateTime(this DateTime dt)
         {
             if (dt < SqlMinDate) return SqlMinDate;
@@ -28,6 +31,7 @@ namespace ZeroPrimitives.Parsing
         /// - dd/MM/yyyy or dd/MM/yyyy HH:mm:ss
         /// - yyyy/MM/dd
         /// </summary>
+        [MethodImpl(MethodImplOptions.AggressiveInlining)]
         public static bool TryParse(ReadOnlySpan<char> span, out DateTime date)
         {
             span = SpanTextOps.TrimAsciiWhitespace(span);
@@ -102,6 +106,7 @@ namespace ZeroPrimitives.Parsing
 #endif
         }
 
+        [MethodImpl(MethodImplOptions.AggressiveInlining)]
         private static int Parse4Digits(ReadOnlySpan<char> span, int offset)
         {
             return ((span[offset] - '0') * 1000) +
@@ -110,19 +115,26 @@ namespace ZeroPrimitives.Parsing
                    (span[offset + 3] - '0');
         }
 
+        [MethodImpl(MethodImplOptions.AggressiveInlining)]
         private static int Parse2Digits(ReadOnlySpan<char> span, int offset)
         {
             return ((span[offset] - '0') * 10) + (span[offset + 1] - '0');
         }
 
+        [MethodImpl(MethodImplOptions.AggressiveInlining)]
         private static bool IsValidDate(int year, int month, int day, int hour, int minute, int second)
         {
-            if (year < 1 || year > 9999) return false;
-            if (month < 1 || month > 12) return false;
-            if (day < 1 || day > DateTime.DaysInMonth(year, month)) return false;
-            if (hour < 0 || hour > 23) return false;
-            if (minute < 0 || minute > 59) return false;
-            if (second < 0 || second > 59) return false;
+            if ((uint)(year - 1) >= 9999) return false;
+            if ((uint)(month - 1) >= 12) return false;
+
+            int maxDays = DaysInMonthTable[month];
+            if (month == 2 && ((year & 3) == 0 && (year % 100 != 0 || year % 400 == 0)))
+            {
+                maxDays = 29;
+            }
+
+            if (day < 1 || day > maxDays) return false;
+            if ((uint)hour >= 24 || (uint)minute >= 60 || (uint)second >= 60) return false;
             return true;
         }
     }

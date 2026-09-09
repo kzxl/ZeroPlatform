@@ -1,4 +1,5 @@
 using System;
+using System.Runtime.CompilerServices;
 using ZeroPrimitives.Parsing;
 using ZeroPrimitives.Text;
 
@@ -12,24 +13,15 @@ namespace ZeroPrimitives
     {
         #region Integer (32-bit)
 
+        [MethodImpl(MethodImplOptions.AggressiveInlining)]
         public static int AsInt(object? value, int defaultValue = 0)
         {
             if (value == null || value == DBNull.Value) return defaultValue;
 
             // Direct register unbox - 0 allocation
             if (value is int i) return i;
-            if (value is long l) return (int)l;
-            if (value is short s) return s;
-            if (value is byte b) return b;
-            if (value is decimal m) return (int)m;
-            if (value is double d) return (int)d;
-            if (value is float f) return (int)f;
-            if (value is bool boolean) return boolean ? 1 : 0;
-            if (value is uint ui) return (int)ui;
-            if (value is ulong ul) return (int)ul;
-            if (value is ushort us) return us;
-            if (value is sbyte sb) return sb;
 
+            // Highly frequent in enterprise applications (DB, JSON, WebAPI, CSV)
             if (value is string str)
             {
                 if (FastNumberParser.TryParseInt32(str.AsSpan(), out int res, defaultValue))
@@ -37,21 +29,27 @@ namespace ZeroPrimitives
                 return defaultValue;
             }
 
+            if (value is long l) return (int)l;
+            if (value is decimal m) return (int)m;
+            if (value is double d) return (int)d;
+            if (value is short s) return s;
+            if (value is byte b) return b;
+            if (value is float f) return (int)f;
+            if (value is bool boolean) return boolean ? 1 : 0;
+            if (value is uint ui) return (int)ui;
+            if (value is ulong ul) return (int)ul;
+            if (value is ushort us) return us;
+            if (value is sbyte sb) return sb;
+
             return defaultValue;
         }
 
+        [MethodImpl(MethodImplOptions.AggressiveInlining)]
         public static int? AsNullableInt(object? value, int? defaultValue = null)
         {
             if (value == null || value == DBNull.Value) return defaultValue;
 
             if (value is int i) return i;
-            if (value is long l) return (int)l;
-            if (value is short s) return s;
-            if (value is byte b) return b;
-            if (value is decimal m) return (int)m;
-            if (value is double d) return (int)d;
-            if (value is float f) return (int)f;
-            if (value is bool boolean) return boolean ? 1 : 0;
 
             if (value is string str)
             {
@@ -59,7 +57,16 @@ namespace ZeroPrimitives
                 if (span.IsEmpty) return defaultValue;
                 if (FastNumberParser.TryParseInt32(span, out int res))
                     return res;
+                return defaultValue;
             }
+
+            if (value is long l) return (int)l;
+            if (value is short s) return s;
+            if (value is byte b) return b;
+            if (value is decimal m) return (int)m;
+            if (value is double d) return (int)d;
+            if (value is float f) return (int)f;
+            if (value is bool boolean) return boolean ? 1 : 0;
 
             return defaultValue;
         }
@@ -68,11 +75,20 @@ namespace ZeroPrimitives
 
         #region Long (64-bit)
 
+        [MethodImpl(MethodImplOptions.AggressiveInlining)]
         public static long AsLong(object? value, long defaultValue = 0)
         {
             if (value == null || value == DBNull.Value) return defaultValue;
 
             if (value is long l) return l;
+
+            if (value is string str)
+            {
+                if (FastNumberParser.TryParseInt64(str.AsSpan(), out long res, defaultValue))
+                    return res;
+                return defaultValue;
+            }
+
             if (value is int i) return i;
             if (value is short s) return s;
             if (value is byte b) return b;
@@ -83,27 +99,15 @@ namespace ZeroPrimitives
             if (value is uint ui) return ui;
             if (value is bool boolean) return boolean ? 1L : 0L;
 
-            if (value is string str)
-            {
-                if (FastNumberParser.TryParseInt64(str.AsSpan(), out long res, defaultValue))
-                    return res;
-                return defaultValue;
-            }
-
             return defaultValue;
         }
 
+        [MethodImpl(MethodImplOptions.AggressiveInlining)]
         public static long? AsNullableLong(object? value, long? defaultValue = null)
         {
             if (value == null || value == DBNull.Value) return defaultValue;
 
             if (value is long l) return l;
-            if (value is int i) return i;
-            if (value is short s) return s;
-            if (value is byte b) return b;
-            if (value is decimal m) return (long)m;
-            if (value is double d) return (long)d;
-            if (value is float f) return (long)f;
 
             if (value is string str)
             {
@@ -111,7 +115,15 @@ namespace ZeroPrimitives
                 if (span.IsEmpty) return defaultValue;
                 if (FastNumberParser.TryParseInt64(span, out long res))
                     return res;
+                return defaultValue;
             }
+
+            if (value is int i) return i;
+            if (value is short s) return s;
+            if (value is byte b) return b;
+            if (value is decimal m) return (long)m;
+            if (value is double d) return (long)d;
+            if (value is float f) return (long)f;
 
             return defaultValue;
         }
@@ -120,11 +132,20 @@ namespace ZeroPrimitives
 
         #region Decimal
 
+        [MethodImpl(MethodImplOptions.AggressiveInlining)]
         public static decimal AsDecimal(object? value, decimal defaultValue = 0m)
         {
             if (value == null || value == DBNull.Value) return defaultValue;
 
             if (value is decimal m) return m;
+
+            if (value is string str)
+            {
+                if (FastNumberParser.TryParseDecimal(str.AsSpan(), out decimal res, defaultValue))
+                    return res;
+                return defaultValue;
+            }
+
             if (value is int i) return i;
             if (value is long l) return l;
             if (value is double d) return (decimal)d;
@@ -134,27 +155,15 @@ namespace ZeroPrimitives
             if (value is uint ui) return ui;
             if (value is ulong ul) return ul;
 
-            if (value is string str)
-            {
-                if (FastNumberParser.TryParseDecimal(str.AsSpan(), out decimal res, defaultValue))
-                    return res;
-                return defaultValue;
-            }
-
             return defaultValue;
         }
 
+        [MethodImpl(MethodImplOptions.AggressiveInlining)]
         public static decimal? AsNullableDecimal(object? value, decimal? defaultValue = null)
         {
             if (value == null || value == DBNull.Value) return defaultValue;
 
             if (value is decimal m) return m;
-            if (value is int i) return i;
-            if (value is long l) return l;
-            if (value is double d) return (decimal)d;
-            if (value is float f) return (decimal)f;
-            if (value is short s) return s;
-            if (value is byte b) return b;
 
             if (value is string str)
             {
@@ -162,7 +171,15 @@ namespace ZeroPrimitives
                 if (span.IsEmpty) return defaultValue;
                 if (FastNumberParser.TryParseDecimal(span, out decimal res))
                     return res;
+                return defaultValue;
             }
+
+            if (value is int i) return i;
+            if (value is long l) return l;
+            if (value is double d) return (decimal)d;
+            if (value is float f) return (decimal)f;
+            if (value is short s) return s;
+            if (value is byte b) return b;
 
             return defaultValue;
         }
@@ -505,24 +522,71 @@ namespace ZeroPrimitives
         /// Universal, high-performance generic type converter.
         /// Unboxes primitives via CPU register casts with zero heap allocations.
         /// </summary>
+        [MethodImpl(MethodImplOptions.AggressiveInlining)]
         public static T To<T>(object? value, T defaultValue = default!)
         {
             if (value == null || value == DBNull.Value) return defaultValue;
-            var targetType = typeof(T);
 
             if (value is T exact) return exact;
 
-            if (targetType == typeof(int)) return (T)(object)AsInt(value);
-            if (targetType == typeof(long)) return (T)(object)AsLong(value);
-            if (targetType == typeof(decimal)) return (T)(object)AsDecimal(value);
-            if (targetType == typeof(double)) return (T)(object)AsDouble(value);
-            if (targetType == typeof(float)) return (T)(object)(float)AsDouble(value);
-            if (targetType == typeof(bool)) return (T)(object)AsBool(value);
-            if (targetType == typeof(string)) return (T)(object)AsString(value);
-            if (targetType == typeof(DateTime)) return (T)(object)AsDateTime(value);
-            if (targetType == typeof(Guid)) return (T)(object)AsGuid(value);
-            if (targetType == typeof(short)) return (T)(object)(short)AsInt(value);
-            if (targetType == typeof(byte)) return (T)(object)(byte)AsInt(value);
+            var targetType = typeof(T);
+
+            // Zero-boxing unbox path: JIT folds typeof(T) == typeof(...) into compile-time constant
+            if (targetType == typeof(int))
+            {
+                int val = AsInt(value);
+                return Unsafe.As<int, T>(ref val);
+            }
+            if (targetType == typeof(long))
+            {
+                long val = AsLong(value);
+                return Unsafe.As<long, T>(ref val);
+            }
+            if (targetType == typeof(decimal))
+            {
+                decimal val = AsDecimal(value);
+                return Unsafe.As<decimal, T>(ref val);
+            }
+            if (targetType == typeof(double))
+            {
+                double val = AsDouble(value);
+                return Unsafe.As<double, T>(ref val);
+            }
+            if (targetType == typeof(float))
+            {
+                float val = (float)AsDouble(value);
+                return Unsafe.As<float, T>(ref val);
+            }
+            if (targetType == typeof(bool))
+            {
+                bool val = AsBool(value);
+                return Unsafe.As<bool, T>(ref val);
+            }
+            if (targetType == typeof(string))
+            {
+                string val = AsString(value);
+                return Unsafe.As<string, T>(ref val);
+            }
+            if (targetType == typeof(DateTime))
+            {
+                DateTime val = AsDateTime(value);
+                return Unsafe.As<DateTime, T>(ref val);
+            }
+            if (targetType == typeof(Guid))
+            {
+                Guid val = AsGuid(value);
+                return Unsafe.As<Guid, T>(ref val);
+            }
+            if (targetType == typeof(short))
+            {
+                short val = (short)AsInt(value);
+                return Unsafe.As<short, T>(ref val);
+            }
+            if (targetType == typeof(byte))
+            {
+                byte val = (byte)AsInt(value);
+                return Unsafe.As<byte, T>(ref val);
+            }
 
             if (targetType.IsEnum)
             {
