@@ -1,0 +1,24 @@
+<Project Sdk="Microsoft.NET.Sdk">
+  <PropertyGroup>
+    <TargetFrameworks>net462;net8.0-windows</TargetFrameworks>
+    <UseWindowsForms>true</UseWindowsForms>
+    <LangVersion>latest</LangVersion>
+    <AllowUnsafeBlocks>true</AllowUnsafeBlocks>
+    <Nullable>enable</Nullable>
+    <Description>Industrial Concrete Pipeline Nodes: Machine Vision, Metrology, Barcode/QR Decoders, AI Inference, Modbus PLC, and Gorilla TimeSeries Logging for ZeroPlatform.</Description>
+    <PackageTags>industrial;pipeline;machine-vision;metrology;caliper;barcode;inference;modbus;timeseries</PackageTags>
+    <Authors>Phong Võ</Authors>
+    <PackageLicenseExpression>MIT</PackageLicenseExpression>
+  </PropertyGroup>
+
+  <ItemGroup>
+    <ProjectReference Include="..\ZeroPipeline.Core\ZeroPipeline.Core.csproj" />
+    <ProjectReference Include="..\..\..\ZeroGraphics\src\ZeroGraphics.Core\ZeroGraphics.Core.csproj" />
+    <ProjectReference Include="..\..\..\ZeroGraphics\src\ZeroGraphics.Imaging\ZeroGraphics.Imaging.csproj" />
+    <ProjectReference Include="..\..\..\ZeroGraphics\src\ZeroGraphics.Vision\ZeroGraphics.Vision.csproj" />
+    <ProjectReference Include="..\..\..\ZeroTensor\src\ZeroTensor.Core\ZeroTensor.Core.csproj" />
+    <ProjectReference Include="..\..\..\ZeroInference\src\ZeroInference.Core\ZeroInference.Core.csproj" />
+    <ProjectReference Include="..\..\..\ZeroStorage\src\ZeroStorage.Core\ZeroStorage.Core.csproj" />
+    <ProjectReference Include="..\..\..\ZeroComm\src\ZeroComm.Core\ZeroComm.Core.csproj" />
+  </ItemGroup>
+</Project>

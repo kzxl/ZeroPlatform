@@ -29,5 +29,7 @@
     <ProjectReference Include="..\..\ZeroGraphics\src\ZeroGraphics.Imaging\ZeroGraphics.Imaging.csproj" />
     <ProjectReference Include="..\..\ZeroGraphics\src\ZeroGraphics.Vision\ZeroGraphics.Vision.csproj" />
     <ProjectReference Include="..\..\ZeroUI\src\ZeroUI.Core\ZeroUI.Core.csproj" />
+    <ProjectReference Include="..\..\ZeroPipeline\src\ZeroPipeline.Core\ZeroPipeline.Core.csproj" />
+    <ProjectReference Include="..\..\ZeroPipeline\src\ZeroPipeline.Nodes\ZeroPipeline.Nodes.csproj" />
   </ItemGroup>
 </Project>

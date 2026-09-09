@@ -1,6 +1,8 @@
 <Project Sdk="Microsoft.NET.Sdk">
   <PropertyGroup>
-    <TargetFramework>net8.0</TargetFramework>
+    <TargetFramework>net8.0-windows</TargetFramework>
+    <UseWindowsForms>true</UseWindowsForms>
+    <AllowUnsafeBlocks>true</AllowUnsafeBlocks>
     <IsPackable>false</IsPackable>
     <IsTestProject>true</IsTestProject>
     <Nullable>enable</Nullable>
@@ -18,5 +20,6 @@
 
   <ItemGroup>
     <ProjectReference Include="..\..\src\ZeroPipeline.Core\ZeroPipeline.Core.csproj" />
+    <ProjectReference Include="..\..\src\ZeroPipeline.Nodes\ZeroPipeline.Nodes.csproj" />
   </ItemGroup>
 </Project>
