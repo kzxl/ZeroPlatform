@@ -1,10 +1,18 @@
 using System;
 using System.Drawing;
+using System.Threading.Tasks;
 using System.Windows.Forms;
 using ZeroGraphics.Core.Telemetry;
 using ZeroGraphics.DirectX.Controls;
 using ZeroGraphics.DirectX.Core;
+using ZeroGraphics.Imaging.Core;
 using ZeroGraphics.Waveform.Controls;
+using ZeroPipeline.Core.Execution;
+using ZeroPipeline.Core.Graph;
+using ZeroPipeline.Core.Nodes;
+using ZeroPipeline.Nodes.Inspection;
+using ZeroPipeline.Nodes.Storage;
+using ZeroPipeline.Nodes.Vision;
 using ZeroUI.WinForms.Industrial;
 using ZeroUI.WinForms.Layout;
 using ZeroUI.WinForms.Theme;
@@ -18,6 +26,13 @@ namespace ZeroPlatform.Samples.Showcase
         private float _phase = 0f;
         private ZeroWaveformCanvas? _waveformCanvas;
 
+        // ZeroPipeline Integration
+        private PipelineExecutor? _pipelineExecutor;
+        private InspectionResult? _lastInspectionResult;
+        private TimeSeriesLogSinkNode? _tsdbLogger;
+        private ZeroDescriptions? _descPipeline;
+        private int _pipelineCycleCount = 0;
+
         public ShowcaseForm()
         {
             Text = "ZeroPlatform - Unified Enterprise UI & Hardware Graphics Showcase";
@@ -29,6 +44,9 @@ namespace ZeroPlatform.Samples.Showcase
 
             // Initialize GPU
             D3D11DeviceManager.EnsureInitialized();
+
+            // Build Live Pipeline Workflow
+            BuildDemoPipeline();
 
             // Header Banner
             var header = new Panel
@@ -45,7 +63,7 @@ namespace ZeroPlatform.Samples.Showcase
                 Font = new Font("Segoe UI", 12f, FontStyle.Bold),
                 ForeColor = Color.FromArgb(0, 229, 255),
                 TextAlign = ContentAlignment.MiddleLeft,
-                Text = $"🌟 ZeroPlatform Ecosystem | {GpuCapabilities.AdapterName} ({GpuCapabilities.DedicatedVramMb:F0} MB VRAM) | ZeroUI Controls + ZeroGraphics DirectX"
+                Text = $"🌟 ZeroPlatform Ecosystem | {GpuCapabilities.AdapterName} ({GpuCapabilities.DedicatedVramMb:F0} MB VRAM) | ZeroUI + ZeroGraphics + ZeroPipeline"
             };
             header.Controls.Add(lblTitle);
             Controls.Add(header);
@@ -76,28 +94,44 @@ namespace ZeroPlatform.Samples.Showcase
                 AutoSize = true
             };
 
+            // 1. Platform Subsystems
             var cardSys = new ZeroCard
             {
                 Title = "Platform Subsystems",
-                Subtitle = "Active Core Repositories & Satellites",
+                Subtitle = "11 Core Repositories & Satellites",
                 Width = 340,
-                Height = 120
+                Height = 150
             };
+
+            var descSys = new ZeroDescriptions
+            {
+                Dock = DockStyle.Fill,
+                Columns = 1,
+                RowHeight = 24,
+                LabelColor = Color.FromArgb(150, 160, 180),
+                ValueColor = Color.FromArgb(220, 225, 235)
+            };
+            descSys.Add("Subsystems", "11 Pure C# Engines");
+            descSys.Add("Pipeline Engine", "ZeroPipeline.Core (DAG)");
+            descSys.Add("Graphics Core", "ZeroGraphics (DX11 + D2D)");
+            descSys.Add("Storage Core", "ZeroStorage (Gorilla TSDB)");
+            cardSys.Controls.Add(descSys);
             stack.Controls.Add(cardSys);
 
+            // 2. Hardware Telemetry Card
             var descCard = new ZeroCard
             {
                 Title = "DXGI Hardware Telemetry",
                 Subtitle = "Live GPU & Acceleration Metrics",
                 Width = 340,
-                Height = 220
+                Height = 190
             };
 
             var descGpu = new ZeroDescriptions
             {
                 Dock = DockStyle.Fill,
                 Columns = 1,
-                RowHeight = 26,
+                RowHeight = 24,
                 LabelColor = Color.FromArgb(150, 160, 180),
                 ValueColor = Color.FromArgb(0, 229, 255)
             };
@@ -105,10 +139,35 @@ namespace ZeroPlatform.Samples.Showcase
             descGpu.Add("Hardware Tier", GpuCapabilities.CurrentTier.ToString());
             descGpu.Add("Dedicated VRAM", $"{GpuCapabilities.DedicatedVramMb:F0} MB");
             descGpu.Add("Rendering Mode", "Direct COM VTable P/Invoke");
-            descGpu.Add("External Libs", "0 (Pure ZeroPlatform)");
 
             descCard.Controls.Add(descGpu);
             stack.Controls.Add(descCard);
+
+            // 3. ZeroPipeline Live Workflow Card
+            var pipelineCard = new ZeroCard
+            {
+                Title = "ZeroPipeline Live Workflow",
+                Subtitle = "Real-Time AOI DAG & TSDB Logger",
+                Width = 340,
+                Height = 210
+            };
+
+            _descPipeline = new ZeroDescriptions
+            {
+                Dock = DockStyle.Fill,
+                Columns = 1,
+                RowHeight = 24,
+                LabelColor = Color.FromArgb(150, 160, 180),
+                ValueColor = Color.FromArgb(0, 255, 136)
+            };
+            _descPipeline.Add("Recipe", "AOI Metrology DAG (v1.0)");
+            _descPipeline.Add("DAG Order", "5 Nodes (Kahn Sort)");
+            _descPipeline.Add("Cycles Run", "0");
+            _descPipeline.Add("Latest Part", "30.00 mm (PASSED)", Color.FromArgb(0, 255, 136));
+            _descPipeline.Add("TSDB Points", "0 (Gorilla XOR)");
+
+            pipelineCard.Controls.Add(_descPipeline);
+            stack.Controls.Add(pipelineCard);
 
             leftPanel.Controls.Add(stack);
             splitMain.Panel1.Controls.Add(leftPanel);
@@ -154,17 +213,88 @@ namespace ZeroPlatform.Samples.Showcase
             _waveformTimer.Start();
         }
 
+        private void BuildDemoPipeline()
+        {
+            var graph = new PipelineGraph();
+
+            var source = new ImageSourceNode(seq =>
+            {
+                // Sine wave variation around 30.0mm (+- 1.8mm)
+                double width = 30.0 + Math.Sin(seq * 0.15) * 1.8;
+                return CreateSyntheticFrame(width);
+            }, "CameraSource");
+
+            var gray = new ImageGrayscaleNode("GrayscaleConverter");
+            var caliper = new EdgeCaliperNode(10, 30, 90, 30, 20.0, name: "CaliperRake");
+            var judge = new DimensionJudgeNode("PinWidth", 30.0, 28.5, 31.5, name: "JudgePin");
+            _tsdbLogger = new TimeSeriesLogSinkNode(metricId: 1, blockSize: 10, name: "TSDB");
+            var sink = new ActionSinkNode<InspectionResult>(r => _lastInspectionResult = r, "UIConsumer");
+
+            graph.Connect(source.Output, gray.Input);
+            graph.Connect(gray.Output, caliper.Input);
+            graph.Connect(caliper.Output, judge.Input);
+            graph.Connect(judge.Output, _tsdbLogger.Input);
+            graph.Connect(judge.Output, sink.Input);
+
+            _pipelineExecutor = new PipelineExecutor(graph);
+            _pipelineExecutor.InitializeAsync().GetAwaiter().GetResult();
+        }
+
+        private static ImageBuffer CreateSyntheticFrame(double stripeWidth)
+        {
+            var image = ImageBuffer.CreateBgra32(100, 60);
+            int startX = 20;
+            int endX = (int)Math.Round(startX + stripeWidth);
+
+            unsafe
+            {
+                for (int y = 0; y < 60; y++)
+                {
+                    byte* row = image.GetRowPointer(y);
+                    for (int x = 0; x < 100; x++)
+                    {
+                        byte val = (x >= startX && x <= endX) ? (byte)230 : (byte)25;
+                        int offset = x * 4;
+                        row[offset] = val;
+                        row[offset + 1] = val;
+                        row[offset + 2] = val;
+                        row[offset + 3] = 255;
+                    }
+                }
+            }
+            return image;
+        }
+
         private void OnStreamTick(object? sender, EventArgs e)
         {
-            if (_waveformCanvas == null || !_waveformCanvas.Visible) return;
-
-            _phase += 0.1f;
-            for (int i = 0; i < _buffer.Length; i++)
+            // 1. Update Waveform
+            if (_waveformCanvas != null && _waveformCanvas.Visible)
             {
-                float t = i + _phase * 40f;
-                _buffer[i] = (float)(Math.Sin(t * 0.003) * 40.0 + Math.Cos(t * 0.02) * 15.0);
+                _phase += 0.1f;
+                for (int i = 0; i < _buffer.Length; i++)
+                {
+                    float t = i + _phase * 40f;
+                    _buffer[i] = (float)(Math.Sin(t * 0.003) * 40.0 + Math.Cos(t * 0.02) * 15.0);
+                }
+                _waveformCanvas.SetData(_buffer);
             }
-            _waveformCanvas.SetData(_buffer);
+
+            // 2. Step ZeroPipeline Execution Engine
+            if (_pipelineExecutor != null && _descPipeline != null)
+            {
+                _pipelineExecutor.ExecuteStepAsync().GetAwaiter().GetResult();
+                _pipelineCycleCount++;
+
+                if (_lastInspectionResult != null)
+                {
+                    var color = _lastInspectionResult.IsPassed ? Color.FromArgb(0, 255, 136) : Color.FromArgb(255, 80, 80);
+                    string statusText = $"{_lastInspectionResult.MeasuredValue:F2} mm ({(_lastInspectionResult.IsPassed ? "PASSED" : "FAILED")})";
+
+                    _descPipeline.SetValue("Cycles Run", _pipelineCycleCount.ToString());
+                    _descPipeline.SetValue("Latest Part", statusText, color);
+                    _descPipeline.SetValue("TSDB Points", $"{_tsdbLogger?.TotalLoggedPoints ?? 0} (Gorilla XOR)");
+                }
+            }
         }
 
         protected override void Dispose(bool disposing)

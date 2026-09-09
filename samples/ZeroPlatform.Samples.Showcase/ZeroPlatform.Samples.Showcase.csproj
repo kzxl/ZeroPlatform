@@ -17,5 +17,8 @@
     <ProjectReference Include="..\..\ZeroGraphics\src\ZeroGraphics.Direct2D\ZeroGraphics.Direct2D.csproj" />
     <ProjectReference Include="..\..\ZeroGraphics\src\ZeroGraphics.DirectX\ZeroGraphics.DirectX.csproj" />
     <ProjectReference Include="..\..\ZeroGraphics\src\ZeroGraphics.Waveform\ZeroGraphics.Waveform.csproj" />
+    <ProjectReference Include="..\..\ZeroPipeline\src\ZeroPipeline.Core\ZeroPipeline.Core.csproj" />
+    <ProjectReference Include="..\..\ZeroPipeline\src\ZeroPipeline.Nodes\ZeroPipeline.Nodes.csproj" />
+    <ProjectReference Include="..\..\ZeroPipeline\src\ZeroPipeline.Recipe\ZeroPipeline.Recipe.csproj" />
   </ItemGroup>
 </Project>
