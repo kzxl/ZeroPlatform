@@ -11,7 +11,7 @@
 #>
 
 param(
-    [ValidateSet('winforms', 'wpf', 'showcase')]
+    [ValidateSet('winforms', 'wpf', 'showcase', 'graphics')]
     [string]$Demo,
     [ValidateSet('net8.0-windows', 'net462')]
     [string]$Framework = 'net8.0-windows'
@@ -32,19 +32,22 @@ if (-not $RootDir) { $RootDir = Get-Location }
 $WinFormsDemoPath = Join-Path $RootDir "ZeroUI\src\ZeroUI.Samples.BenchmarkDemo\ZeroUI.Samples.BenchmarkDemo.csproj"
 $WpfDemoPath      = Join-Path $RootDir "ZeroUI\src\ZeroUI.Samples.WpfDemo\ZeroUI.Samples.WpfDemo.csproj"
 $ShowcasePath     = Join-Path $RootDir "samples\ZeroPlatform.Samples.Showcase\ZeroPlatform.Samples.Showcase.csproj"
+$GraphicsDemoPath = Join-Path $RootDir "ZeroGraphics\samples\ZeroGraphics.Samples.Demo\ZeroGraphics.Samples.Demo.csproj"
 
 if (-not $Demo) {
     Write-Host "Vui lòng chọn ứng dụng Demo bạn muốn khởi chạy:" -ForegroundColor Yellow
     Write-Host "  [1] ZeroUI WinForms Demo (Controls Showcase & Benchmark)" -ForegroundColor White
     Write-Host "  [2] ZeroUI WPF Demo (Modern WPF Controls & Dark Mode)" -ForegroundColor White
     Write-Host "  [3] ZeroPlatform Full Showcase (ZeroUI + ZeroGraphics Direct2D/DirectX + Pipeline)" -ForegroundColor White
+    Write-Host "  [4] ZeroGraphics Metrology & Hardware Demo (Direct2D/D3D11 & Vision)" -ForegroundColor White
     Write-Host "  [Q] Thoát" -ForegroundColor Gray
     Write-Host ""
-    $choice = Read-Host "Nhập lựa chọn (1, 2, 3) [Mặc định: 1]"
+    $choice = Read-Host "Nhập lựa chọn (1, 2, 3, 4) [Mặc định: 1]"
 
     switch ($choice.Trim()) {
         "2" { $Demo = "wpf" }
         "3" { $Demo = "showcase" }
+        "4" { $Demo = "graphics" }
         "q" { exit 0 }
         "Q" { exit 0 }
         default { $Demo = "winforms" }
@@ -55,6 +58,7 @@ $targetProj = switch ($Demo) {
     "winforms" { $WinFormsDemoPath }
     "wpf"      { $WpfDemoPath }
     "showcase" { $ShowcasePath }
+    "graphics" { $GraphicsDemoPath }
 }
 
 if (-not (Test-Path $targetProj)) {
@@ -66,7 +70,7 @@ Write-Host "[+] Đang khởi chạy: $Demo ($targetProj)..." -ForegroundColor Gr
 Write-Host "-----------------------------------------------------------------" -ForegroundColor Gray
 
 # Khởi chạy ứng dụng qua dotnet run
-if ($Demo -eq "showcase") {
+if ($Demo -eq "showcase" -or $Demo -eq "graphics") {
     dotnet run --project "$targetProj" -f $Framework -c Debug
 } else {
     dotnet run --project "$targetProj" -c Debug
