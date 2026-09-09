@@ -13,6 +13,8 @@ using ZeroPipeline.Core.Nodes;
 using ZeroPipeline.Nodes.Inspection;
 using ZeroPipeline.Nodes.Storage;
 using ZeroPipeline.Nodes.Vision;
+using ZeroPipeline.UI.Models;
+using ZeroPipeline.UI.Studio;
 using ZeroUI.WinForms.Industrial;
 using ZeroUI.WinForms.Layout;
 using ZeroUI.WinForms.Theme;
@@ -32,6 +34,7 @@ namespace ZeroPlatform.Samples.Showcase
         private TimeSeriesLogSinkNode? _tsdbLogger;
         private ZeroDescriptions? _descPipeline;
         private int _pipelineCycleCount = 0;
+        private ZeroPipelineStudioControl? _studioControl;
 
         public ShowcaseForm()
         {
@@ -172,7 +175,57 @@ namespace ZeroPlatform.Samples.Showcase
             leftPanel.Controls.Add(stack);
             splitMain.Panel1.Controls.Add(leftPanel);
 
-            // Right Side: ZeroGraphics Hardware Accelerators (SDF Card + Real-Time Oscilloscope)
+            // Right Side View Switcher & Container Host
+            var rightHost = new Panel
+            {
+                Dock = DockStyle.Fill,
+                BackColor = Color.FromArgb(16, 18, 24)
+            };
+
+            var viewSwitcher = new Panel
+            {
+                Dock = DockStyle.Top,
+                Height = 36,
+                BackColor = Color.FromArgb(22, 26, 36),
+                Padding = new Padding(6, 4, 6, 4)
+            };
+
+            var btnGpu = new Button
+            {
+                Text = "🎨 GPU Hardware & Waveforms",
+                FlatStyle = FlatStyle.Flat,
+                ForeColor = Color.FromArgb(0, 229, 255),
+                BackColor = Color.FromArgb(36, 45, 64),
+                Font = new Font("Segoe UI", 8.25f, FontStyle.Bold),
+                Dock = DockStyle.Left,
+                Width = 220,
+                Cursor = Cursors.Hand
+            };
+            btnGpu.FlatAppearance.BorderColor = Color.FromArgb(0, 229, 255);
+
+            var btnStudio = new Button
+            {
+                Text = "🔗 ZeroPipeline Visual Studio",
+                FlatStyle = FlatStyle.Flat,
+                ForeColor = Color.FromArgb(180, 190, 210),
+                BackColor = Color.FromArgb(26, 32, 44),
+                Font = new Font("Segoe UI", 8.25f, FontStyle.Bold),
+                Dock = DockStyle.Left,
+                Width = 220,
+                Cursor = Cursors.Hand
+            };
+            btnStudio.FlatAppearance.BorderColor = Color.FromArgb(50, 60, 80);
+
+            viewSwitcher.Controls.Add(btnStudio);
+            viewSwitcher.Controls.Add(btnGpu);
+
+            var contentHost = new Panel
+            {
+                Dock = DockStyle.Fill,
+                BackColor = Color.FromArgb(16, 18, 24)
+            };
+
+            // View 1: ZeroGraphics Hardware Accelerators (SDF Card + Real-Time Oscilloscope)
             var splitGraphics = new SplitContainer
             {
                 Dock = DockStyle.Fill,
@@ -203,7 +256,54 @@ namespace ZeroPlatform.Samples.Showcase
             };
             splitGraphics.Panel2.Controls.Add(_waveformCanvas);
 
-            splitMain.Panel2.Controls.Add(splitGraphics);
+            // View 2: ZeroPipeline Visual Node Studio
+            _studioControl = new ZeroPipelineStudioControl
+            {
+                Dock = DockStyle.Fill,
+                Visible = false
+            };
+
+            // Populate sample demo DAG
+            PopulateStudioDemoGraph(_studioControl);
+            if (_pipelineExecutor != null)
+            {
+                _studioControl.AttachExecutor(_pipelineExecutor);
+            }
+
+            contentHost.Controls.Add(splitGraphics);
+            contentHost.Controls.Add(_studioControl);
+
+            btnGpu.Click += (s, e) =>
+            {
+                _studioControl.Visible = false;
+                splitGraphics.Visible = true;
+                splitGraphics.BringToFront();
+                btnGpu.ForeColor = Color.FromArgb(0, 229, 255);
+                btnGpu.BackColor = Color.FromArgb(36, 45, 64);
+                btnGpu.FlatAppearance.BorderColor = Color.FromArgb(0, 229, 255);
+                btnStudio.ForeColor = Color.FromArgb(180, 190, 210);
+                btnStudio.BackColor = Color.FromArgb(26, 32, 44);
+                btnStudio.FlatAppearance.BorderColor = Color.FromArgb(50, 60, 80);
+            };
+
+            btnStudio.Click += (s, e) =>
+            {
+                splitGraphics.Visible = false;
+                _studioControl.Visible = true;
+                _studioControl.BringToFront();
+                _studioControl.Canvas.ZoomToFit();
+                btnStudio.ForeColor = Color.FromArgb(0, 229, 255);
+                btnStudio.BackColor = Color.FromArgb(36, 45, 64);
+                btnStudio.FlatAppearance.BorderColor = Color.FromArgb(0, 229, 255);
+                btnGpu.ForeColor = Color.FromArgb(180, 190, 210);
+                btnGpu.BackColor = Color.FromArgb(26, 32, 44);
+                btnGpu.FlatAppearance.BorderColor = Color.FromArgb(50, 60, 80);
+            };
+
+            rightHost.Controls.Add(contentHost);
+            rightHost.Controls.Add(viewSwitcher);
+
+            splitMain.Panel2.Controls.Add(rightHost);
             Controls.Add(splitMain);
             splitMain.BringToFront();
 
@@ -295,6 +395,38 @@ namespace ZeroPlatform.Samples.Showcase
                     _descPipeline.SetValue("TSDB Points", $"{_tsdbLogger?.TotalLoggedPoints ?? 0} (Gorilla XOR)");
                 }
             }
+        }
+
+        private static void PopulateStudioDemoGraph(ZeroPipelineStudioControl studio)
+        {
+            var cam = new CanvasNode("CameraSource", "Camera Source", "SyntheticCameraNode", "Vision", 50f, 100f);
+            cam.AddOutputPin("Frame", typeof(byte[]));
+            cam.AddOutputPin("FrameIndex", typeof(long));
+            cam.Properties["FrameRate"] = "60";
+
+            var thresh = new CanvasNode("GrayscaleConverter", "Gray Converter", "ImageThresholdNode", "Vision", 320f, 100f);
+            thresh.AddInputPin("SourceImage", typeof(byte[]));
+            thresh.AddOutputPin("BinaryImage", typeof(byte[]));
+            thresh.Properties["Threshold"] = "128";
+
+            var caliper = new CanvasNode("CaliperRake", "Edge Caliper", "MetrologyCaliperNode", "Inspection", 590f, 100f);
+            caliper.AddInputPin("Image", typeof(byte[]));
+            caliper.AddOutputPin("Measurement", typeof(InspectionResult));
+            caliper.Properties["ExpectedWidthMm"] = "30.0";
+            caliper.Properties["ToleranceMm"] = "1.5";
+
+            var tsdb = new CanvasNode("TSDB", "TSDB Storage", "TsdbStorageNode", "Storage", 860f, 100f);
+            tsdb.AddInputPin("Record", typeof(InspectionResult));
+            tsdb.Properties["RetentionDays"] = "30";
+
+            studio.Canvas.AddNode(cam);
+            studio.Canvas.AddNode(thresh);
+            studio.Canvas.AddNode(caliper);
+            studio.Canvas.AddNode(tsdb);
+
+            studio.Canvas.Connect(cam.Outputs[0], thresh.Inputs[0]);
+            studio.Canvas.Connect(thresh.Outputs[0], caliper.Inputs[0]);
+            studio.Canvas.Connect(caliper.Outputs[0], tsdb.Inputs[0]);
         }
 
         protected override void Dispose(bool disposing)

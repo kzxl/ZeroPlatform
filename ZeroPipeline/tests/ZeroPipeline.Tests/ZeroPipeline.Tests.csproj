@@ -22,5 +22,6 @@
     <ProjectReference Include="..\..\src\ZeroPipeline.Core\ZeroPipeline.Core.csproj" />
     <ProjectReference Include="..\..\src\ZeroPipeline.Nodes\ZeroPipeline.Nodes.csproj" />
     <ProjectReference Include="..\..\src\ZeroPipeline.Recipe\ZeroPipeline.Recipe.csproj" />
+    <ProjectReference Include="..\..\src\ZeroPipeline.UI\ZeroPipeline.UI.csproj" />
   </ItemGroup>
 </Project>

@@ -1,0 +1,21 @@
+<Project Sdk="Microsoft.NET.Sdk">
+  <PropertyGroup>
+    <TargetFrameworks>net462;net8.0-windows</TargetFrameworks>
+    <UseWindowsForms>true</UseWindowsForms>
+    <LangVersion>latest</LangVersion>
+    <AllowUnsafeBlocks>true</AllowUnsafeBlocks>
+    <Nullable>enable</Nullable>
+    <Description>Visual Node Canvas and Interactive Pipeline Studio for ZeroPlatform: Infinite Pan/Zoom Workspace, Bezier Noodles, Node-RED style authoring, and Live Execution Debugger.</Description>
+    <PackageTags>visual-programming;node-editor;pipeline;dag;bezier;studio;canvas;zero-dependency</PackageTags>
+    <Authors>Phong Võ</Authors>
+    <PackageLicenseExpression>MIT</PackageLicenseExpression>
+  </PropertyGroup>
+
+  <ItemGroup>
+    <ProjectReference Include="..\ZeroPipeline.Core\ZeroPipeline.Core.csproj" />
+    <ProjectReference Include="..\ZeroPipeline.Nodes\ZeroPipeline.Nodes.csproj" />
+    <ProjectReference Include="..\ZeroPipeline.Recipe\ZeroPipeline.Recipe.csproj" />
+    <ProjectReference Include="..\..\..\ZeroUI\src\ZeroUI.Core\ZeroUI.Core.csproj" />
+    <ProjectReference Include="..\..\..\ZeroUI\src\ZeroUI.WinForms\ZeroUI.WinForms.csproj" />
+  </ItemGroup>
+</Project>
