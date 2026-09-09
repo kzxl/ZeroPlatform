@@ -4,8 +4,8 @@
 > **Architect:** Phong Võ  
 > **Target Runtimes:** `.NET Framework 4.6.2`, `.NET Standard 2.0`, `.NET 8.0 / 9.0+ Windows & Headless`  
 > **Core Principles:** Zero External Dependencies • Zero Runtime GC Pressure • Hardware-Accelerated High-Throughput  
-> **Last Updated:** 2026-09-08  
-> **Active Sprint:** Phase 5 — `ZeroData` & `ZeroSignal` (`ZeroTensor` & `ZeroNeural` Completed)  
+> **Last Updated:** 2026-09-09  
+> **Active Sprint:** Phase 11 — Enterprise Hardening & Unified Industrial Pipeline (Phases 1–10 Completed: 610/610 Tests Pass)  
 
 ---
 
@@ -158,61 +158,257 @@ General Matrix Multiplication ($C = \alpha AB + \beta C$) is implemented with a 
 ---
 
 ### 3. `ZeroData` — Columnar DataFrame Engine *(Polars / Arrow Equivalent)*
-- Column-oriented memory structures storing primitive vectors (`float[]`, `int[]`, `DateTime[]`) contiguously.
-- Zero-copy slicing, SIMD-accelerated filtering (`Where`), and sorting (`QuickSort` with SIMD pivot evaluation).
-- High-frequency temporal window resampling (`Resample(timeCol, valCol, window, agg)`).
-- Direct data feeding into `ZeroUI` virtualized grids, handling 10,000,000+ records at a fixed 60 FPS refresh rate.
+
+`ZeroData` delivers an in-memory columnar table engine optimized for high-throughput temporal data manipulation, relational aggregation, and zero-copy rendering.
+
+#### A. Column-Oriented Memory Model & Contiguous Chunk Layout
+- **Contiguous Primitive Chunks (`DataColumn<T>`)**: Data is laid out contiguously by column rather than row (Row-Oriented / AoS $\to$ Columnar / SoA). Primitive numeric arrays (`float[]`, `double[]`, `int[]`, `long[]`, `DateTime[]`) are stored without boxing.
+- **Cache Locality**: Sequential scans and aggregations traverse contiguous CPU memory lines without cache eviction from unrelated column attributes.
+- **Null Bitmap Tracking**: Optional null tracking through bit-packed byte vectors ($1 \text{ bit per element}$), avoiding nullable reference wrapper overhead.
+
+#### B. Vectorized SIMD Filtering & Zero-Copy Boolean Masking
+- **SIMD Mask Evaluation**: Evaluates row filter predicates ($A > \text{threshold}$) using vectorized SIMD comparators to yield boolean bitmasks.
+- **Zero-Copy Filter Extraction (`df.Filter(mask)`)**: Copies only the matching rows into newly packed contiguous columns in parallel across all table attributes simultaneously.
+- **Vectorized Aggregators**: Column reduction primitives (`Sum`, `Mean`, `Min`, `Max`, `StdDev`) utilize SIMD unrolled vector accumulators.
+
+#### C. Relational Multi-Column GroupBy & Temporal Resampling
+- **Hash-Partitioned Grouping (`GroupBy`)**: Employs an ultra-fast hash partition map over composite column keys to compute grouped aggregations (`Count`, `Mean`, `Sum`) in a single pass.
+- **High-Frequency Temporal Window Resampling (`Resample`)**:
+  - Partitions variable-frequency sensor telemetry into discrete time buckets ($T_{\text{bucket}} = \lfloor \frac{t - t_0}{\Delta t} \rfloor \cdot \Delta t$).
+  - Evaluates configurable reduction operators per bucket (First, Last, Mean, Min, Max, Count).
+
+#### D. ZeroUI Virtual Mode Adapter (`ZeroDataVirtualProvider`)
+- Serves as an $O(1)$ zero-copy random-access virtual data source directly feeding `ZeroUI` virtualized grid and telemetry controls, effortlessly rendering tables exceeding 10,000,000 rows at 60 FPS without memory replication.
 
 ---
 
 ### 4. `ZeroSignal` — Industrial Digital Signal Processing & Optimization *(SciPy Equivalent)*
-- IIR/FIR filter synthesis: Butterworth, Chebyshev, Bessel poles and zeros computation via Bilinear Transform.
-- Direct Form II Transposed Second-Order Sections (SOS) with steady-state initialization.
-- Zero-phase bidirectional filtering (`FiltFilt`) eliminating phase lag in sensor telemetry.
-- Orthonormal Discrete Wavelet Transform (DWT/IDWT) with Mallat pyramid decomposition and VisuShrink thresholding.
-- Non-linear least squares optimization (*Levenberg-Marquardt*) for camera calibration and multi-axis kinematic fitting.
+
+`ZeroSignal` provides deterministic, real-time DSP filters, time-frequency wavelets, and non-linear regression solvers designed for continuous edge sensor telemetry.
+
+#### A. Direct Form II Transposed Second-Order Sections (SOS)
+Any high-order digital filter is factored into a cascade of numerically stable Second-Order Sections (biquads):
+
+$$H(z) = \prod_{k=1}^K g_k \frac{b_{0,k} + b_{1,k} z^{-1} + b_{2,k} z^{-2}}{1 + a_{1,k} z^{-1} + a_{2,k} z^{-2}}$$
+
+- **Direct Form II Transposed State-Space Equations**:
+  $$y[n] = b_0 x[n] + w_1[n-1]$$
+  $$w_1[n] = b_1 x[n] - a_1 y[n] + w_2[n-1]$$
+  $$w_2[n] = b_2 x[n] - a_2 y[n]$$
+- **Steady-State Initial Conditions**: Calculates steady-state state registers ($w_1, w_2$) to eliminate startup step-response transients at $t = 0$.
+
+#### B. Zero-Phase Forward-Backward Bidirectional Filtering (`FiltFilt`)
+- Filters input signal $x[n]$ in the forward time direction to produce $y_{\text{fwd}}[n]$.
+- Reverses $y_{\text{fwd}}[n]$, filters through the same cascaded sections, and reverses back to produce $y[n]$.
+- **Phase Invariant**: Net phase distortion is identically zero ($\angle H_{\text{total}}(e^{j\omega}) \equiv 0$), while magnitude response is squared ($|H_{\text{total}}(e^{j\omega})| = |H(e^{j\omega})|^2$).
+- **Boundary Extension**: Implements odd-reflection padding at boundaries to suppress endpoint edge transients.
+
+#### C. Discrete Wavelet Transform (DWT/IDWT) & VisuShrink Denoising
+- **Orthonormal Filter Banks**: Supports Haar, Daubechies 2 (`db2`), and Daubechies 4 (`db4`) scaling ($h$) and wavelet ($g$) quadrature mirror filters.
+- **Mallat Pyramid Decomposition**: Recursively decomposes low-frequency approximation coefficients down to level $J$.
+- **Universal VisuShrink Thresholding**:
+  $$\lambda = \hat{\sigma} \sqrt{2 \ln N}, \quad \hat{\sigma} = \frac{\text{median}(|d_1|)}{0.6745}$$
+  Applies soft/hard shrinkage to detail coefficients to remove high-frequency sensor noise while preserving sharp edge transients.
+
+#### D. Non-Linear Least Squares Solver (Levenberg-Marquardt)
+Solves non-linear parameter estimation problems $\min_p \frac{1}{2} \|f(p) - y\|^2$ via adaptive interpolation between Gauss-Newton and Gradient Descent:
+
+$$\left( J^T J + \lambda \operatorname{diag}(J^T J) \right) \Delta p = -J^T r$$
+
+- **Finite-Difference Jacobian ($J$)**: Evaluates central or forward difference approximations per parameter.
+- **Adaptive Marquardt Damping ($\lambda$)**: Multiplies $\lambda$ by $\nu$ upon step rejection, or divides upon successful descent, achieving rapid global convergence.
 
 ---
 
 ### 5. `ZeroInference` — Lightweight Edge AI Inference Engine *(ONNX Runtime Equivalent)*
-- **Static Arena Memory Planner**: Pre-computes tensor lifetimes during topological compilation to reuse buffer memory offsets, guaranteeing zero heap allocations during high-frequency camera inference (100–500 FPS).
-- **Operator Layer Fusion**: Automatically fuses `Conv2D + BatchNorm` (folding scale/variance into convolution kernel weights and bias) and `Conv2D + ReLU` in-place.
-- **Symmetric INT8 Quantization**: Quantizes FP32 weights and activations into 8-bit signed integers ($x_{\text{int8}} = \text{clamp}(\text{round}(x / S), -128, 127)$) with integer matrix multiplication (`MatMulInt8`) and scale dequantization.
-- **`.zeromodel` Binary File Format**: Fast, portable, zero-dependency serialization format storing graph topology, layer attributes, and unaligned weights without protocol buffer overhead.
-- **Accelerated Vision Post-Processing**: Fast Intersection over Union (IoU) calculation and Non-Maximum Suppression (NMS) with score thresholding for bounding box filtering.
+
+`ZeroInference` compiles neural computation graphs into static execution sessions optimized for sub-millisecond edge vision inference with zero runtime heap allocation.
+
+#### A. Static Arena Memory Planner & Zero-Alloc Invariant
+- **Lifetime Analysis**: Performs backward and forward graph traversals to compute the birth step $b_i$ and death step $d_i$ of every intermediate activation tensor.
+- **Static Arena Offset Allocation**: Solves 1D memory interval layout packing to reuse buffer memory offsets between non-overlapping tensor lifetimes:
+  $$[b_i, d_i] \cap [b_j, d_j] = \emptyset \implies \text{Offset}(T_i) \text{ and } \text{Offset}(T_j) \text{ can share memory}$$
+- **Runtime Invariant**: Guarantees zero heap GC allocations during continuous camera frame inference cycles (100–500 FPS).
+
+#### B. Operator Layer Fusion Algebra
+Optimizes graph topology by folding adjacent layers:
+1. **Convolution + Batch Normalization Fold**:
+   $$W_{\text{fused}} = W \cdot \frac{\gamma}{\sqrt{\sigma^2 + \epsilon}}, \quad B_{\text{fused}} = (B - \mu) \cdot \frac{\gamma}{\sqrt{\sigma^2 + \epsilon}} + \beta$$
+   Eliminates explicit `BatchNorm` nodes from the execution graph entirely.
+2. **Convolution + Activation In-Place Fusion**: Fuses subsequent `ReLU` activation directly into the output write loop of `Conv2D`, saving full-frame memory round-trips.
+
+#### C. Symmetric INT8 Quantization & Dequantization
+- **Scale Factor Computation**:
+  $$S = \frac{\max(|x|)}{127}$$
+- **Quantization Mapping**:
+  $$x_{\text{int8}} = \operatorname{clamp}\left(\operatorname{round}\left(\frac{x}{S}\right), -128, 127\right)$$
+- **Integer Matrix Multiplication (`MatMulInt8`)**: Accumulates 8-bit integer multiplications into 32-bit integer registers, followed by floating-point scale multiplication $S_A S_B$, yielding up to 4x throughput on CPU SIMD units.
+
+#### D. Portable `.zeromodel` Binary Serialization
+- Direct binary format storing graph topological metadata, node kind descriptors, attribute dictionaries, and contiguous weight buffers.
+- Zero dependency on external serialization libraries (e.g. Protocol Buffers, FlatBuffers, JSON).
+
+#### E. Accelerated Computer Vision Post-Processing
+- **Vectorized Intersection over Union (IoU)**: Evaluates bounding box overlap areas via SIMD coordinates.
+- **Fast Non-Maximum Suppression (FastNMS)**: Suppresses redundant overlapping bounding boxes based on classification score rankings in $O(M^2)$ time where $M \ll N$.
 
 ---
 
 ### 6. `ZeroGeometry` — 3D Spatial Computing & Point Cloud Registration *(Open3D / Clipper Equivalent)*
-- **High-Performance 3D Spatial Partitioning (`KdTree3D`)**: $O(N \log N)$ balanced median tree construction with exact Euclidean nearest neighbor and $k$-NN radius queries.
-- **Point Cloud Filtering & Preprocessing**: Voxel Grid decimation filter for uniform downsampling, and Statistical Outlier Removal (SOR) based on mean neighbor distance distributions.
-- **Point-to-Point Iterative Closest Point (ICP)**: Rigid body transformation alignment between 3D point clouds using Arun's Singular Value Decomposition (SVD) with reflection handling ($\det(R) > 0$).
-- **2D Computational Geometry (`Polygon2D`)**: Sutherland-Hodgman polygon clipping against arbitrary convex polygons, and outward/inward polygon offsetter for inspection dilation/erosion zones.
+
+`ZeroGeometry` provides algorithms for 3D point cloud filtering, spatial search trees, 3D rigid body registration, and 2D polygon clipping.
+
+#### A. 3D Spatial Partitioning (`KdTree3D`)
+- **Median Balanced Construction**: Recursively partitions 3D points $(x, y, z)$ cycling coordinate axes $(X \to Y \to Z \to X)$ using $O(N)$ median selection, yielding a strictly balanced $O(N \log N)$ tree depth.
+- **Euclidean Nearest Neighbor & Radius Search**: Prunes non-candidate subtrees using hypersphere bounding checks:
+  $$|p_{\text{split}} - q_{\text{split}}| \ge R_{\text{best}} \implies \text{prune opposite branch}$$
+
+#### B. Point Cloud Decimation & Outlier Removal
+- **Voxel Grid Filter**: Partitions 3D bounding volume into regular cubic voxels of side length $V_s$. Points falling within the same voxel index are collapsed into their Euclidean centroid, achieving uniform point cloud decimation.
+- **Statistical Outlier Removal (SOR)**:
+  - Queries $k$-nearest neighbors for every point and computes mean neighbor distance $\bar{d}_i$.
+  - Computes global mean $\mu_d$ and standard deviation $\sigma_d$.
+  - Prunes points where $\bar{d}_i > \mu_d + \alpha \cdot \sigma_d$, removing airborne dust, optical glare, and sensor noise.
+
+#### C. Arun's SVD Point-to-Point Iterative Closest Point (ICP)
+Finds the optimal rigid transformation $(R, t)$ minimizing $\sum \|R p_i + t - q_i\|^2$:
+1. Center point sets to centroids: $x_i = p_i - \bar{p}, \quad y_i = q_i - \bar{q}$.
+2. Compute cross-covariance matrix: $H = \sum_{i=1}^N x_i y_i^T$.
+3. Compute Singular Value Decomposition: $H = U \Sigma V^T$.
+4. Calculate optimal rotation with reflection check:
+   $$R = V \begin{pmatrix} 1 & 0 & 0 \\ 0 & 1 & 0 \\ 0 & 0 & \det(V U^T) \end{pmatrix} U^T$$
+5. Calculate optimal translation: $t = \bar{q} - R \bar{p}$.
+
+#### D. Sutherland-Hodgman Polygon Clipper & Offsetter
+- **Convex Polygon Clipping**: Clips arbitrary 2D subject polygons against convex clip polygons in $O(V_{\text{subject}} \cdot V_{\text{clip}})$ time.
+- **Normal Offset Expansion/Erosion**: Computes vertex normal bisectors to inward-erode or outward-dilate polygon boundaries for industrial toolpath offset and inspection zones.
 
 ---
 
 ### 7. `ZeroComm` — Industrial Protocols & High-Speed Edge Framing *(Industrial Gateway)*
-- **Modbus Protocol Suite (RTU & TCP)**: Full implementation of function codes (01, 02, 03, 04, 05, 06, 15, 16), MBAP header management, and exception handling without third-party drivers.
-- **Mitsubishi MC Protocol (3E Binary Frame)**: Direct binary Ethernet communication with Q/L/iQ-R and FX5U PLCs supporting batch word/bit read and write operations on D, W, M, X, Y devices.
-- **Omron FINS Protocol**: Direct Ethernet/UDP communication with Omron CJ/CS/NJ/NX series PLCs supporting DM, CIO, WR, and HR memory area access.
-- **Zero-Allocation Circular Ring Buffer & Streaming Parser**: High-throughput circular streaming buffer with non-allocating sliding packet extraction for handling fragmented and coalesced TCP/Serial socket streams.
-- **Hardware-Accelerated Checksums**: 256-entry precomputed lookup table engines for Modbus CRC16, CCITT CRC16, and IEEE 802.3 CRC32.
+
+`ZeroComm` implements direct Ethernet/Serial fieldbus protocol parsers and sliding ring buffer frame extractors without third-party communication drivers.
+
+#### A. Zero-Allocation Circular Ring Buffer & Streaming Frame Parser
+- **Contiguous Memory Slicing**: Flat backing buffer with write/read cursor wraps.
+- **Non-Allocating Frame Extraction**: Employs sliding inspection windows (`ReadOnlySpan<byte>`) to identify delimiters and headers, extracting full packets directly into stack or pool buffers without heap allocation.
+
+#### B. Hardware-Accelerated Lookup Table Checksums
+- **Modbus CRC16 & CCITT CRC16**: 256-word precomputed lookup tables processing byte streams with XOR operations.
+- **IEEE 802.3 CRC32**: Standard Ethernet and file validation checksum table engine.
+
+#### C. Industrial Protocol Codecs
+- **Modbus (RTU & TCP)**: Request/Response serialization for Discrete Inputs, Coils, Input Registers, and Holding Registers (FC 01–06, 15, 16) with MBAP transaction synchronization.
+- **Mitsubishi MELSEC MC Protocol (3E Binary Frame)**: Batch word/bit read and write commands over TCP/UDP targeting D, W, R, M, X, Y PLC devices.
+- **Omron FINS Protocol**: Direct binary Ethernet/UDP frame management supporting DM, CIO, WR, and HR memory areas with network routing parameters.
 
 ---
 
 ### 8. `ZeroStorage` — High-Throughput Time-Series Store & Columnar Persistence *(Gorilla TSDB)*
-- **Facebook Gorilla Compression Engine**:
-  - **Timestamp Compression**: Delta-of-Delta ($DOD = (t_i - t_{i-1}) - (t_{i-1} - t_{i-2})$) variable-length bit encoding (1 to 36 bits per sample).
-  - **Floating-Point Value Compression**: IEEE 754 XOR floating point compression with leading/trailing zero block reuse, achieving over 30x compression on industrial sensor feeds without precision loss.
-- **Memory-Mapped Columnar Log (`MemoryMappedTimeSeriesLog`)**: Zero-copy disk persistence utilizing .NET `MemoryMappedFiles`, appending fixed-overhead chunk headers with random-access range queries.
+
+`ZeroStorage` implements Facebook Gorilla time-series compression algorithms and memory-mapped file persistence for continuous factory telemetry logging.
+
+#### A. Facebook Gorilla Bit-Level Variable-Length Compression Model
+- **BitStreamWriter & BitStreamReader**: Low-level bit packing supporting arbitrary bit lengths ($1$ to $64$ bits) across byte boundaries.
+
+#### B. Delta-of-Delta Timestamp Compression
+For consecutive timestamps $t_0, t_1, t_2, \dots$:
+1. Compute first difference: $D_i = t_i - t_{i-1}$.
+2. Compute second difference (Delta-of-Delta): $DOD_i = D_i - D_{i-1}$.
+3. Encode $DOD_i$ with variable-length prefix codes:
+   - If $DOD_i = 0$: store `'0'` (1 bit).
+   - If $-63 \le DOD_i \le 64$: store `'10'` followed by 7 bits (9 bits total).
+   - If $-255 \le DOD_i \le 256$: store `'110'` followed by 9 bits (12 bits total).
+   - If $-2047 \le DOD_i \le 2048$: store `'1110'` followed by 12 bits (16 bits total).
+   - Otherwise: store `'1111'` followed by 32 bits (36 bits total).
+
+#### C. IEEE 754 XOR Floating-Point Value Compression
+For consecutive 64-bit IEEE 754 values $v_i, v_{i-1}$:
+1. Compute XOR diff: $X_i = v_i \oplus v_{i-1}$.
+2. If $X_i = 0$: store `'0'` (1 bit).
+3. If $X_i \ne 0$: store `'1'`, followed by:
+   - If leading/trailing zero counts match previous XOR: store `'0'`, followed by significant bits.
+   - If leading/trailing zero counts differ: store `'1'`, followed by 5 bits (leading zeroes), 6 bits (length), and significant bits.
+- **Compression Ratio**: Exceeds **30x** on industrial sensor measurements without loss of floating-point precision.
+
+#### D. Memory-Mapped Append-Only Columnar Persistence
+- Appends fixed-length chunk blocks directly to disk using `MemoryMappedFiles`.
+- Precomputes block statistics (`StartTime`, `EndTime`, `Min`, `Max`, `Sum`) to enable rapid index pruning during time-range queries.
 
 ---
 
 ### 9. `ZeroCompute` — Hardware Compute & GPU BLAS Acceleration *(DirectX 11 HLSL / SIMD)*
-- **Unified Compute Abstraction (`IComputeContext`)**: Single API surface supporting multi-threaded SIMD CPU parallel execution and Direct3D 11 Compute Shader GPU dispatch.
-- **Cache-Blocked Tiled GEMM Engine**: $64 \times 64$ L1/L2 cache tiling with 4-way loop unrolling and multi-threaded parallelization over M-blocks.
-- **Vectorized Element-Wise BLAS & Activations**: Hardware-vectorized operations for Add, Multiply, Scale, ReLU, LeakyReLU, GELU, Sigmoid, Tanh, and Softmax.
-- **Multi-Dimensional Reductions**: Generic axis reductions (`ReduceSum`, `ReduceMax`) supporting arbitrary tensor shapes and dimensions.
+
+`ZeroCompute` provides hardware compute kernel execution across multi-core CPU SIMD units and Direct3D 11 Compute Shaders.
+
+#### A. Unified Compute Abstraction (`IComputeContext`)
+- Single unified API surface for tensor operations, supporting CPU multi-threading and GPU hardware dispatch interchangeably.
+
+#### B. Cache-Blocked Multi-Threaded Tiled GEMM
+- **Hierarchical Cache Tiling**: $64 \times 64$ sub-matrix blocking fitted inside L1/L2 data cache.
+- **Inner SIMD Loop Unrolling**: 4-way unrolled inner accumulation using `Vector<float>`.
+- **Parallel Dispatch**: Partitions row blocks across CPU threads via work-stealing scheduling.
+
+#### C. Vectorized Element-Wise BLAS & Activations
+- Parallelized element-wise primitives (`Add`, `Multiply`, `Scale`).
+- Vectorized activation functions: `ReLU`, `LeakyReLU`, `GELU`, `Sigmoid`, `Tanh`, and `Softmax`.
+
+#### D. Multi-Dimensional Axis Reductions
+- Optimized strided reductions (`ReduceSum`, `ReduceMax`) over arbitrary tensor dimensions.
+
+---
+
+### 10. Unified Cross-Module Industrial Pipeline Architecture
+
+The 10 subsystems of ZeroPlatform interconnect to form an end-to-end industrial data processing and visualization pipeline:
+
+```
+┌──────────────────────────────────────────────────────────────────────────────────────────────────────────────────┐
+│                                     ZeroPlatform Unified Industrial Pipeline                                     │
+└──────────────────────────────────────────────────────────────────────────────────────────────────────────────────┘
+   │
+   ▼
+┌───────────────────────────┐      High-Speed Socket      ┌───────────────────────────┐
+│     ZeroComm (Edge)       │ ──────────────────────────► │  ZeroStorage (Gorilla)    │
+│  Modbus / MC / FINS       │                             │  MMF Time-Series Store    │
+└───────────────────────────┘                             └───────────────────────────┘
+   │                                                             │
+   │ Raw Frames / Telemetry                                      │ Zero-Copy Read
+   ▼                                                             ▼
+┌───────────────────────────┐      SIMD Conditioning      ┌───────────────────────────┐
+│     ZeroSignal (DSP)      │ ──────────────────────────► │     ZeroData (Polars)     │
+│  SOS IIR / FiltFilt / DWT │                             │  Columnar Table / Resample│
+└───────────────────────────┘                             └───────────────────────────┘
+   │                                                             │
+   │ Calibrated Measurements                                     │ Virtual Grid Data
+   ▼                                                             ▼
+┌───────────────────────────┐      DMA Zero-Copy Share    ┌───────────────────────────┐
+│   ZeroGraphics (Vision)   │ ◄────────────────────────── │    ZeroUI (Industrial)    │
+│  Camera DMA / NCC / D3D11 │                             │  Docking / Grids / Cards  │
+└───────────────────────────┘                             └───────────────────────────┘
+   │
+   │ Image Frame Buffers
+   ▼
+┌───────────────────────────┐      VRAM / SIMD Memory     ┌───────────────────────────┐
+│    ZeroTensor (NumPy)     │ ──────────────────────────► │   ZeroCompute (cuBLAS)    │
+│  N-D Arrays / GEMM SVD    │                             │  Tiled GEMM / GPU Dispatch│
+└───────────────────────────┘                             └───────────────────────────┘
+   │                                                             │
+   │ Formatted Input Tensors                                     │ Accelerated Matrix Ops
+   ▼                                                             ▼
+┌───────────────────────────┐      Bounding Boxes / Masks ┌───────────────────────────┐
+│  ZeroInference (ONNX RT)  │ ──────────────────────────► │   ZeroGeometry (3D/2D)    │
+│  Static Arena / NMS / INT8│                             │  KdTree / ICP / Clipper   │
+└───────────────────────────┘                             └───────────────────────────┘
+   │                                                             │
+   └───────────────────────────────┬─────────────────────────────┘
+                                   │ Spatial Inspection Results
+                                   ▼
+                        ┌───────────────────────────┐
+                        │    ZeroUI & Inspection    │
+                        │   Real-Time 60 FPS View   │
+                        └───────────────────────────┘
+```
 
 ---
 
@@ -372,6 +568,35 @@ Current Status Legend:
   - [x] `BlasEngine.Add`, `Multiply`: High-throughput parallel arithmetic
   - [x] `BlasEngine.Activation`: ReLU, LeakyReLU, GELU, Sigmoid, Tanh, and Softmax
   - [x] `BlasEngine.ReduceSum`, `ReduceMax`: Arbitrary rank multi-dimensional axis reductions [6/6 tests pass (100%)]
+
+### Phase 11: Enterprise Ecosystem Deepening & Production Hardening (ACTIVE / PLANNED)
+- [/] **Cross-Subsystem Pipeline Integration**:
+  - [ ] End-to-end edge telemetry pipeline (`ZeroComm` $\to$ `ZeroStorage` $\to$ `ZeroSignal` $\to$ `ZeroData` $\to$ `ZeroUI`)
+  - [ ] End-to-end edge vision inspection pipeline (`ZeroGraphics` $\to$ `ZeroTensor` $\to$ `ZeroCompute` $\to$ `ZeroInference` $\to$ `ZeroGeometry` $\to$ `ZeroUI`)
+  - [ ] Comprehensive End-to-End Test Suite verifying multi-module handoffs without GC allocation
+- [ ] **`ZeroComm` Network & Serial Transport Layer**:
+  - [ ] Async TCP Client (`AsyncTcpTransport`) with auto-reconnection, circular buffer reception, and keep-alive
+  - [ ] Serial Port stream driver (`AsyncSerialTransport`) for RS-232/RS-485 Modbus RTU communication
+  - [ ] High-throughput asynchronous request-response dispatcher with timeout cancellation
+- [ ] **`ZeroCompute` Direct3D 11 Hardware Compute Engine**:
+  - [ ] Direct3D 11 Compute Shader Dispatcher (`D3D11ComputeContext`) leveraging DX11 `CSSetShader` & `Dispatch`
+  - [ ] Zero-copy GPU `StructuredBuffer` mapping bridging `ZeroGraphics` VRAM texture surfaces to `ZeroTensor`
+- [ ] **`ZeroInference` Model Parser & Advanced Execution**:
+  - [ ] Pure C# ONNX binary model parser without Google.Protobuf dependency
+  - [ ] Direct import of standard ONNX model weights and operator graph into native `.zeromodel`
+  - [ ] Thread-safe execution session pool for multi-camera parallel inference
+- [ ] **`ZeroStorage` Durability & Tiered Compaction**:
+  - [ ] High-durability append-only Write-Ahead Log (WAL) with CRC32 integrity verification
+  - [ ] Background multi-block compaction & tiered cold storage archiving
+- [ ] **`ZeroGeometry` 3D Surface Reconstruction & Advanced Meshing**:
+  - [ ] 3D Normal Vector Estimation via local covariance eigenanalysis
+  - [ ] 2D Delaunay Triangulation & Voronoi Diagrams for metrology inspection zones
+- [ ] **`ZeroData` Parquet/Arrow Interop & Relational Joins**:
+  - [ ] Apache Arrow IPC streaming format zero-copy reader
+  - [ ] SIMD-accelerated Hash Join (Inner, Left, Outer) across dataframes
+- [ ] **`ZeroSignal` Time-Frequency Spectral & Multi-Rate DSP**:
+  - [ ] Short-Time Fourier Transform (STFT) & Spectrogram computation
+  - [ ] Multi-rate Polyphase FIR decimation/interpolation & Extended Kalman Filter (EKF)
 
 ---
 
