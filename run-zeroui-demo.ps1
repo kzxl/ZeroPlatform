@@ -11,7 +11,7 @@
 #>
 
 param(
-    [ValidateSet('winforms', 'wpf', 'showcase', 'graphics')]
+    [ValidateSet('winforms', 'wpf', 'showcase', 'graphics', 'record')]
     [string]$Demo,
     [ValidateSet('net8.0-windows', 'net462')]
     [string]$Framework = 'net8.0-windows'
@@ -40,18 +40,27 @@ if (-not $Demo) {
     Write-Host "  [2] ZeroUI WPF Demo (Modern WPF Controls & Dark Mode)" -ForegroundColor White
     Write-Host "  [3] ZeroPlatform Full Showcase (ZeroUI + ZeroGraphics Direct2D/DirectX + Pipeline)" -ForegroundColor White
     Write-Host "  [4] ZeroGraphics Metrology & Hardware Demo (Direct2D/D3D11 & Vision)" -ForegroundColor White
+    Write-Host "  [5] Ghi hình Live Demo Video tự động (In-Process Frame Recorder -> MP4/GIF)" -ForegroundColor Magenta
     Write-Host "  [Q] Thoát" -ForegroundColor Gray
     Write-Host ""
-    $choice = Read-Host "Nhập lựa chọn (1, 2, 3, 4) [Mặc định: 1]"
+    $choice = Read-Host "Nhập lựa chọn (1, 2, 3, 4, 5) [Mặc định: 1]"
 
     switch ($choice.Trim()) {
         "2" { $Demo = "wpf" }
         "3" { $Demo = "showcase" }
         "4" { $Demo = "graphics" }
+        "5" { $Demo = "record" }
         "q" { exit 0 }
         "Q" { exit 0 }
         default { $Demo = "winforms" }
     }
+}
+
+if ($Demo -eq "record") {
+    Write-Host "[+] Đang khởi chạy In-Process Live Video Recording ($WinFormsDemoPath)..." -ForegroundColor Magenta
+    Write-Host "-----------------------------------------------------------------" -ForegroundColor Gray
+    dotnet run --project "$WinFormsDemoPath" -c Debug -- --record-live-demo
+    exit $LASTEXITCODE
 }
 
 $targetProj = switch ($Demo) {
