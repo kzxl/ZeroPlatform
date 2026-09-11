@@ -9,7 +9,7 @@
 
 Engineered around the **Multi-Repository Satellite Architecture**, all 12 subsystems operate as completely independent repositories with independent release lifecycles and CI/CD pipelines, unified under this workspace orchestrator.
 
-👉 **[Read the Full Ecosystem Architecture & Repository Matrix](docs/ZERO_PLATFORM_ECOSYSTEM.md)**
+👉 **[Read the Full Ecosystem Architecture Specification](docs/architect/platform-architecture.md)** | **[Subsystem Catalog](docs/ZERO_PLATFORM_ECOSYSTEM.md)**
 
 ---
 
