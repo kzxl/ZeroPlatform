@@ -18,8 +18,8 @@
   </ItemGroup>
 
   <ItemGroup>
-    <ProjectReference Include="..\..\..\..\ZeroPrimitives\src\ZeroPrimitives.Core\ZeroPrimitives.Core.csproj" />
-    <ProjectReference Include="..\..\..\..\ZeroData\src\ZeroData.Core\ZeroData.Core.csproj" />
-    <ProjectReference Include="..\..\..\..\ZeroStorage\src\ZeroStorage.Core\ZeroStorage.Core.csproj" />
+    <PackageReference Include="ZeroPrimitives.Core" Version="1.0.0" />
+    <PackageReference Include="ZeroData.Core" Version="1.0.0" />
+    <PackageReference Include="ZeroStorage.Core" Version="1.0.0" />
   </ItemGroup>
 </Project>
