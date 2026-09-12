@@ -74,4 +74,8 @@
     <Project Path="ZeroPrimitives/src/ZeroPrimitives.Core/ZeroPrimitives.Core.csproj" />
     <Project Path="ZeroPrimitives/tests/ZeroPrimitives.Tests/ZeroPrimitives.Tests.csproj" />
   </Folder>
+  <Folder Name="/Satellites/">
+    <Project Path="Satellites/ZeroPlatform.IoT/src/ZeroPlatform.IoT/ZeroPlatform.IoT.csproj" />
+    <Project Path="Satellites/ZeroPlatform.IoT/tests/ZeroPlatform.IoT.Tests/ZeroPlatform.IoT.Tests.csproj" />
+  </Folder>
 </Solution>

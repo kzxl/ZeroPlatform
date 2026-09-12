@@ -22,9 +22,12 @@ Satellites are modular, domain-specific extensions that build upon the core foun
 
 ## 🚀 Planned Satellites Pipeline
 
-| Satellite | Responsibility | Target Technology |
-| :--- | :--- | :--- |
-| **`ZeroPlatform.Charts`** | Financial, industrial telemetry, and Gantt charts | D3D11 LineStrip + Instanced Quads |
-| **`ZeroPlatform.IoT`** | Industrial protocol connectors (Modbus, OPC-UA, MQTT) | High-throughput memory pipeline |
-| **`ZeroPlatform.Reports`** | Document and label generation, thermal printer engine | DirectWrite vector rendering |
-| **`ZeroPlatform.AudioVisual`** | Real-time audio spectrum analyzer and video canvas | D3D11 Texture streaming |
+👉 **[Read the Full Satellite Systems Architecture & Expansion Roadmap](../../docs/architect/satellite-expansion-roadmap.md)**
+
+| Satellite | Responsibility | Target Technology | Status |
+| :--- | :--- | :--- | :---: |
+| **`ZeroPlatform.IoT`** | Industrial protocol connectors (OPC-UA Binary, MQTT 3.1.1/5.0, Sparkplug B) | High-throughput memory pipeline & Pure C# Sockets | **Active (P0)** |
+| **`ZeroPlatform.Charts`** | Financial, industrial telemetry, Gantt charts, and 3D heatmaps | D3D11 LineStrip + Instanced Quads | Planned (P1) |
+| **`ZeroPlatform.Reports`** | Document and label generation, thermal printer engine (ZPL II/TSPL), vector PDF | DirectWrite vector rendering & Zero-dependency PDF | Planned (P1) |
+| **`ZeroPlatform.AudioVisual`** | Real-time audio spectrum analyzer and video canvas | WASAPI + D3D11 Texture streaming | Planned (P2) |
+| **`ZeroPlatform.Twin3D`** | 3D Digital Twin, STL/OBJ CAD mesh loader, 6-axis robot kinematics | Direct3D 11 + ZeroGeometry PointCloud | Planned (P2) |
