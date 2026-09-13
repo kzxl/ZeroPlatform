@@ -172,6 +172,29 @@ namespace ZeroPlatform.Samples.Showcase
             pipelineCard.Controls.Add(_descPipeline);
             stack.Controls.Add(pipelineCard);
 
+            // 4. Industrial Satellites Expansion Card
+            var satCard = new ZeroCard
+            {
+                Title = "Satellites Subsystem",
+                Subtitle = "5 Active Industrial Expansion Clusters",
+                Width = 340,
+                Height = 175
+            };
+            var descSat = new ZeroDescriptions
+            {
+                Dock = DockStyle.Fill,
+                Columns = 1,
+                RowHeight = 24,
+                LabelColor = Color.FromArgb(150, 160, 180),
+                ValueColor = Color.FromArgb(0, 229, 255)
+            };
+            descSat.Add("IoT Protocols", "OPC-UA + MQTT 5.0 + Sparkplug");
+            descSat.Add("High-Speed Charts", "Direct3D 11 (LTTB 10M+ Pts)");
+            descSat.Add("Traceability & Reports", "Pure C# Vector PDF 1.4 + ZPL");
+            descSat.Add("Acoustic PdM & Twin3D", "STFT Spectrogram + 6-DOF DH");
+            satCard.Controls.Add(descSat);
+            stack.Controls.Add(satCard);
+
             leftPanel.Controls.Add(stack);
             splitMain.Panel1.Controls.Add(leftPanel);
 
@@ -205,17 +228,31 @@ namespace ZeroPlatform.Samples.Showcase
 
             var btnStudio = new Button
             {
-                Text = "🔗 ZeroPipeline Visual Studio",
+                Text = "🔗 ZeroPipeline Studio",
                 FlatStyle = FlatStyle.Flat,
                 ForeColor = Color.FromArgb(180, 190, 210),
                 BackColor = Color.FromArgb(26, 32, 44),
                 Font = new Font("Segoe UI", 8.25f, FontStyle.Bold),
                 Dock = DockStyle.Left,
-                Width = 220,
+                Width = 180,
                 Cursor = Cursors.Hand
             };
             btnStudio.FlatAppearance.BorderColor = Color.FromArgb(50, 60, 80);
 
+            var btnSatellites = new Button
+            {
+                Text = "🛰️ Satellites Hub",
+                FlatStyle = FlatStyle.Flat,
+                ForeColor = Color.FromArgb(180, 190, 210),
+                BackColor = Color.FromArgb(26, 32, 44),
+                Font = new Font("Segoe UI", 8.25f, FontStyle.Bold),
+                Dock = DockStyle.Left,
+                Width = 180,
+                Cursor = Cursors.Hand
+            };
+            btnSatellites.FlatAppearance.BorderColor = Color.FromArgb(50, 60, 80);
+
+            viewSwitcher.Controls.Add(btnSatellites);
             viewSwitcher.Controls.Add(btnStudio);
             viewSwitcher.Controls.Add(btnGpu);
 
@@ -270,35 +307,52 @@ namespace ZeroPlatform.Samples.Showcase
                 _studioControl.AttachExecutor(_pipelineExecutor);
             }
 
+            // View 3: Industrial Satellites Hub
+            var satellitesView = new SatellitesHubView
+            {
+                Dock = DockStyle.Fill,
+                Visible = false
+            };
+
             contentHost.Controls.Add(splitGraphics);
             contentHost.Controls.Add(_studioControl);
+            contentHost.Controls.Add(satellitesView);
 
-            btnGpu.Click += (s, e) =>
+            void SelectView(Button activeBtn, Control activeControl)
             {
+                splitGraphics.Visible = false;
                 _studioControl.Visible = false;
-                splitGraphics.Visible = true;
-                splitGraphics.BringToFront();
-                btnGpu.ForeColor = Color.FromArgb(0, 229, 255);
-                btnGpu.BackColor = Color.FromArgb(36, 45, 64);
-                btnGpu.FlatAppearance.BorderColor = Color.FromArgb(0, 229, 255);
-                btnStudio.ForeColor = Color.FromArgb(180, 190, 210);
-                btnStudio.BackColor = Color.FromArgb(26, 32, 44);
-                btnStudio.FlatAppearance.BorderColor = Color.FromArgb(50, 60, 80);
-            };
+                satellitesView.Visible = false;
+
+                activeControl.Visible = true;
+                activeControl.BringToFront();
+
+                foreach (var b in new[] { btnGpu, btnStudio, btnSatellites })
+                {
+                    if (b == activeBtn)
+                    {
+                        b.ForeColor = Color.FromArgb(0, 229, 255);
+                        b.BackColor = Color.FromArgb(36, 45, 64);
+                        b.FlatAppearance.BorderColor = Color.FromArgb(0, 229, 255);
+                    }
+                    else
+                    {
+                        b.ForeColor = Color.FromArgb(180, 190, 210);
+                        b.BackColor = Color.FromArgb(26, 32, 44);
+                        b.FlatAppearance.BorderColor = Color.FromArgb(50, 60, 80);
+                    }
+                }
+            }
+
+            btnGpu.Click += (s, e) => SelectView(btnGpu, splitGraphics);
 
             btnStudio.Click += (s, e) =>
             {
-                splitGraphics.Visible = false;
-                _studioControl.Visible = true;
-                _studioControl.BringToFront();
+                SelectView(btnStudio, _studioControl);
                 _studioControl.Canvas.ZoomToFit();
-                btnStudio.ForeColor = Color.FromArgb(0, 229, 255);
-                btnStudio.BackColor = Color.FromArgb(36, 45, 64);
-                btnStudio.FlatAppearance.BorderColor = Color.FromArgb(0, 229, 255);
-                btnGpu.ForeColor = Color.FromArgb(180, 190, 210);
-                btnGpu.BackColor = Color.FromArgb(26, 32, 44);
-                btnGpu.FlatAppearance.BorderColor = Color.FromArgb(50, 60, 80);
             };
+
+            btnSatellites.Click += (s, e) => SelectView(btnSatellites, satellitesView);
 
             rightHost.Controls.Add(contentHost);
             rightHost.Controls.Add(viewSwitcher);
