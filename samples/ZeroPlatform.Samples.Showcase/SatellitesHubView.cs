@@ -233,13 +233,13 @@ namespace ZeroPlatform.Samples.Showcase
         }
         #endregion
 
-        #region 2. Twin3D Section (ZeroPlatform.Twin3D)
+        #region 2. Twin3D Section (ZeroTwin3D)
         private Control BuildTwin3DSection()
         {
             var card = new ZeroCard
             {
                 Dock = DockStyle.Fill,
-                Title = "🤖 Digital Twin Kinematics (ZeroPlatform.Twin3D)",
+                Title = "🤖 Digital Twin Kinematics (ZeroTwin3D)",
                 Subtitle = "Denavit-Hartenberg 6-DOF Solver | Workcell Safety Zone"
             };
 
@@ -327,13 +327,13 @@ namespace ZeroPlatform.Samples.Showcase
         }
         #endregion
 
-        #region 3. AudioVisual Section (ZeroPlatform.AudioVisual)
+        #region 3. AudioVisual Section (ZeroAudioVisual)
         private Control BuildAudioVisualSection()
         {
             var card = new ZeroCard
             {
                 Dock = DockStyle.Fill,
-                Title = "🔊 Acoustic PdM & Audio (ZeroPlatform.AudioVisual)",
+                Title = "🔊 Acoustic PdM & Audio (ZeroAudioVisual)",
                 Subtitle = "Vibration Statistical Metrics & Rolling Bearing Fault Diagnostic"
             };
 
@@ -429,13 +429,13 @@ namespace ZeroPlatform.Samples.Showcase
         }
         #endregion
 
-        #region 4. Reports & IoT Section (ZeroPlatform.Reports & IoT)
+        #region 4. Reports & IoT Section (ZeroReports & ZeroIoT)
         private Control BuildReportsIotSection()
         {
             var card = new ZeroCard
             {
                 Dock = DockStyle.Fill,
-                Title = "🏷️ Traceability & IoT (Reports & IoT)",
+                Title = "🏷️ Traceability & IoT (ZeroReports & ZeroIoT)",
                 Subtitle = "Pure C# Vector PDF 1.4 | Thermal ZPL II / TSPL | MQTT 5.0"
             };
 
@@ -501,12 +501,12 @@ namespace ZeroPlatform.Samples.Showcase
             {
                 var report = new ReportDocument("ZERO PLATFORM INDUSTRIAL INSPECTION REPORT")
                 {
-                    Subtitle = $"Generated: {DateTime.Now:yyyy-MM-dd HH:mm:ss} | Engine: ZeroPlatform.Reports (PDF 1.4)"
+                    Subtitle = $"Generated: {DateTime.Now:yyyy-MM-dd HH:mm:ss} | Engine: ZeroReports (PDF 1.4)"
                 };
 
                 var sec1 = report.AddSection("1. Workcell & Kinematics Telemetry");
                 sec1.AddKeyValue("Machine Cell", "CNC-Alpha-09")
-                    .AddKeyValue("Controller", "ZeroPlatform 6-DOF DH Solver")
+                    .AddKeyValue("Controller", "ZeroTwin3D 6-DOF DH Solver")
                     .AddKeyValue("Safety Status", "NOMINAL (Pass)")
                     .AddSpacer(12);
 
@@ -528,7 +528,7 @@ namespace ZeroPlatform.Samples.Showcase
                 string tempPath = Path.Combine(Path.GetTempPath(), $"ZeroReport_{DateTime.Now:yyyyMMdd_HHmmss}.pdf");
                 File.WriteAllBytes(tempPath, pdfBytes);
 
-                MessageBox.Show($"Vector PDF 1.4 generated successfully ({pdfBytes.Length} bytes)!\nSaved to: {tempPath}", "ZeroPlatform.Reports", MessageBoxButtons.OK, MessageBoxIcon.Information);
+                MessageBox.Show($"Vector PDF 1.4 generated successfully ({pdfBytes.Length} bytes)!\nSaved to: {tempPath}", "ZeroReports", MessageBoxButtons.OK, MessageBoxIcon.Information);
                 Process.Start(new ProcessStartInfo(tempPath) { UseShellExecute = true });
             }
             catch (Exception ex)
