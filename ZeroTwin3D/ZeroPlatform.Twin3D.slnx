@@ -1,8 +1,0 @@
-<Solution>
-  <Folder Name="/src/">
-    <Project Path="src/ZeroPlatform.Twin3D/ZeroPlatform.Twin3D.csproj" />
-  </Folder>
-  <Folder Name="/tests/">
-    <Project Path="tests/ZeroPlatform.Twin3D.Tests/ZeroPlatform.Twin3D.Tests.csproj" />
-  </Folder>
-</Solution>

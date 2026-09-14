@@ -5,17 +5,17 @@ using System.Drawing;
 using System.IO;
 using System.Text;
 using System.Windows.Forms;
-using ZeroPlatform.AudioVisual.Acoustic;
-using ZeroPlatform.AudioVisual.Analysis;
-using ZeroPlatform.Charts.Axis;
-using ZeroPlatform.Charts.Controls;
-using ZeroPlatform.Charts.DataModels;
-using ZeroPlatform.Reports.Dom;
-using ZeroPlatform.Reports.Pdf;
-using ZeroPlatform.Reports.Thermal;
-using ZeroPlatform.Twin3D.Engine;
-using ZeroPlatform.Twin3D.Kinematics;
-using ZeroPlatform.Twin3D.Sync;
+using ZeroAudioVisual.Acoustic;
+using ZeroAudioVisual.Analysis;
+using ZeroCharts.Axis;
+using ZeroCharts.Controls;
+using ZeroCharts.DataModels;
+using ZeroReports.Dom;
+using ZeroReports.Pdf;
+using ZeroReports.Thermal;
+using ZeroTwin3D.Engine;
+using ZeroTwin3D.Kinematics;
+using ZeroTwin3D.Sync;
 using ZeroUI.WinForms.Industrial;
 using ZeroUI.WinForms.Theme;
 
@@ -114,13 +114,13 @@ namespace ZeroPlatform.Samples.Showcase
             Controls.Add(tableLayout);
         }
 
-        #region 1. Charts Section (ZeroPlatform.Charts)
+        #region 1. Charts Section (ZeroCharts)
         private Control BuildChartsSection()
         {
             var card = new ZeroCard
             {
                 Dock = DockStyle.Fill,
-                Title = "📊 High-Density Plots (ZeroPlatform.Charts)",
+                Title = "📊 High-Density Plots (ZeroCharts)",
                 Subtitle = "Direct3D 11 GPU Pipeline | LTTB Decimation | Multi-Series"
             };
 

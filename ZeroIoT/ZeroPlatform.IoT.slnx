@@ -1,8 +1,0 @@
-<Solution>
-  <Folder Name="/src/">
-    <Project Path="src/ZeroPlatform.IoT/ZeroPlatform.IoT.csproj" />
-  </Folder>
-  <Folder Name="/tests/">
-    <Project Path="tests/ZeroPlatform.IoT.Tests/ZeroPlatform.IoT.Tests.csproj" />
-  </Folder>
-</Solution>
