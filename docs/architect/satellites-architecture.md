@@ -22,7 +22,7 @@ Satellites are modular, domain-specific extensions that build upon the core foun
 
 ## 🚀 Planned Satellites Pipeline
 
-👉 **[Read the Full Satellite Systems Architecture & Expansion Roadmap](../../docs/architect/satellite-expansion-roadmap.md)**
+👉 **[Read the Full Satellite Systems Architecture & Expansion Roadmap](../../../docs/architect/satellite-expansion-roadmap.md)**
 
 | Satellite | Responsibility | Target Technology | Status |
 | :--- | :--- | :--- | :---: |
