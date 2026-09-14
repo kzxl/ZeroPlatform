@@ -26,8 +26,8 @@ Satellites are modular, domain-specific extensions that build upon the core foun
 
 | Satellite | Responsibility | Target Technology | Status |
 | :--- | :--- | :--- | :---: |
-| **`ZeroPlatform.IoT`** | Industrial protocol connectors (OPC-UA Binary, MQTT 3.1.1/5.0, Sparkplug B) | High-throughput memory pipeline & Pure C# Sockets | **Completed (P0)** |
-| **`ZeroPlatform.Charts`** | High-density telemetry plots (10M+ pts), LTTB decimation, Candle, Heatmap, Gantt | D3D11 Instanced Quads & WinForms/ZeroUI controls | **Completed (P1)** |
-| **`ZeroPlatform.Reports`** | Document and label generation, thermal printer engine (ZPL II/TSPL), vector PDF | Pure C# Vector PDF 1.4 & Industrial Thermal Codecs | **Completed (P1)** |
-| **`ZeroPlatform.AudioVisual`** | Real-time acoustic vibration monitoring, STFT Spectrogram, Bearing fault detection, RTP/H.264 | Zero-allocation Ring Buffers & Industrial RTP streaming | **Completed (P2)** |
-| **`ZeroPlatform.Twin3D`** | 3D Digital Twin, STL/OBJ CAD mesh loader, 6-axis & SCARA robot kinematics, safety zones | Pure C# 3D Math, DH Solvers & Spatial Scene Graphs | **Completed (P2)** |
+| **`ZeroIoT`** | Industrial protocol connectors (OPC-UA Binary, MQTT 3.1.1/5.0, Sparkplug B) | High-throughput memory pipeline & Pure C# Sockets | **Completed (P0)** |
+| **`ZeroCharts`** | High-density telemetry plots (10M+ pts), LTTB decimation, Candle, Heatmap, Gantt | D3D11 Instanced Quads & WinForms/ZeroUI controls | **Completed (P1)** |
+| **`ZeroReports`** | Document and label generation, thermal printer engine (ZPL II/TSPL), vector PDF | Pure C# Vector PDF 1.4 & Industrial Thermal Codecs | **Completed (P1)** |
+| **`ZeroAudioVisual`** | Real-time acoustic vibration monitoring, STFT Spectrogram, Bearing fault detection, RTP/H.264 | Zero-allocation Ring Buffers & Industrial RTP streaming | **Completed (P2)** |
+| **`ZeroTwin3D`** | 3D Digital Twin, STL/OBJ CAD mesh loader, 6-axis & SCARA robot kinematics, safety zones | Pure C# 3D Math, DH Solvers & Spatial Scene Graphs | **Completed (P2)** |
