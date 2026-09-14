@@ -75,15 +75,15 @@
     <Project Path="ZeroPrimitives/tests/ZeroPrimitives.Tests/ZeroPrimitives.Tests.csproj" />
   </Folder>
   <Folder Name="/Satellites/">
-    <Project Path="Satellites/ZeroPlatform.IoT/src/ZeroPlatform.IoT/ZeroPlatform.IoT.csproj" />
-    <Project Path="Satellites/ZeroPlatform.IoT/tests/ZeroPlatform.IoT.Tests/ZeroPlatform.IoT.Tests.csproj" />
-    <Project Path="Satellites/ZeroPlatform.Charts/src/ZeroPlatform.Charts/ZeroPlatform.Charts.csproj" />
-    <Project Path="Satellites/ZeroPlatform.Charts/tests/ZeroPlatform.Charts.Tests/ZeroPlatform.Charts.Tests.csproj" />
-    <Project Path="Satellites/ZeroPlatform.Reports/src/ZeroPlatform.Reports/ZeroPlatform.Reports.csproj" />
-    <Project Path="Satellites/ZeroPlatform.Reports/tests/ZeroPlatform.Reports.Tests/ZeroPlatform.Reports.Tests.csproj" />
-    <Project Path="Satellites/ZeroPlatform.AudioVisual/src/ZeroPlatform.AudioVisual/ZeroPlatform.AudioVisual.csproj" />
-    <Project Path="Satellites/ZeroPlatform.AudioVisual/tests/ZeroPlatform.AudioVisual.Tests/ZeroPlatform.AudioVisual.Tests.csproj" />
-    <Project Path="Satellites/ZeroPlatform.Twin3D/src/ZeroPlatform.Twin3D/ZeroPlatform.Twin3D.csproj" />
-    <Project Path="Satellites/ZeroPlatform.Twin3D/tests/ZeroPlatform.Twin3D.Tests/ZeroPlatform.Twin3D.Tests.csproj" />
+    <Project Path="ZeroIoT/src/ZeroPlatform.IoT/ZeroPlatform.IoT.csproj" />
+    <Project Path="ZeroIoT/tests/ZeroPlatform.IoT.Tests/ZeroPlatform.IoT.Tests.csproj" />
+    <Project Path="ZeroCharts/src/ZeroPlatform.Charts/ZeroPlatform.Charts.csproj" />
+    <Project Path="ZeroCharts/tests/ZeroPlatform.Charts.Tests/ZeroPlatform.Charts.Tests.csproj" />
+    <Project Path="ZeroReports/src/ZeroPlatform.Reports/ZeroPlatform.Reports.csproj" />
+    <Project Path="ZeroReports/tests/ZeroPlatform.Reports.Tests/ZeroPlatform.Reports.Tests.csproj" />
+    <Project Path="ZeroAudioVisual/src/ZeroPlatform.AudioVisual/ZeroPlatform.AudioVisual.csproj" />
+    <Project Path="ZeroAudioVisual/tests/ZeroPlatform.AudioVisual.Tests/ZeroPlatform.AudioVisual.Tests.csproj" />
+    <Project Path="ZeroTwin3D/src/ZeroPlatform.Twin3D/ZeroPlatform.Twin3D.csproj" />
+    <Project Path="ZeroTwin3D/tests/ZeroPlatform.Twin3D.Tests/ZeroPlatform.Twin3D.Tests.csproj" />
   </Folder>
 </Solution>

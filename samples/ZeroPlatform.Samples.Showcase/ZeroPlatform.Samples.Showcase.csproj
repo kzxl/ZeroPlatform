@@ -21,10 +21,10 @@
     <ProjectReference Include="..\..\ZeroPipeline\src\ZeroPipeline.Nodes\ZeroPipeline.Nodes.csproj" />
     <ProjectReference Include="..\..\ZeroPipeline\src\ZeroPipeline.Recipe\ZeroPipeline.Recipe.csproj" />
     <ProjectReference Include="..\..\ZeroPipeline\src\ZeroPipeline.UI\ZeroPipeline.UI.csproj" />
-    <ProjectReference Include="..\..\Satellites\ZeroPlatform.IoT\src\ZeroPlatform.IoT\ZeroPlatform.IoT.csproj" />
-    <ProjectReference Include="..\..\Satellites\ZeroPlatform.Charts\src\ZeroPlatform.Charts\ZeroPlatform.Charts.csproj" />
-    <ProjectReference Include="..\..\Satellites\ZeroPlatform.Reports\src\ZeroPlatform.Reports\ZeroPlatform.Reports.csproj" />
-    <ProjectReference Include="..\..\Satellites\ZeroPlatform.AudioVisual\src\ZeroPlatform.AudioVisual\ZeroPlatform.AudioVisual.csproj" />
-    <ProjectReference Include="..\..\Satellites\ZeroPlatform.Twin3D\src\ZeroPlatform.Twin3D\ZeroPlatform.Twin3D.csproj" />
+    <ProjectReference Include="..\..\ZeroIoT\src\ZeroPlatform.IoT\ZeroPlatform.IoT.csproj" />
+    <ProjectReference Include="..\..\ZeroCharts\src\ZeroPlatform.Charts\ZeroPlatform.Charts.csproj" />
+    <ProjectReference Include="..\..\ZeroReports\src\ZeroPlatform.Reports\ZeroPlatform.Reports.csproj" />
+    <ProjectReference Include="..\..\ZeroAudioVisual\src\ZeroPlatform.AudioVisual\ZeroPlatform.AudioVisual.csproj" />
+    <ProjectReference Include="..\..\ZeroTwin3D\src\ZeroPlatform.Twin3D\ZeroPlatform.Twin3D.csproj" />
   </ItemGroup>
 </Project>

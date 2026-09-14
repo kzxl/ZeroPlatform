@@ -9,7 +9,7 @@ Satellites are modular, domain-specific extensions that build upon the core foun
 ## 🎯 Satellite Principles
 
 1. **Decoupled Autonomy**:
-   - Each satellite should reside in its own folder under `Satellites/` and can optionally maintain its own Git repository or package lifecycle.
+   - Each satellite resides in its own root-level subsystem folder (e.g. `ZeroIoT`, `ZeroCharts`, `ZeroReports`, `ZeroAudioVisual`, `ZeroTwin3D`) and maintains its own package and repository lifecycle.
    - Satellites must never modify the core codebase of `ZeroUI` or `ZeroGraphics`.
 
 2. **Dual-Targeting Support**:
