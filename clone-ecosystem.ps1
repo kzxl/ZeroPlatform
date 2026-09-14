@@ -17,10 +17,16 @@ $subsystems = @(
     "ZeroComm",
     "ZeroGraphics",
     "ZeroUI",
-    "ZeroPipeline"
+    "ZeroPipeline",
+    "ZeroPrimitives",
+    "ZeroIoT",
+    "ZeroCharts",
+    "ZeroReports",
+    "ZeroAudioVisual",
+    "ZeroTwin3D"
 )
 
-Write-Host "`n🚀 Synchronizing ZeroPlatform Ecosystem Subsystems...`n" -ForegroundColor Cyan
+Write-Host "`n🚀 Synchronizing ZeroPlatform Ecosystem Subsystems (17 Subsystems)...`n" -ForegroundColor Cyan
 
 foreach ($sub in $subsystems) {
     $targetPath = Join-Path $PSScriptRoot $sub
