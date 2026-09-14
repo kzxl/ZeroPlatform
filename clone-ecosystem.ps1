@@ -23,7 +23,8 @@ $subsystems = @(
     "ZeroCharts",
     "ZeroReports",
     "ZeroAudioVisual",
-    "ZeroTwin3D"
+    "ZeroTwin3D",
+    "ZeroSystem"
 )
 
 Write-Host "`n🚀 Synchronizing ZeroPlatform Ecosystem Subsystems (17 Subsystems)...`n" -ForegroundColor Cyan
