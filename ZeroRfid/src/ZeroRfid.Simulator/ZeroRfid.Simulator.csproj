@@ -1,0 +1,13 @@
+<Project Sdk="Microsoft.NET.Sdk">
+  <PropertyGroup>
+    <TargetFrameworks>netstandard2.0;net462;net8.0</TargetFrameworks>
+    <LangVersion>latest</LangVersion>
+    <Nullable>enable</Nullable>
+    <Description>Realistic scenario-based RFID reader simulator supporting virtual portal gate transit, conveyor stream triggers, memory read/write, and GPIO control for hardware-free development.</Description>
+    <PackageTags>rfid;simulator;mock;virtual-reader;testing;zeroplatform</PackageTags>
+  </PropertyGroup>
+
+  <ItemGroup>
+    <ProjectReference Include="..\ZeroRfid.Core\ZeroRfid.Core.csproj" />
+  </ItemGroup>
+</Project>

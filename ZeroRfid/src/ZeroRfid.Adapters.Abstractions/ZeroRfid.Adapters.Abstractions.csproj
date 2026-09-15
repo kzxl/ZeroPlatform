@@ -1,0 +1,13 @@
+<Project Sdk="Microsoft.NET.Sdk">
+  <PropertyGroup>
+    <TargetFrameworks>netstandard2.0;net462;net8.0</TargetFrameworks>
+    <LangVersion>latest</LangVersion>
+    <Nullable>enable</Nullable>
+    <Description>Extensible vendor SDK adapter base classes, event synchronization, and data normalization abstractions for bridging third-party RFID reader hardware (Zebra, Impinj, Hopeland) into ZeroPlatform.</Description>
+    <PackageTags>rfid;adapter;vendor-sdk;zebra;impinj;hopeland;ports-and-adapters;zeroplatform</PackageTags>
+  </PropertyGroup>
+
+  <ItemGroup>
+    <ProjectReference Include="..\ZeroRfid.Core\ZeroRfid.Core.csproj" />
+  </ItemGroup>
+</Project>
