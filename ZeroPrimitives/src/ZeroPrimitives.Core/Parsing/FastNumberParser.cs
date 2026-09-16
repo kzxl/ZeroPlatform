@@ -52,25 +52,20 @@ namespace ZeroPrimitives.Parsing
 
                         if (pureDigits)
                         {
-                            long acc = 0;
+                            const uint MaxInt32Div10 = 214748364U;
+                            uint acc = 0;
                             while (ptr < end)
                             {
-                                acc = (acc * 10) + (*ptr++ - '0');
-                                if (acc > (long)int.MaxValue + 1)
+                                uint digit = (uint)(*ptr++ - '0');
+                                if (acc > MaxInt32Div10 || (acc == MaxInt32Div10 && digit > (uint)(neg ? 8 : 7)))
                                 {
-                                    result = neg ? int.MinValue : int.MaxValue;
+                                    result = defaultValue;
                                     return false;
                                 }
+                                acc = (acc * 10) + digit;
                             }
 
-                            long finalVal = neg ? -acc : acc;
-                            if (finalVal < int.MinValue || finalVal > int.MaxValue)
-                            {
-                                result = neg ? int.MinValue : int.MaxValue;
-                                return false;
-                            }
-
-                            result = (int)finalVal;
+                            result = neg ? unchecked((int)-acc) : (int)acc;
                             return true;
                         }
                     }
@@ -203,13 +198,20 @@ namespace ZeroPrimitives.Parsing
 
                         if (pureDigits)
                         {
+                            const ulong MaxInt64Div10 = 922337203685477580UL;
                             ulong acc = 0;
                             while (ptr < end)
                             {
-                                acc = (acc * 10) + (ulong)(*ptr++ - '0');
+                                ulong digit = (ulong)(*ptr++ - '0');
+                                if (acc > MaxInt64Div10 || (acc == MaxInt64Div10 && digit > (ulong)(neg ? 8 : 7)))
+                                {
+                                    result = defaultValue;
+                                    return false;
+                                }
+                                acc = (acc * 10) + digit;
                             }
 
-                            result = neg ? -(long)acc : (long)acc;
+                            result = neg ? unchecked((long)(0UL - acc)) : unchecked((long)acc);
                             return true;
                         }
                     }
@@ -528,5 +530,149 @@ namespace ZeroPrimitives.Parsing
             decimalSep = '\0';
             thousandSep = '\0';
         }
+
+        #region ReadOnlySpan<byte> Overloads
+
+        /// <summary>
+        /// Parses a 32-bit integer directly from a UTF-8 ReadOnlySpan of bytes without string or char array allocations.
+        /// </summary>
+        [MethodImpl(MethodImplOptions.AggressiveInlining)]
+        public static unsafe bool TryParseInt32(ReadOnlySpan<byte> span, out int result)
+        {
+            result = 0;
+            if (span.IsEmpty) return false;
+
+            fixed (byte* p = span)
+            {
+                byte* ptr = p;
+                byte* end = p + span.Length;
+
+                while (ptr < end && (*ptr == (byte)' ' || *ptr == (byte)'\t')) ptr++;
+                while (end > ptr && (*(end - 1) == (byte)' ' || *(end - 1) == (byte)'\t')) end--;
+
+                if (ptr >= end) return false;
+
+                bool neg = false;
+                if (*ptr == (byte)'-') { neg = true; ptr++; }
+                else if (*ptr == (byte)'+') { ptr++; }
+
+                if (ptr >= end) return false;
+
+                const uint MaxInt32Div10 = 214748364U;
+                uint acc = 0;
+                while (ptr < end)
+                {
+                    byte b = *ptr++;
+                    if (b < (byte)'0' || b > (byte)'9') return false;
+                    uint digit = (uint)(b - (byte)'0');
+                    if (acc > MaxInt32Div10 || (acc == MaxInt32Div10 && digit > (uint)(neg ? 8 : 7)))
+                        return false;
+                    acc = (acc * 10) + digit;
+                }
+
+                result = neg ? unchecked((int)(0U - acc)) : unchecked((int)acc);
+                return true;
+            }
+        }
+
+        /// <summary>
+        /// Parses a 64-bit integer directly from a UTF-8 ReadOnlySpan of bytes without string or char array allocations.
+        /// </summary>
+        [MethodImpl(MethodImplOptions.AggressiveInlining)]
+        public static unsafe bool TryParseInt64(ReadOnlySpan<byte> span, out long result)
+        {
+            result = 0;
+            if (span.IsEmpty) return false;
+
+            fixed (byte* p = span)
+            {
+                byte* ptr = p;
+                byte* end = p + span.Length;
+
+                while (ptr < end && (*ptr == (byte)' ' || *ptr == (byte)'\t')) ptr++;
+                while (end > ptr && (*(end - 1) == (byte)' ' || *(end - 1) == (byte)'\t')) end--;
+
+                if (ptr >= end) return false;
+
+                bool neg = false;
+                if (*ptr == (byte)'-') { neg = true; ptr++; }
+                else if (*ptr == (byte)'+') { ptr++; }
+
+                if (ptr >= end) return false;
+
+                const ulong MaxInt64Div10 = 922337203685477580UL;
+                ulong acc = 0;
+                while (ptr < end)
+                {
+                    byte b = *ptr++;
+                    if (b < (byte)'0' || b > (byte)'9') return false;
+                    ulong digit = (ulong)(b - (byte)'0');
+                    if (acc > MaxInt64Div10 || (acc == MaxInt64Div10 && digit > (ulong)(neg ? 8 : 7)))
+                        return false;
+                    acc = (acc * 10) + digit;
+                }
+
+                result = neg ? unchecked((long)(0UL - acc)) : unchecked((long)acc);
+                return true;
+            }
+        }
+
+        /// <summary>
+        /// Parses a decimal directly from a UTF-8 ReadOnlySpan of bytes using zero-allocation stack transformation.
+        /// </summary>
+        [MethodImpl(MethodImplOptions.AggressiveInlining)]
+        public static bool TryParseDecimal(ReadOnlySpan<byte> span, out decimal result)
+        {
+            result = 0m;
+            if (span.IsEmpty) return false;
+
+            if (span.Length <= 64)
+            {
+                Span<char> chars = stackalloc char[span.Length];
+                for (int i = 0; i < span.Length; i++) chars[i] = (char)span[i];
+                return TryParseDecimal(chars, out result);
+            }
+
+            char[] rented = System.Buffers.ArrayPool<char>.Shared.Rent(span.Length);
+            try
+            {
+                for (int i = 0; i < span.Length; i++) rented[i] = (char)span[i];
+                return TryParseDecimal(rented.AsSpan(0, span.Length), out result);
+            }
+            finally
+            {
+                System.Buffers.ArrayPool<char>.Shared.Return(rented);
+            }
+        }
+
+        /// <summary>
+        /// Parses a double directly from a UTF-8 ReadOnlySpan of bytes using zero-allocation stack transformation.
+        /// </summary>
+        [MethodImpl(MethodImplOptions.AggressiveInlining)]
+        public static bool TryParseDouble(ReadOnlySpan<byte> span, out double result)
+        {
+            result = 0.0;
+            if (span.IsEmpty) return false;
+
+            if (span.Length <= 64)
+            {
+                Span<char> chars = stackalloc char[span.Length];
+                for (int i = 0; i < span.Length; i++) chars[i] = (char)span[i];
+                return TryParseDouble(chars, out result);
+            }
+
+            char[] rented = System.Buffers.ArrayPool<char>.Shared.Rent(span.Length);
+            try
+            {
+                for (int i = 0; i < span.Length; i++) rented[i] = (char)span[i];
+                return TryParseDouble(rented.AsSpan(0, span.Length), out result);
+            }
+            finally
+            {
+                System.Buffers.ArrayPool<char>.Shared.Return(rented);
+            }
+        }
+
+        #endregion
     }
 }

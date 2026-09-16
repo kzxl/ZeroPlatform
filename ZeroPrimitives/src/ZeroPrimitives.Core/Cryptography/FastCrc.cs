@@ -169,5 +169,158 @@ namespace ZeroPrimitives.Cryptography
         }
 
         #endregion
+
+        #region CRC32C (Castagnoli, Polynomial 0x82F63B78 - Hardware Accelerated)
+
+        private static readonly uint[] Crc32CTable = GenerateCrc32CTable();
+
+        private static uint[] GenerateCrc32CTable()
+        {
+            var table = new uint[256];
+            for (uint i = 0; i < 256; i++)
+            {
+                uint entry = i;
+                for (int j = 0; j < 8; j++)
+                {
+                    if ((entry & 1) == 1)
+                        entry = (entry >> 1) ^ 0x82F63B78u;
+                    else
+                        entry >>= 1;
+                }
+                table[i] = entry;
+            }
+            return table;
+        }
+
+        /// <summary>
+        /// Indicates whether hardware-accelerated CRC32C instructions (SSE4.2 on x86/x64 or ARM64) are active.
+        /// </summary>
+        public static bool IsHardwareAcceleratedCrc32C
+        {
+            get
+            {
+#if NET8_0_OR_GREATER
+                return System.Runtime.Intrinsics.X86.Sse42.IsSupported ||
+                       System.Runtime.Intrinsics.Arm.Crc32.IsSupported;
+#else
+                return false;
+#endif
+            }
+        }
+
+        /// <summary>
+        /// Computes 32-bit Castagnoli CRC (CRC-32C).
+        /// Executes via native CPU hardware instructions (SSE4.2 or ARM64) on .NET 8+, processing 8 bytes per single cycle.
+        /// Falls back to 4-way loop unrolled lookup table on .NET Framework.
+        /// </summary>
+        [MethodImpl(MethodImplOptions.AggressiveInlining)]
+        public static unsafe uint Crc32C(ReadOnlySpan<byte> data)
+        {
+            if (data.IsEmpty) return 0;
+
+#if NET8_0_OR_GREATER
+            if (System.Runtime.Intrinsics.X86.Sse42.X64.IsSupported)
+            {
+                ulong crc = 0xFFFFFFFFu;
+                fixed (byte* p = data)
+                {
+                    byte* ptr = p;
+                    int length = data.Length;
+
+                    while (length >= 8)
+                    {
+                        crc = System.Runtime.Intrinsics.X86.Sse42.X64.Crc32(crc, *(ulong*)ptr);
+                        ptr += 8;
+                        length -= 8;
+                    }
+                    if (length >= 4)
+                    {
+                        crc = System.Runtime.Intrinsics.X86.Sse42.Crc32((uint)crc, *(uint*)ptr);
+                        ptr += 4;
+                        length -= 4;
+                    }
+                    while (length > 0)
+                    {
+                        crc = System.Runtime.Intrinsics.X86.Sse42.Crc32((uint)crc, *ptr);
+                        ptr++;
+                        length--;
+                    }
+                }
+                return (uint)crc ^ 0xFFFFFFFFu;
+            }
+            else if (System.Runtime.Intrinsics.X86.Sse42.IsSupported)
+            {
+                uint crc = 0xFFFFFFFFu;
+                fixed (byte* p = data)
+                {
+                    byte* ptr = p;
+                    int length = data.Length;
+
+                    while (length >= 4)
+                    {
+                        crc = System.Runtime.Intrinsics.X86.Sse42.Crc32(crc, *(uint*)ptr);
+                        ptr += 4;
+                        length -= 4;
+                    }
+                    while (length > 0)
+                    {
+                        crc = System.Runtime.Intrinsics.X86.Sse42.Crc32(crc, *ptr);
+                        ptr++;
+                        length--;
+                    }
+                }
+                return crc ^ 0xFFFFFFFFu;
+            }
+            else if (System.Runtime.Intrinsics.Arm.Crc32.Arm64.IsSupported)
+            {
+                uint crc = 0xFFFFFFFFu;
+                fixed (byte* p = data)
+                {
+                    byte* ptr = p;
+                    int length = data.Length;
+
+                    while (length >= 8)
+                    {
+                        crc = System.Runtime.Intrinsics.Arm.Crc32.Arm64.ComputeCrc32C(crc, *(ulong*)ptr);
+                        ptr += 8;
+                        length -= 8;
+                    }
+                    while (length > 0)
+                    {
+                        crc = System.Runtime.Intrinsics.Arm.Crc32.ComputeCrc32C(crc, *ptr);
+                        ptr++;
+                        length--;
+                    }
+                }
+                return crc ^ 0xFFFFFFFFu;
+            }
+#endif
+
+            // Software fallback table with 4-way unrolling
+            uint swCrc = 0xFFFFFFFFu;
+            fixed (byte* p = data)
+            {
+                byte* ptr = p;
+                byte* end = p + data.Length;
+
+                while (ptr + 4 <= end)
+                {
+                    swCrc = (swCrc >> 8) ^ Crc32CTable[(swCrc ^ ptr[0]) & 0xFF];
+                    swCrc = (swCrc >> 8) ^ Crc32CTable[(swCrc ^ ptr[1]) & 0xFF];
+                    swCrc = (swCrc >> 8) ^ Crc32CTable[(swCrc ^ ptr[2]) & 0xFF];
+                    swCrc = (swCrc >> 8) ^ Crc32CTable[(swCrc ^ ptr[3]) & 0xFF];
+                    ptr += 4;
+                }
+
+                while (ptr < end)
+                {
+                    swCrc = (swCrc >> 8) ^ Crc32CTable[(swCrc ^ *ptr++) & 0xFF];
+                }
+            }
+
+            return swCrc ^ 0xFFFFFFFFu;
+        }
+
+        #endregion
     }
 }

@@ -17,7 +17,7 @@ Engineered around the **Multi-Repository Satellite Architecture**, all 12 subsys
 
 | Subsystem | Repository | Key Capabilities |
 | :--- | :--- | :--- |
-| **`ZeroPrimitives`** | [`kzxl/ZeroPrimitives`](https://github.com/kzxl/ZeroPrimitives) | Pure C# ultra-fast primitive conversions, span/pointer number parsers, compiled mapper. |
+| **`ZeroPrimitives`** | [`kzxl/ZeroPrimitives`](https://github.com/kzxl/ZeroPrimitives) | Pure C# ultra-fast primitive conversions, SSE4.2 CRC32C, span/pointer parsers, compiled mapper. |
 | **`ZeroTensor`** | [`kzxl/ZeroTensor`](https://github.com/kzxl/ZeroTensor) | N-D strided memory layout, zero-copy slicing, Level-3 BLAS, SVD/QR/Cholesky. |
 | **`ZeroCompute`** | [`kzxl/ZeroCompute`](https://github.com/kzxl/ZeroCompute) | Direct3D 11 Compute Shader dispatcher via COM VTable & CPU AVX2 SIMD fallback. |
 | **`ZeroData`** | [`kzxl/ZeroData`](https://github.com/kzxl/ZeroData) | Columnar DataFrame, relational hash joins (Inner/Left/Right/Outer), Arrow IPC. |
@@ -27,9 +27,29 @@ Engineered around the **Multi-Repository Satellite Architecture**, all 12 subsys
 | **`ZeroSignal`** | [`kzxl/ZeroSignal`](https://github.com/kzxl/ZeroSignal) | In-place FFT, STFT spectrogram, zero-phase Butterworth `FiltFilt`, Extended Kalman Filter. |
 | **`ZeroGeometry`** | [`kzxl/ZeroGeometry`](https://github.com/kzxl/ZeroGeometry) | 3D ICP rigid cloud alignment, KdTree3D/RTree2D, polygon clipping, Delaunay triangulation. |
 | **`ZeroComm`** | [`kzxl/ZeroComm`](https://github.com/kzxl/ZeroComm) | Asynchronous TCP transport, Modbus TCP/RTU master, Mitsubishi 3E Binary, Omron FINS. |
-| **`ZeroGraphics`** | [`kzxl/ZeroGraphics`](https://github.com/kzxl/ZeroGraphics) | Direct3D 11 GPU rendering, Direct2D 60 FPS waveforms, analytical SDF cards, CV algorithms. |
-| **`ZeroUI`** | [`kzxl/ZeroUI`](https://github.com/kzxl/ZeroUI) | 10M+ rows virtual grid, 60 FPS SCADA/HMI controls, dark theme system (`#12151C`). |
+| **`ZeroGraphics`** | [`kzxl/ZeroGraphics`](https://github.com/kzxl/ZeroGraphics) | Direct3D 11 GPU rendering, 144Hz waveforms, computational photography (Mertens HDR, Focus Stacking, Wavelets), CV metrology. |
+| **`ZeroUI`** | [`kzxl/ZeroUI`](https://github.com/kzxl/ZeroUI) | 10M+ rows virtual grid, 60 FPS SCADA/HMI controls, Creative & Media Editors Suite, dark theme (`#12151C`). |
 | **`ZeroPipeline`** | [`kzxl/ZeroPipeline`](https://github.com/kzxl/ZeroPipeline) | DAG scheduler (Kahn sort), industrial inspection nodes, JSON recipes, interactive node canvas. |
+
+---
+
+## 📜 Subsystem Version Matrix
+
+| Subsystem | Version | Status | Primary Focus |
+| :--- | :---: | :---: | :--- |
+| **`ZeroPrimitives`** | `v1.1.0` | Active | Hardware-accelerated CRC32C (SSE4.2/ARM64), zero-alloc span/pointer parsers & CSV tokenizer. |
+| **`ZeroGraphics`** | `v1.2.0` | Active | COM VTable D3D11/D2D, 144Hz waveforms, computational photography (Mertens HDR, focus stacking, wavelets). |
+| **`ZeroUI`** | `v1.8.0` | Active | 10M+ rows virtual grid, 40+ SCADA controls, Creative & Media Editors Suite, single-HWND architecture. |
+| **`ZeroTensor`** | `v1.0.0` | Active | N-D strided memory layout, zero-copy slicing, Level-3 BLAS, SVD/QR/Cholesky decompositions. |
+| **`ZeroCompute`** | `v1.0.0` | Active | D3D11 Compute Shader dispatcher via COM VTable & CPU AVX2 SIMD fallback kernels. |
+| **`ZeroData`** | `v1.0.0` | Active | Columnar DataFrame, relational hash joins (Inner/Left/Right/Outer), Arrow IPC serialization. |
+| **`ZeroStorage`** | `v1.0.0` | Active | Embedded TSDB, Facebook Gorilla Delta-of-Delta + XOR float compression, CRC32 WAL. |
+| **`ZeroInference`** | `v1.0.0` | Active | Pure C# ONNX binary model parser, inference graph, Int8 quantizer, Vision NMS. |
+| **`ZeroNeural`** | `v1.0.0` | Active | Reverse-mode automatic differentiation (Autograd), neural network layers, AdamW optimizer. |
+| **`ZeroSignal`** | `v1.0.0` | Active | In-place FFT, STFT spectrogram, zero-phase Butterworth `FiltFilt`, Extended Kalman Filter. |
+| **`ZeroGeometry`** | `v1.0.0` | Active | 3D ICP rigid cloud alignment, KdTree3D/RTree2D, polygon clipping, Delaunay triangulation. |
+| **`ZeroComm`** | `v1.0.0` | Active | Asynchronous TCP transport, Modbus TCP/RTU master, Mitsubishi 3E Binary, Omron FINS. |
+| **`ZeroPipeline`** | `v1.0.0` | Active | DAG scheduler (Kahn sort), industrial inspection nodes, JSON recipes, interactive node canvas. |
 
 ---
 

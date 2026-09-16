@@ -4,8 +4,16 @@
     <LangVersion>latest</LangVersion>
     <AllowUnsafeBlocks>true</AllowUnsafeBlocks>
     <Nullable>enable</Nullable>
-    <Description>Pure C# ultra-fast, zero-allocation primitive conversions, low-level span/pointer number parsers, and compiled object mapping for high-throughput .NET applications.</Description>
-    <PackageTags>primitives;safeconvert;fastconvert;span;zero-allocation;parsing;high-performance;mapper</PackageTags>
+    <Version>1.1.0</Version>
+    <Authors>Phong Võ (kzxl)</Authors>
+    <Company>ZeroUniverse</Company>
+    <Description>Pure C# ultra-fast, zero-allocation primitive conversions, low-level span/pointer number parsers, hardware CRC32C, FastHex, SpanSplitter, BitOps, ByteRingBuffer, and compiled object mapping for high-throughput .NET applications.</Description>
+    <PackageTags>primitives;safeconvert;fastconvert;span;zero-allocation;hex;rfid;crc32c;simd;parsing;high-performance;mapper;zeroplatform</PackageTags>
+    <PackageLicenseExpression>MIT</PackageLicenseExpression>
+    <RepositoryUrl>https://github.com/kzxl/ZeroPrimitives.git</RepositoryUrl>
+    <RepositoryType>git</RepositoryType>
+    <PackageProjectUrl>https://github.com/kzxl/ZeroPrimitives</PackageProjectUrl>
+    <PackageReadmeFile>README.md</PackageReadmeFile>
   </PropertyGroup>
 
   <ItemGroup Condition="'$(TargetFramework)' == 'netstandard2.0' Or '$(TargetFramework)' == 'net462'">
