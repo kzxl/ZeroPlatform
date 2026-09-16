@@ -30,6 +30,7 @@ Engineered around the **Multi-Repository Satellite Architecture**, all 12 subsys
 | **`ZeroGraphics`** | [`kzxl/ZeroGraphics`](https://github.com/kzxl/ZeroGraphics) | Direct3D 11 GPU rendering, 144Hz waveforms, computational photography (Mertens HDR, Focus Stacking, Wavelets), CV metrology. |
 | **`ZeroUI`** | [`kzxl/ZeroUI`](https://github.com/kzxl/ZeroUI) | 10M+ rows virtual grid, 60 FPS SCADA/HMI controls, Creative & Media Editors Suite, dark theme (`#12151C`). |
 | **`ZeroPipeline`** | [`kzxl/ZeroPipeline`](https://github.com/kzxl/ZeroPipeline) | DAG scheduler (Kahn sort), industrial inspection nodes, JSON recipes, interactive node canvas. |
+| **`ZeroSecurity`** | [`kzxl/ZeroSecurity`](https://github.com/kzxl/ZeroSecurity) | Pure C# BLAKE3/FastSha256, SSDEEP fuzzy hash, BloomFilter IOC, Shannon entropy, Welford UEBA stats, ChaCha20-Poly1305. |
 
 ---
 
@@ -46,6 +47,7 @@ Engineered around the **Multi-Repository Satellite Architecture**, all 12 subsys
 | **`ZeroComm`** | `v1.1.0` | Active | Async TCP transport, RFC 5389 STUN NAT traversal, Modbus TCP/RTU master, Mitsubishi 3E, Omron FINS. |
 | **`ZeroSignal`** | `v1.1.0` | Active | In-place FFT, STFT spectrogram, zero-phase Butterworth `FiltFilt`, EKF, VadDetector, AudioJitterBuffer. |
 | **`ZeroRfid`** | `v1.0.0` | Active | EPC Gen2 / ISO 18000-6C suite, UHF reader adapters, sliding-window deduplication pipeline & simulator. |
+| **`ZeroSecurity`** | `v1.0.0` | Active | Pure C# BLAKE3, SSDEEP fuzzy hash, BloomFilter IOC, Shannon entropy, Welford Z-Score UEBA, ChaCha20-Poly1305. |
 | **`ZeroTensor`** | `v1.0.0` | Active | N-D strided memory layout, zero-copy slicing, Level-3 BLAS, SVD/QR/Cholesky decompositions. |
 | **`ZeroCompute`** | `v1.0.0` | Active | D3D11 Compute Shader dispatcher via COM VTable & CPU AVX2 SIMD fallback kernels. |
 | **`ZeroNeural`** | `v1.0.0` | Active | Reverse-mode automatic differentiation (Autograd), neural network layers, AdamW optimizer. |

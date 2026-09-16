@@ -98,4 +98,8 @@
     <Project Path="ZeroSystem/src/ZeroSystem.Core/ZeroSystem.Core.csproj" />
     <Project Path="ZeroSystem/tests/ZeroSystem.Tests/ZeroSystem.Tests.csproj" />
   </Folder>
+  <Folder Name="/ZeroSecurity/">
+    <Project Path="ZeroSecurity/src/ZeroSecurity/ZeroSecurity.csproj" />
+    <Project Path="ZeroSecurity/tests/ZeroSecurity.Tests/ZeroSecurity.Tests.csproj" />
+  </Folder>
 </Solution>
