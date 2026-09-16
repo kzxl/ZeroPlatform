@@ -40,16 +40,23 @@ Engineered around the **Multi-Repository Satellite Architecture**, all 12 subsys
 | **`ZeroPrimitives`** | `v1.1.0` | Active | Hardware-accelerated CRC32C (SSE4.2/ARM64), zero-alloc span/pointer parsers & CSV tokenizer. |
 | **`ZeroGraphics`** | `v1.2.0` | Active | COM VTable D3D11/D2D, 144Hz waveforms, computational photography (Mertens HDR, focus stacking, wavelets). |
 | **`ZeroUI`** | `v1.8.0` | Active | 10M+ rows virtual grid, 40+ SCADA controls, Creative & Media Editors Suite, single-HWND architecture. |
+| **`ZeroInference`** | `v1.1.0` | Active | Polymorphic `IInferenceSession`, ONNX parser, Pure C# & OnnxRuntime providers, Local LLM streaming. |
+| **`ZeroData`** | `v1.1.0` | Active | Columnar DataFrame, Arrow IPC, compiled expression tree SQL materializers, zero-alloc unboxing. |
+| **`ZeroStorage`** | `v1.1.0` | Active | Embedded TSDB, Gorilla Delta-of-Delta + XOR float compression, MultiMetricBlock wide-row compression, WAL. |
+| **`ZeroComm`** | `v1.1.0` | Active | Async TCP transport, RFC 5389 STUN NAT traversal, Modbus TCP/RTU master, Mitsubishi 3E, Omron FINS. |
+| **`ZeroSignal`** | `v1.1.0` | Active | In-place FFT, STFT spectrogram, zero-phase Butterworth `FiltFilt`, EKF, VadDetector, AudioJitterBuffer. |
+| **`ZeroRfid`** | `v1.0.0` | Active | EPC Gen2 / ISO 18000-6C suite, UHF reader adapters, sliding-window deduplication pipeline & simulator. |
 | **`ZeroTensor`** | `v1.0.0` | Active | N-D strided memory layout, zero-copy slicing, Level-3 BLAS, SVD/QR/Cholesky decompositions. |
 | **`ZeroCompute`** | `v1.0.0` | Active | D3D11 Compute Shader dispatcher via COM VTable & CPU AVX2 SIMD fallback kernels. |
-| **`ZeroData`** | `v1.0.0` | Active | Columnar DataFrame, relational hash joins (Inner/Left/Right/Outer), Arrow IPC serialization. |
-| **`ZeroStorage`** | `v1.0.0` | Active | Embedded TSDB, Facebook Gorilla Delta-of-Delta + XOR float compression, CRC32 WAL. |
-| **`ZeroInference`** | `v1.0.0` | Active | Pure C# ONNX binary model parser, inference graph, Int8 quantizer, Vision NMS. |
 | **`ZeroNeural`** | `v1.0.0` | Active | Reverse-mode automatic differentiation (Autograd), neural network layers, AdamW optimizer. |
-| **`ZeroSignal`** | `v1.0.0` | Active | In-place FFT, STFT spectrogram, zero-phase Butterworth `FiltFilt`, Extended Kalman Filter. |
 | **`ZeroGeometry`** | `v1.0.0` | Active | 3D ICP rigid cloud alignment, KdTree3D/RTree2D, polygon clipping, Delaunay triangulation. |
-| **`ZeroComm`** | `v1.0.0` | Active | Asynchronous TCP transport, Modbus TCP/RTU master, Mitsubishi 3E Binary, Omron FINS. |
 | **`ZeroPipeline`** | `v1.0.0` | Active | DAG scheduler (Kahn sort), industrial inspection nodes, JSON recipes, interactive node canvas. |
+| **`ZeroReports`** | `v1.0.0` | Active | Pure C# high-speed PDF & industrial thermal barcode label rendering without GDI+. |
+| **`ZeroAudioVisual`** | `v1.0.0` | Active | Acoustic predictive maintenance, multi-channel beamforming & audio-visual synchronization. |
+| **`ZeroCharts`** | `v1.0.0` | Active | Direct2D GPU high-density telemetry strip charts and dynamic multi-axis graphs. |
+| **`ZeroIoT`** | `v1.0.0` | Active | Industrial IoT edge connectors, MQTT, OPC UA client and sensor telemetry bridge. |
+| **`ZeroSystem`** | `v1.0.0` | Active | Sovereign Windows native subsystem, system telemetry, and hardware inventory diagnostics. |
+| **`ZeroTwin3D`** | `v1.0.0` | Active | Pure C# 3D digital twin spatial scene graph and industrial asset visualization. |
 
 ---
 
