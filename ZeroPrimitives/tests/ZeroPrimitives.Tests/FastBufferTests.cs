@@ -24,6 +24,34 @@ namespace ZeroPrimitives.Tests
         }
 
         [Fact]
+        public void GzipDecompress_UncompressedPayload_FallsBackSafelyWithoutException()
+        {
+            string plainText = "Plain uncompressed text payload that should not crash!";
+            byte[] plainBytes = Encoding.UTF8.GetBytes(plainText);
+
+            // GzipDecompressToString on plain UTF-8 text must NOT throw, must return plain text
+            string resultText = FastBuffer.GzipDecompressToString(plainBytes);
+            Assert.Equal(plainText, resultText);
+
+            // GzipDecompress on uncompressed bytes must return original bytes
+            byte[] resultBytes = FastBuffer.GzipDecompress(plainBytes);
+            Assert.Equal(plainBytes, resultBytes);
+        }
+
+        [Fact]
+        public void Gzip_NullAndEmptyInputs_HandledSafely()
+        {
+            Assert.Equal(string.Empty, FastBuffer.GzipDecompressToString(null));
+            Assert.Equal(string.Empty, FastBuffer.GzipDecompressToString(Array.Empty<byte>()));
+
+            Assert.Empty(FastBuffer.GzipDecompress(null));
+            Assert.Empty(FastBuffer.GzipDecompress(Array.Empty<byte>()));
+
+            Assert.Empty(FastBuffer.GzipCompress((byte[])null!));
+            Assert.Empty(FastBuffer.GzipCompress(Array.Empty<byte>()));
+        }
+
+        [Fact]
         public void EndianSwap_ReversesByteOrderAccurately()
         {
             // 16-bit: 0x1234 -> 0x3412

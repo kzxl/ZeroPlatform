@@ -33,30 +33,54 @@ namespace ZeroPrimitives.Buffers
         }
 
         /// <summary>
-        /// Decompresses GZip compressed bytes into UTF-8 text.
+        /// Compresses raw byte array using GZip.
         /// </summary>
-        public static string GzipDecompressToString(byte[] compressed)
+        public static byte[] GzipCompress(byte[]? data)
+        {
+            if (data == null || data.Length == 0) return Array.Empty<byte>();
+            return GzipCompress((ReadOnlySpan<byte>)data);
+        }
+
+        /// <summary>
+        /// Decompresses GZip compressed bytes into UTF-8 text.
+        /// Safe guard: Checks GZip magic header (0x1F, 0x8B). If uncompressed UTF-8, returns text directly without crashing.
+        /// </summary>
+        public static string GzipDecompressToString(byte[]? compressed)
         {
             if (compressed == null || compressed.Length == 0) return string.Empty;
 
-            using var input = new MemoryStream(compressed);
-            using var gzip = new GZipStream(input, CompressionMode.Decompress);
-            using var reader = new StreamReader(gzip, Encoding.UTF8);
-            return reader.ReadToEnd();
+            // Magic header guard: 0x1F, 0x8B
+            if (compressed.Length >= 2 && compressed[0] == 0x1F && compressed[1] == 0x8B)
+            {
+                using var input = new MemoryStream(compressed);
+                using var gzip = new GZipStream(input, CompressionMode.Decompress);
+                using var reader = new StreamReader(gzip, Encoding.UTF8);
+                return reader.ReadToEnd();
+            }
+
+            // Safe fallback: payload is uncompressed UTF-8 text
+            return Encoding.UTF8.GetString(compressed);
         }
 
         /// <summary>
         /// Decompresses GZip compressed bytes into raw byte array.
+        /// Safe guard: Checks GZip magic header (0x1F, 0x8B). If not GZip, returns raw bytes directly.
         /// </summary>
-        public static byte[] GzipDecompress(byte[] compressed)
+        public static byte[] GzipDecompress(byte[]? compressed)
         {
             if (compressed == null || compressed.Length == 0) return Array.Empty<byte>();
 
-            using var input = new MemoryStream(compressed);
-            using var gzip = new GZipStream(input, CompressionMode.Decompress);
-            using var output = new MemoryStream();
-            gzip.CopyTo(output);
-            return output.ToArray();
+            // Magic header guard: 0x1F, 0x8B
+            if (compressed.Length >= 2 && compressed[0] == 0x1F && compressed[1] == 0x8B)
+            {
+                using var input = new MemoryStream(compressed);
+                using var gzip = new GZipStream(input, CompressionMode.Decompress);
+                using var output = new MemoryStream();
+                gzip.CopyTo(output);
+                return output.ToArray();
+            }
+
+            return compressed;
         }
 
         #endregion

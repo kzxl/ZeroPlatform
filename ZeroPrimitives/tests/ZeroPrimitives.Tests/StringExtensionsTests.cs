@@ -79,5 +79,13 @@ namespace ZeroPrimitives.Tests
 
             Assert.Equal("Dau", "Đậu".RemoveDiacritics());
         }
+
+        [Fact]
+        public void UnSignedTransfer_StripsAccentsAndReplacesSpecialChars()
+        {
+            string vn = "Công ty Cổ phần & Giải pháp!";
+            string result = vn.UnSignedTransfer();
+            Assert.Equal("Cong_ty_Co_phan_-_Giai_phap-", result);
+        }
     }
 }

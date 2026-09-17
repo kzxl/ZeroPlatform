@@ -102,4 +102,8 @@
     <Project Path="ZeroSecurity/src/ZeroSecurity/ZeroSecurity.csproj" />
     <Project Path="ZeroSecurity/tests/ZeroSecurity.Tests/ZeroSecurity.Tests.csproj" />
   </Folder>
+  <Folder Name="/ZeroNetwork/">
+    <Project Path="ZeroNetwork/src/ZeroNetwork.Core/ZeroNetwork.Core.csproj" />
+    <Project Path="ZeroNetwork/tests/ZeroNetwork.Tests/ZeroNetwork.Tests.csproj" />
+  </Folder>
 </Solution>

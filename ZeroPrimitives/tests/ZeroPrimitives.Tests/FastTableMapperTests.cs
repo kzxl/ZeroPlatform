@@ -96,5 +96,62 @@ namespace ZeroPrimitives.Tests
             Assert.Equal(101, list[0].Id);
             Assert.Equal(12345.67m, list[0].Salary);
         }
+
+        [Fact]
+        public void TestListToDataTableMapping()
+        {
+            var list = new System.Collections.Generic.List<EmployeeDto>
+            {
+                new EmployeeDto
+                {
+                    Id = 1,
+                    Name = "Alice",
+                    Salary = 50000m,
+                    Rating = 4.5,
+                    IsActive = true,
+                    HireDate = new DateTime(2023, 1, 1),
+                    TenantId = Guid.NewGuid()
+                },
+                new EmployeeDto
+                {
+                    Id = 2,
+                    Name = null!,
+                    Salary = 0m,
+                    Rating = 0.0,
+                    IsActive = false,
+                    HireDate = default,
+                    TenantId = Guid.Empty
+                }
+            };
+
+            var dt = list.ToDataTable();
+
+            Assert.NotNull(dt);
+            Assert.Equal(2, dt.Rows.Count);
+            Assert.Equal(7, dt.Columns.Count);
+            Assert.Equal(1, dt.Rows[0]["Id"]);
+            Assert.Equal("Alice", dt.Rows[0]["Name"]);
+            Assert.Equal(DBNull.Value, dt.Rows[1]["Name"]);
+        }
+
+        [Fact]
+        public void TestAnonymousTypeToDataTableMapping()
+        {
+            var items = new[]
+            {
+                new { Id = 10, Title = "Test 1", Count = (int?)5 },
+                new { Id = 20, Title = (string)null!, Count = (int?)null }
+            };
+
+            var dt = items.ToDataTable();
+
+            Assert.Equal(2, dt.Rows.Count);
+            Assert.Equal(3, dt.Columns.Count);
+            Assert.Equal(10, dt.Rows[0]["Id"]);
+            Assert.Equal("Test 1", dt.Rows[0]["Title"]);
+            Assert.Equal(5, dt.Rows[0]["Count"]);
+            Assert.Equal(DBNull.Value, dt.Rows[1]["Title"]);
+            Assert.Equal(DBNull.Value, dt.Rows[1]["Count"]);
+        }
     }
 }

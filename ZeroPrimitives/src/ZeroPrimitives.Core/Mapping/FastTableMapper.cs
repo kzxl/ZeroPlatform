@@ -81,6 +81,41 @@ namespace ZeroPrimitives.Mapping
             return mapper(row);
         }
 
+        /// <summary>
+        /// Projects an IEnumerable of T into a DataTable using compiled expression row writers.
+        /// Zero reflection overhead per row.
+        /// </summary>
+        public static DataTable ToDataTable<T>(this IEnumerable<T>? source, string? tableName = null)
+        {
+            var table = string.IsNullOrEmpty(tableName) ? new DataTable() : new DataTable(tableName);
+
+            var colNames = TableSchemaCache<T>.ColumnNames;
+            var colTypes = TableSchemaCache<T>.ColumnTypes;
+            var rowWriter = TableSchemaCache<T>.RowWriter;
+
+            for (int i = 0; i < colNames.Length; i++)
+            {
+                table.Columns.Add(colNames[i], colTypes[i]);
+            }
+
+            if (source == null) return table;
+
+            table.BeginLoadData();
+            var values = new object[colNames.Length];
+
+            foreach (var item in source)
+            {
+                if (item != null)
+                {
+                    rowWriter(item, values);
+                    table.Rows.Add(values);
+                }
+            }
+
+            table.EndLoadData();
+            return table;
+        }
+
         #endregion
 
         #region Expression Tree Compilation for IDataRecord
@@ -275,6 +310,88 @@ namespace ZeroPrimitives.Mapping
             var body = Expression.Block(new[] { itemVar }, statements);
             var lambda = Expression.Lambda<Func<DataRow, T>>(body, rowParam);
             return lambda.Compile();
+        }
+
+        #endregion
+
+        #region IEnumerable to DataTable Compilation
+
+        private static class TableSchemaCache<T>
+        {
+            public static readonly string[] ColumnNames;
+            public static readonly Type[] ColumnTypes;
+            public static readonly Action<T, object[]> RowWriter;
+
+            static TableSchemaCache()
+            {
+                var props = typeof(T).GetProperties(BindingFlags.Public | BindingFlags.Instance);
+                var readableProps = new List<PropertyInfo>();
+                foreach (var p in props)
+                {
+                    if (p.CanRead && p.GetIndexParameters().Length == 0)
+                    {
+                        readableProps.Add(p);
+                    }
+                }
+
+                int count = readableProps.Count;
+                ColumnNames = new string[count];
+                ColumnTypes = new Type[count];
+
+                var itemParam = Expression.Parameter(typeof(T), "item");
+                var arrayParam = Expression.Parameter(typeof(object[]), "array");
+                var statements = new List<Expression>(Math.Max(1, count));
+
+                var dbNullConstant = Expression.Constant(DBNull.Value, typeof(object));
+
+                for (int i = 0; i < count; i++)
+                {
+                    var prop = readableProps[i];
+                    ColumnNames[i] = prop.Name;
+                    var underlying = Nullable.GetUnderlyingType(prop.PropertyType) ?? prop.PropertyType;
+                    ColumnTypes[i] = underlying;
+
+                    var indexConst = Expression.Constant(i);
+                    var propAccess = Expression.Property(itemParam, prop);
+
+                    Expression valExpr;
+                    if (prop.PropertyType.IsValueType)
+                    {
+                        if (Nullable.GetUnderlyingType(prop.PropertyType) != null)
+                        {
+                            valExpr = Expression.Condition(
+                                Expression.Property(propAccess, "HasValue"),
+                                Expression.Convert(Expression.Property(propAccess, "Value"), typeof(object)),
+                                dbNullConstant);
+                        }
+                        else
+                        {
+                            valExpr = Expression.Convert(propAccess, typeof(object));
+                        }
+                    }
+                    else
+                    {
+                        valExpr = Expression.Condition(
+                            Expression.ReferenceNotEqual(propAccess, Expression.Constant(null, prop.PropertyType)),
+                            Expression.Convert(propAccess, typeof(object)),
+                            dbNullConstant);
+                    }
+
+                    var arrayAssign = Expression.Assign(
+                        Expression.ArrayAccess(arrayParam, indexConst),
+                        valExpr);
+
+                    statements.Add(arrayAssign);
+                }
+
+                if (statements.Count == 0)
+                {
+                    statements.Add(Expression.Empty());
+                }
+
+                var block = Expression.Block(statements);
+                RowWriter = Expression.Lambda<Action<T, object[]>>(block, itemParam, arrayParam).Compile();
+            }
         }
 
         #endregion

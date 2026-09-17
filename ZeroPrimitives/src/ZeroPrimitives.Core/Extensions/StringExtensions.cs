@@ -144,5 +144,12 @@ namespace ZeroPrimitives.Extensions
 
             return sb.ToString().Normalize(NormalizationForm.FormC);
         }
+
+        /// <summary>
+        /// Converts Vietnamese string into unaccented, URL-safe transfer string using high-performance VietnameseSearchNormalizer.
+        /// Replaces special characters with '-', spaces with '_', and strips diacritics.
+        /// </summary>
+        public static string UnSignedTransfer(this string? text)
+            => ZeroPrimitives.Validation.VietnameseSearchNormalizer.UnSignedTransfer(text);
     }
 }
