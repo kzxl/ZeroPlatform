@@ -30,7 +30,8 @@ Engineered around the **Multi-Repository Satellite Architecture**, all 12 subsys
 | **`ZeroGraphics`** | [`kzxl/ZeroGraphics`](https://github.com/kzxl/ZeroGraphics) | Direct3D 11 GPU rendering, 144Hz waveforms, computational photography (Mertens HDR, Focus Stacking, Wavelets), CV metrology. |
 | **`ZeroUI`** | [`kzxl/ZeroUI`](https://github.com/kzxl/ZeroUI) | 10M+ rows virtual grid, 60 FPS SCADA/HMI controls, Creative & Media Editors Suite, dark theme (`#12151C`). |
 | **`ZeroPipeline`** | [`kzxl/ZeroPipeline`](https://github.com/kzxl/ZeroPipeline) | DAG scheduler (Kahn sort), industrial inspection nodes, JSON recipes, interactive node canvas. |
-| **`ZeroSecurity`** | [`kzxl/ZeroSecurity`](https://github.com/kzxl/ZeroSecurity) | Pure C# BLAKE3/FastSha256, HMAC-SHA256, HKDF, PBKDF2, SSDEEP, Cuckoo/Bloom IOC, X25519 ECDH, ChaCha20/XChaCha20-Poly1305. |
+| **`ZeroNetwork`** | [`kzxl/ZeroNetwork`](https://github.com/kzxl/ZeroNetwork) | High-performance network infrastructure, IP/CIDR math, IEEE OUI filtering, ARP table, WoL, parallel port scanner, and embedded micro-HTTP server. |
+| **`ZeroDocuments`** | [`kzxl/ZeroDocuments`](https://github.com/kzxl/ZeroDocuments) | Pure C# OpenXML Excel (.xlsx) reader/writer and RFC 4180 CSV engine without external dependencies. |
 
 ---
 
@@ -57,6 +58,8 @@ Engineered around the **Multi-Repository Satellite Architecture**, all 12 subsys
 | **`ZeroAudioVisual`** | `v1.0.0` | Active | Acoustic predictive maintenance, multi-channel beamforming & audio-visual synchronization. |
 | **`ZeroCharts`** | `v1.0.0` | Active | Direct2D GPU high-density telemetry strip charts and dynamic multi-axis graphs. |
 | **`ZeroIoT`** | `v1.0.0` | Active | Industrial IoT edge connectors, MQTT, OPC UA client and sensor telemetry bridge. |
+| **`ZeroNetwork`** | `v2.0.0` | Active | Network infrastructure, CIDR IP math, OUI discovery, diagnostics, and embedded micro-services. |
+| **`ZeroDocuments`** | `v1.0.0` | Active | Pure C# OpenXML Excel (.xlsx) reader/writer and RFC 4180 CSV engine without external dependencies. |
 | **`ZeroSystem`** | `v1.0.0` | Active | Sovereign Windows native subsystem, system telemetry, and hardware inventory diagnostics. |
 | **`ZeroTwin3D`** | `v1.0.0` | Active | Pure C# 3D digital twin spatial scene graph and industrial asset visualization. |
 

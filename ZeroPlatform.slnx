@@ -106,4 +106,8 @@
     <Project Path="ZeroNetwork/src/ZeroNetwork.Core/ZeroNetwork.Core.csproj" />
     <Project Path="ZeroNetwork/tests/ZeroNetwork.Tests/ZeroNetwork.Tests.csproj" />
   </Folder>
+  <Folder Name="/ZeroDocuments/">
+    <Project Path="ZeroDocuments/src/ZeroDocuments.Core/ZeroDocuments.Core.csproj" />
+    <Project Path="ZeroDocuments/tests/ZeroDocuments.Tests/ZeroDocuments.Tests.csproj" />
+  </Folder>
 </Solution>
