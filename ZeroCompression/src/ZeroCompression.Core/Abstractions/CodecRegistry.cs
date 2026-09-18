@@ -21,6 +21,7 @@ namespace ZeroCompression.Core
             Register(new DeflateCodec());
             Register(new GZipCodec());
             Register(new StoreCodec());
+            Register(new ZeroTelemetryCodec());
         }
 
         public static void Register(ICompressionCodec codec)

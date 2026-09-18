@@ -17,6 +17,8 @@ namespace ZeroCompression.Core
         /// <summary>Deflate (.NET BCL). Standard deflate stream.</summary>
         Deflate = 4,
         /// <summary>GZip (.NET BCL). Standard GZip stream.</summary>
-        GZip = 5
+        GZip = 5,
+        /// <summary>ZeroTelemetry: Specialized Gorilla/Chimp bit-packing XOR delta codec for time-series and numeric telemetry.</summary>
+        ZeroTelemetry = 6
     }
 }
