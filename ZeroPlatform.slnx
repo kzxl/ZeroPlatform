@@ -53,6 +53,10 @@
     <Project Path="ZeroStorage/src/ZeroStorage.Core/ZeroStorage.Core.csproj" />
     <Project Path="ZeroStorage/tests/ZeroStorage.Tests/ZeroStorage.Tests.csproj" />
   </Folder>
+  <Folder Name="/ZeroCompression/">
+    <Project Path="ZeroCompression/src/ZeroCompression.Core/ZeroCompression.Core.csproj" />
+    <Project Path="ZeroCompression/tests/ZeroCompression.Tests/ZeroCompression.Tests.csproj" />
+  </Folder>
   <Folder Name="/ZeroCompute/">
     <Project Path="ZeroCompute/src/ZeroCompute.Core/ZeroCompute.Core.csproj" />
     <Project Path="ZeroCompute/tests/ZeroCompute.Tests/ZeroCompute.Tests.csproj" />
