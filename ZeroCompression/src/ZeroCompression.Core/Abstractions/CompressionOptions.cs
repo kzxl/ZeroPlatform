@@ -79,5 +79,23 @@ namespace ZeroCompression.Core
             opt.Method = method;
             return opt;
         }
+
+        /// <summary>
+        /// Probes a disk path or file, automatically detects the data type, and configures the optimal compression options.
+        /// </summary>
+        public static CompressionOptions AutoDetect(string path, CompressionProfile profile = CompressionProfile.Ultra)
+        {
+            var result = ZeroCompression.Core.Analysis.DataClassifier.ClassifyPath(path);
+            return result.CreateOptions(profile);
+        }
+
+        /// <summary>
+        /// Probes a byte sample and configures the optimal compression options.
+        /// </summary>
+        public static CompressionOptions AutoDetect(ReadOnlySpan<byte> sample, string? fileNameOrExtension = null, CompressionProfile profile = CompressionProfile.Ultra)
+        {
+            var result = ZeroCompression.Core.Analysis.DataClassifier.Classify(sample, fileNameOrExtension);
+            return result.CreateOptions(profile);
+        }
     }
 }
