@@ -18,9 +18,9 @@ namespace ZeroCompression.Core.Analysis
         public string Summary()
         {
             if (AlreadyCompressed)
-                return $"Dữ liệu gần như không nén được (giảm ~{SavingsPercent:0.#}%). "
-                     + "Phần lớn đã được nén sẵn — nén sâu sẽ tốn thời gian mà lợi ích thấp.";
-            return $"Ước tính giảm ~{SavingsPercent:0.#}% "
+                return $"Data is virtually incompressible (~{SavingsPercent:0.#}% savings). "
+                     + "Mostly pre-compressed — deep compression will yield low benefit.";
+            return $"Estimated savings: ~{SavingsPercent:0.#}% "
                  + $"({FormatSize(TotalSize)} -> ~{FormatSize(PredictedSize)}).";
         }
 
@@ -96,7 +96,7 @@ namespace ZeroCompression.Core.Analysis
             }
             else
             {
-                throw new FileNotFoundException("Không tìm thấy đường dẫn nguồn.", sourcePath);
+                throw new FileNotFoundException("Source path not found.", sourcePath);
             }
             return list;
         }

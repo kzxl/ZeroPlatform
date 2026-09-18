@@ -42,7 +42,7 @@ namespace ZeroCompression.Core.Crypto
             byte[] key = DeriveKey(password, salt);
             byte[] expected = MakeVerifier(key, salt);
             if (!CryptographicOperations.FixedTimeEquals(verifier, expected))
-                throw new InvalidDataException("Sai mật khẩu.");
+                throw new InvalidDataException("Incorrect password.");
 
             return new GcmReadStream(source, key);
         }
@@ -105,7 +105,7 @@ namespace ZeroCompression.Core.Crypto
             while (read < count)
             {
                 int n = s.Read(buf, read, count - read);
-                if (n == 0) throw new EndOfStreamException("Dữ liệu mã hóa bị cắt cụt.");
+                if (n == 0) throw new EndOfStreamException("Encrypted payload truncated.");
                 read += n;
             }
             return buf;
@@ -120,7 +120,7 @@ namespace ZeroCompression.Core.Crypto
                 if (n == 0)
                 {
                     if (read == 0) return false;
-                    throw new EndOfStreamException("Dữ liệu mã hóa bị cắt cụt.");
+                    throw new EndOfStreamException("Encrypted payload truncated.");
                 }
                 read += n;
             }
@@ -252,22 +252,22 @@ namespace ZeroCompression.Core.Crypto
 
                 int flagByte = _in.ReadByte();
                 if (flagByte < 0)
-                    throw new InvalidDataException("Thiếu khối kết thúc - dữ liệu mã hóa bị cắt cụt.");
+                    throw new InvalidDataException("Missing termination block; encrypted payload truncated.");
                 bool isFinal = flagByte != 0;
 
                 if (!TryReadExactly(_in, _lenBuf, 4))
-                    throw new EndOfStreamException("Dữ liệu mã hóa bị cắt cụt.");
+                    throw new EndOfStreamException("Encrypted payload truncated.");
 
                 int cipherLen = BitConverter.ToInt32(_lenBuf, 0);
                 if (cipherLen < 0 || cipherLen > ChunkSize)
-                    throw new InvalidDataException("Khung mã hóa hỏng.");
+                    throw new InvalidDataException("Corrupted encryption frame.");
 
                 if (!TryReadExactly(_in, _nonce, NonceSize) || !TryReadExactly(_in, _tag, TagSize))
-                    throw new EndOfStreamException("Dữ liệu mã hóa bị cắt cụt.");
+                    throw new EndOfStreamException("Encrypted payload truncated.");
 
                 byte[] cipher = new byte[cipherLen];
                 if (cipherLen > 0 && !TryReadExactly(_in, cipher, cipherLen))
-                    throw new EndOfStreamException("Dữ liệu mã hóa bị cắt cụt.");
+                    throw new EndOfStreamException("Encrypted payload truncated.");
 
                 byte[] aad = MakeAad(_counter, isFinal);
                 if (_plain.Length < cipherLen) _plain = new byte[cipherLen];
@@ -277,7 +277,7 @@ namespace ZeroCompression.Core.Crypto
                 }
                 catch (CryptographicException)
                 {
-                    throw new InvalidDataException("Dữ liệu mã hóa bị sửa đổi hoặc hỏng (xác thực thất bại).");
+                    throw new InvalidDataException("Encrypted payload modified or corrupted (authentication failed).");
                 }
 
                 _plainLen = cipherLen;

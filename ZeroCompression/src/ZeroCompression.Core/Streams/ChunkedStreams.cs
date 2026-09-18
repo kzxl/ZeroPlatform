@@ -27,7 +27,7 @@ namespace ZeroCompression.Core.Streams
                 }
                 else
                 {
-                    throw new FileNotFoundException($"Không tìm thấy tệp nén phân mảnh: {_baseFilePath}.001 hoặc .bin");
+                    throw new FileNotFoundException($"Chunked archive volume not found: {_baseFilePath}.001 or .bin");
                 }
             }
         }

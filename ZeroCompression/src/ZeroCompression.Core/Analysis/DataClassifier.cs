@@ -89,7 +89,7 @@ namespace ZeroCompression.Core.Analysis
                     DetectedType = DetectedDataType.GenericBinary,
                     RecommendedMethod = CompressionMethod.Zstd,
                     RecommendedLevel = 3,
-                    Reason = "Dữ liệu trống, áp dụng Zstd mặc định."
+                    Reason = "Payload is empty; falling back to default Zstandard codec."
                 };
             }
 
@@ -129,7 +129,7 @@ namespace ZeroCompression.Core.Analysis
                     RecommendedMethod = CompressionMethod.Store,
                     RecommendedLevel = 0,
                     ShannonEntropy = entropy,
-                    Reason = $"Độ hỗn loạn Shannon cực cao ({entropy:F2}/8.0 bit/byte), dữ liệu đã nén hoặc mã hóa. Bỏ qua nén (Store) để tiết kiệm CPU."
+                    Reason = $"High Shannon entropy ({entropy:F2}/8.0 bits/byte); payload is already compressed or encrypted. Selecting Store to bypass CPU overhead."
                 };
             }
 
@@ -148,7 +148,7 @@ namespace ZeroCompression.Core.Analysis
                         WindowLog = 27,
                         ShannonEntropy = entropy,
                         PrintableRatio = printableRatio,
-                        Reason = $"Văn bản cấu trúc JSON ({jsonRatio:P1} cú pháp JSON). Kích hoạt Zstandard Ultra (Level 19) + Long Distance Matching (LDM) để triệt tiêu lặp khóa."
+                        Reason = $"Structured JSON text detected ({jsonRatio:P1} JSON syntax density). Activating Zstandard Ultra (Level 19) with Long-Distance Matching (LDM) to eliminate schema duplication."
                     };
                 }
 
@@ -162,7 +162,7 @@ namespace ZeroCompression.Core.Analysis
                         LongDistanceMatching = true,
                         ShannonEntropy = entropy,
                         PrintableRatio = printableRatio,
-                        Reason = "Dữ liệu phân tách dạng cột (CSV/TSV). Kích hoạt Zstandard Ultra + LDM."
+                        Reason = "Delimited tabular data detected (CSV/TSV). Activating Zstandard Ultra with Long-Distance Matching."
                     };
                 }
 
@@ -173,7 +173,7 @@ namespace ZeroCompression.Core.Analysis
                     RecommendedLevel = 11,
                     ShannonEntropy = entropy,
                     PrintableRatio = printableRatio,
-                    Reason = "Văn bản hoặc mã nguồn tự nhiên. Kích hoạt Brotli High Level tối ưu cho Text."
+                    Reason = "Natural plain text or source code detected. Activating Brotli High Level for optimal text compression."
                 };
             }
 
@@ -200,7 +200,7 @@ namespace ZeroCompression.Core.Analysis
                 LongDistanceMatching = false,
                 ShannonEntropy = entropy,
                 PrintableRatio = printableRatio,
-                Reason = $"Dữ liệu nhị phân tổng quát (Entropy {entropy:F2}). Áp dụng Zstandard Normal (Level 12) cân bằng tốc độ và tỉ lệ."
+                Reason = $"General binary payload (Entropy: {entropy:F2}). Applying balanced Zstandard Normal (Level 12)."
             };
         }
 
@@ -265,11 +265,11 @@ namespace ZeroCompression.Core.Analysis
                     DetectedType = DetectedDataType.GenericBinary,
                     RecommendedMethod = CompressionMethod.Zstd,
                     RecommendedLevel = 3,
-                    Reason = "Thư mục nguồn trống hoặc chỉ chứa thư mục con rỗng."
+                    Reason = "Source directory is empty or contains only empty subdirectories."
                 };
             }
 
-            throw new FileNotFoundException("Không tìm thấy đường dẫn nguồn cần phân tích.", path);
+            throw new FileNotFoundException("Source path not found for analysis.", path);
         }
 
         #region Heuristic Sub-Engines
@@ -378,7 +378,7 @@ namespace ZeroCompression.Core.Analysis
             reason = "";
             if (ext is ".ztel" or ".telemetry" or ".scada")
             {
-                reason = "Phần mở rộng chỉ định dữ liệu Telemetry chuyên dụng.";
+                reason = "File extension indicates dedicated telemetry data.";
                 return true;
             }
 
@@ -418,7 +418,7 @@ namespace ZeroCompression.Core.Analysis
             double consistencyRatio = (double)validSequences / (sampleCount - 1);
             if (consistencyRatio >= 0.70)
             {
-                reason = $"Phát hiện mẫu Telemetry / Chuỗi thời gian (độ khớp mốc thời gian {consistencyRatio:P0}). Áp dụng ZeroTelemetry (Gorilla DoD + XOR) để nén sâu vượt trội.";
+                reason = $"Detected telemetry / time-series pattern ({consistencyRatio:P0} timestamp regularity). Activating ZeroTelemetry (Gorilla DoD + XOR) for high compression.";
                 return true;
             }
 
@@ -435,7 +435,7 @@ namespace ZeroCompression.Core.Analysis
                     or ".jpg" or ".jpeg" or ".png" or ".webp" or ".gif"
                     or ".pdf" or ".docx" or ".xlsx" or ".pptx")
             {
-                reason = $"Định dạng tập tin '{ext}' đã được nén sẵn từ trước. Chọn Store để lưu trữ nguyên bản, không tốn CPU.";
+                reason = $"File format '{ext}' is already compressed. Using Store mode to preserve CPU resources.";
                 return true;
             }
 
@@ -444,37 +444,37 @@ namespace ZeroCompression.Core.Analysis
                 // ZIP: PK\x03\x04 or PK\x05\x06
                 if (data[0] == 0x50 && data[1] == 0x4B && (data[2] == 0x03 || data[2] == 0x05))
                 {
-                    reason = "Phát hiện chữ ký gói ZIP nén sẵn.";
+                    reason = "Detected pre-compressed ZIP container signature.";
                     return true;
                 }
                 // 7-Zip: 7z\xBC\xAF\x27\x1C
                 if (data.Length >= 6 && data[0] == 0x37 && data[1] == 0x7A && data[2] == 0xBC && data[3] == 0xAF && data[4] == 0x27 && data[5] == 0x1C)
                 {
-                    reason = "Phát hiện chữ ký kho nén 7-Zip.";
+                    reason = "Detected 7-Zip archive signature.";
                     return true;
                 }
                 // GZip: \x1F\x8B
                 if (data[0] == 0x1F && data[1] == 0x8B)
                 {
-                    reason = "Phát hiện chữ ký luồng GZip.";
+                    reason = "Detected GZip stream signature.";
                     return true;
                 }
                 // Zstandard frame: 0x28, 0xB5, 0x2F, 0xFD
                 if (data[0] == 0x28 && data[1] == 0xB5 && data[2] == 0x2F && data[3] == 0xFD)
                 {
-                    reason = "Phát hiện frame nén Zstandard.";
+                    reason = "Detected Zstandard frame signature.";
                     return true;
                 }
                 // JPEG: \xFF\xD8\xFF
                 if (data[0] == 0xFF && data[1] == 0xD8 && data[2] == 0xFF)
                 {
-                    reason = "Phát hiện hình ảnh JPEG nén sẵn.";
+                    reason = "Detected pre-compressed JPEG image signature.";
                     return true;
                 }
                 // PNG: \x89PNG
                 if (data[0] == 0x89 && data[1] == 0x50 && data[2] == 0x4E && data[3] == 0x47)
                 {
-                    reason = "Phát hiện hình ảnh PNG nén sẵn.";
+                    reason = "Detected pre-compressed PNG image signature.";
                     return true;
                 }
             }
@@ -487,19 +487,19 @@ namespace ZeroCompression.Core.Analysis
             reason = "";
             if (ext is ".exe" or ".dll" or ".sys" or ".so" or ".dylib" or ".ocx")
             {
-                reason = $"Phần mở rộng '{ext}' là tệp nhị phân thực thi. Áp dụng LZMA để nén sâu mã máy x86/x64.";
+                reason = $"File extension '{ext}' indicates an executable binary. Applying LZMA for machine code.";
                 return true;
             }
 
             if (data.Length >= 2 && data[0] == 0x4D && data[1] == 0x5A) // 'MZ'
             {
-                reason = "Phát hiện tiêu đề Portable Executable (Windows MZ). Áp dụng LZMA để tối ưu nén mã máy.";
+                reason = "Detected Portable Executable (Windows MZ) header. Applying LZMA for machine code optimization.";
                 return true;
             }
 
             if (data.Length >= 4 && data[0] == 0x7F && data[1] == 0x45 && data[2] == 0x4C && data[3] == 0x46) // '\x7FELF'
             {
-                reason = "Phát hiện tiêu đề Linux ELF Executable. Áp dụng LZMA.";
+                reason = "Detected Linux ELF executable header. Applying LZMA.";
                 return true;
             }
 
