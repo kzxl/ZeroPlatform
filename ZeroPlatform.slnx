@@ -114,4 +114,12 @@
     <Project Path="ZeroDocuments/src/ZeroDocuments.Core/ZeroDocuments.Core.csproj" />
     <Project Path="ZeroDocuments/tests/ZeroDocuments.Tests/ZeroDocuments.Tests.csproj" />
   </Folder>
+  <Folder Name="/ZeroVideo/">
+    <Project Path="ZeroVideo/src/ZeroVideo/ZeroVideo.csproj" />
+    <Project Path="ZeroVideo/tests/ZeroVideo.Tests/ZeroVideo.Tests.csproj" />
+  </Folder>
+  <Folder Name="/Zero3D/">
+    <Project Path="Zero3D/src/Zero3D/Zero3D.csproj" />
+    <Project Path="Zero3D/tests/Zero3D.Tests/Zero3D.Tests.csproj" />
+  </Folder>
 </Solution>
