@@ -1,0 +1,8 @@
+blank_issues_enabled: false
+contact_links:
+  - name: 💬 Ecosystem Discussions & Q&A
+    url: https://github.com/kzxl/ZeroPlatform/discussions
+    about: Ask architectural questions and discuss industrial platform design.
+  - name: 📖 Architectural Documentation
+    url: https://github.com/kzxl/ZeroPlatform/tree/master/docs
+    about: Review specifications and subsystem deep dives.

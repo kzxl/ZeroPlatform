@@ -1,0 +1,51 @@
+name: 💡 Feature Request
+description: Propose an architectural enhancement, new subsystem capability, or algorithm.
+title: "[Feature]: "
+labels: ["enhancement"]
+body:
+  - type: markdown
+    attributes:
+      value: |
+        Have an idea to improve ZeroPlatform? Tell us about your proposal!
+  - type: dropdown
+    id: subsystem
+    attributes:
+      label: Target Subsystem
+      options:
+        - Architecture / Cross-Cutting
+        - ZeroPrimitives
+        - ZeroTensor
+        - ZeroCompute
+        - ZeroData
+        - ZeroStorage
+        - ZeroInference
+        - ZeroNeural
+        - ZeroSignal
+        - ZeroGeometry
+        - ZeroComm
+        - ZeroGraphics
+        - ZeroUI
+        - ZeroPipeline
+        - ZeroNetwork
+        - ZeroDocuments
+    validations:
+      required: true
+  - type: textarea
+    id: problem
+    attributes:
+      label: Problem or Industrial Motivation
+      description: What engineering scenario or requirement does this address?
+    validations:
+      required: true
+  - type: textarea
+    id: solution
+    attributes:
+      label: Proposed Solution & Architectural Design
+      description: Describe the technical implementation, algorithm, or API design.
+    validations:
+      required: true
+  - type: textarea
+    id: alternatives
+    attributes:
+      label: Alternatives Considered
+      description: Any alternative implementations considered.
