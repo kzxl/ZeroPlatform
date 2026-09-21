@@ -15,11 +15,12 @@ graph TD
     subgraph "Layer 5: Orchestration, Inspection & HMI"
         ZeroPipeline["🔗 ZeroPipeline<br/><i>DAG Engine, Metrology & Canvas</i>"]
         ZeroUI["🖥️ ZeroUI<br/><i>Virtual Grid, HMI Controls & WPF</i>"]
+        ZeroUIReact["⚛️ ZeroUI.React<br/><i>Web HMI & Connected Clusters</i>"]
         ZeroReports["🖨️ ZeroReports<br/><i>PDF & Thermal Barcode Labels</i>"]
     end
 
     subgraph "Layer 4: Graphics, 3D & Digital Twin"
-        ZeroGraphics["🎨 ZeroGraphics<br/><i>RHI, D3D11, D2D, Waveform & Vision</i>"]
+        ZeroGraphics["🎨 ZeroGraphics<br/><i>RHI, Interception, Waveform & Vision</i>"]
         ZeroTwin3D["🏢 ZeroTwin3D<br/><i>3D Digital Twin, glTF & OBJ</i>"]
         ZeroCharts["📈 ZeroCharts<br/><i>Direct2D Telemetry Graphs</i>"]
         ZeroAudioVisual["🎙️ ZeroAudioVisual<br/><i>Beamforming & Acoustic Vision</i>"]
@@ -40,10 +41,11 @@ graph TD
         ZeroSecurity["🔐 ZeroSecurity<br/><i>BLAKE3, ChaCha20 & X25519</i>"]
     end
 
-    subgraph "Layer 1: Numerical Foundation, Data & Compute"
+    subgraph "Layer 1: Numerical Foundation, Data, Compression & Compute"
         ZeroPrimitives["⚡ ZeroPrimitives<br/><i>Fast Parsing, CRC32C & Mapper</i>"]
         ZeroTensor["🧱 ZeroTensor<br/><i>N-D Strided Tensors & BLAS</i>"]
         ZeroCompute["⚙️ ZeroCompute<br/><i>Direct3D 11 Compute & CPU SIMD</i>"]
+        ZeroCompression["🗜️ ZeroCompression<br/><i>Multi-Codec, Gorilla & AEAD</i>"]
         ZeroData["📊 ZeroData<br/><i>Columnar DataFrame & Arrow IPC</i>"]
         ZeroStorage["💾 ZeroStorage<br/><i>Gorilla XOR TSDB & WAL</i>"]
         ZeroDocuments["📄 ZeroDocuments<br/><i>Pure C# Excel & CSV Engine</i>"]
@@ -68,13 +70,14 @@ graph TD
 
 ---
 
-## 📦 Complete 23-Repository Matrix & Catalog
+## 📦 Complete 25-Repository Matrix & Catalog
 
 | Repository | GitHub Remote | NuGet Packages | Key Capabilities | Dependencies |
 | :--- | :--- | :--- | :--- | :--- |
 | **`ZeroPrimitives`** | [`kzxl/ZeroPrimitives`](https://github.com/kzxl/ZeroPrimitives) | `ZeroPrimitives.Core` | Pure C# zero-allocation primitive conversions, SSE4.2 CRC32C, span/pointer parsers, fast hex/base64, compiled object mapper. | **Pure C#** (0 deps) |
 | **`ZeroTensor`** | [`kzxl/ZeroTensor`](https://github.com/kzxl/ZeroTensor) | `ZeroTensor.Core` | N-D strided memory layout, zero-copy slicing, Level-3 BLAS (GEMM), SVD/QR/Cholesky matrix decompositions. | **Pure C#** (0 deps) |
 | **`ZeroCompute`** | [`kzxl/ZeroCompute`](https://github.com/kzxl/ZeroCompute) | `ZeroCompute.Core` | Unified compute abstraction (`IComputeContext`), Direct3D 11 Compute Shader dispatcher via COM VTable, CPU AVX2 SIMD fallback. | `ZeroTensor` |
+| **`ZeroCompression`** | [`kzxl/ZeroCompression`](https://github.com/kzxl/ZeroCompression) | `ZeroCompression.Core` | Streaming multi-codec compression (Zstandard, LZMA, Brotli, Gorilla float TSDB codec), sub-ms heuristic classifier (`DataClassifier`), AES-256-GCM AEAD, TAR/ZIP containers. | **Pure C#** (0 deps) |
 | **`ZeroData`** | [`kzxl/ZeroData`](https://github.com/kzxl/ZeroData) | `ZeroData.Core` | High-frequency columnar `DataFrame`, SIMD relational hash joins (Inner, Left, Right, Outer), temporal resampling, pure C# Apache Arrow IPC. | **Pure C#** (0 deps) |
 | **`ZeroStorage`** | [`kzxl/ZeroStorage`](https://github.com/kzxl/ZeroStorage) | `ZeroStorage.Core` | Embedded time-series database (TSDB), Facebook Gorilla Delta-of-Delta + XOR float compression (1.37 B/sample), MMF zero-copy persistence, CRC32 WAL. | **Pure C#** (0 deps) |
 | **`ZeroInference`** | [`kzxl/ZeroInference`](https://github.com/kzxl/ZeroInference) | `ZeroInference.Core` | Polymorphic `IInferenceSession`, Pure C# ONNX binary model parser, CPU execution graph & OnnxRuntime GPU providers, YOLOv8/v11 anchor-free decoders (detection, pose, segment). | `ZeroTensor` |
@@ -83,8 +86,9 @@ graph TD
 | **`ZeroGeometry`** | [`kzxl/ZeroGeometry`](https://github.com/kzxl/ZeroGeometry) | `ZeroGeometry.Core` | 3D laser scan alignment (Arun's SVD ICP), KdTree3D/RTree2D spatial indexing, surface normal eigenanalysis, Sutherland-Hodgman clipping, 2D Delaunay triangulation. | `ZeroTensor` |
 | **`ZeroComm`** | [`kzxl/ZeroComm`](https://github.com/kzxl/ZeroComm) | `ZeroComm.Core` | Asynchronous TCP/Serial transport (`TCP_NODELAY`), circular DMA ring buffers, transaction multiplexing, Modbus TCP/RTU master, Mitsubishi MELSEC 3E, Omron FINS. | **Pure C#** (0 deps) |
 | **`ZeroIoT`** | [`kzxl/ZeroIoT`](https://github.com/kzxl/ZeroIoT) | `ZeroIoT.Core` | Industrial IoT edge connectors, MQTT client, OPC UA client and sensor telemetry bridge. | **Pure C#** (0 deps) |
-| **`ZeroGraphics`** | [`kzxl/ZeroGraphics`](https://github.com/kzxl/ZeroGraphics) | `ZeroGraphics.Core`<br/>`ZeroGraphics.Rhi`<br/>`ZeroGraphics.DirectX`<br/>`ZeroGraphics.Direct2D`<br/>`ZeroGraphics.Waveform`<br/>`ZeroGraphics.Imaging`<br/>`ZeroGraphics.Vision` | Render Hardware Interface (RHI - Null & D3D11), Direct3D 11 GPU rendering, Direct2D 144Hz waveforms, computational photography (Mertens HDR, focus stacking), pure C# computer vision & Barcode HRI suite. | Direct COM VTable |
+| **`ZeroGraphics`** | [`kzxl/ZeroGraphics`](https://github.com/kzxl/ZeroGraphics) | `ZeroGraphics.Core`<br/>`ZeroGraphics.Rhi`<br/>`ZeroGraphics.DirectX`<br/>`ZeroGraphics.Direct2D`<br/>`ZeroGraphics.Waveform`<br/>`ZeroGraphics.Imaging`<br/>`ZeroGraphics.Vision` | Render Hardware Interface (RHI - Null & D3D11) with explicit barriers & timeline fences, COM VTable D3D11/D2D, pure C# Graphics Interception (`ComVTableHook`), Zero-LOH NCC & Gaussian blur, AVX2 SIMD thresholding & color transforms, Async Staging Ring Buffer, 144Hz waveforms, computational photography, Barcode HRI suite. | Direct COM VTable |
 | **`ZeroUI`** | [`kzxl/ZeroUI`](https://github.com/kzxl/ZeroUI) | `ZeroUI.Core`<br/>`ZeroUI.WinForms`<br/>`ZeroUI.Wpf` | 10M+ rows virtual data grid, single-HWND D3DCanvas, 40+ SCADA/HMI controls, dark theme design system (`#12151C`), PackML state machine, Media & Creative Editors Suite. | `ZeroGraphics` |
+| **`ZeroUI.React`** | [`kzxl/ZeroUI.React`](https://github.com/kzxl/ZeroUI.React) | `@zeroui/react` | Enterprise & Industrial React component suite for SCADA, connected button clusters, universal theme token synchronization with Desktop. | React 18+ (0 UI deps) |
 | **`ZeroTwin3D`** | [`kzxl/ZeroTwin3D`](https://github.com/kzxl/ZeroTwin3D) | `ZeroTwin3D.Core` | Pure C# 3D digital twin spatial scene graph, Wavefront OBJ & glTF 2.0 / GLB 3D model loaders, Direct3D 11 rendering pipeline, orbit/fly camera navigation. | `ZeroGraphics` |
 | **`ZeroCharts`** | [`kzxl/ZeroCharts`](https://github.com/kzxl/ZeroCharts) | `ZeroCharts.Core` | Direct2D GPU high-density telemetry strip charts, dynamic multi-axis graphs, and real-time streaming data visualizers. | `ZeroGraphics` |
 | **`ZeroPipeline`** | [`kzxl/ZeroPipeline`](https://github.com/kzxl/ZeroPipeline) | `ZeroPipeline.Core`<br/>`ZeroPipeline.Nodes`<br/>`ZeroPipeline.Recipe`<br/>`ZeroPipeline.UI` | Directed acyclic graph (DAG) scheduler (Kahn sort), backpressure buffers, domain inspection nodes, declarative JSON recipes, and infinite pan/zoom visual node studio. | All Subsystems |

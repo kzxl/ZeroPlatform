@@ -12,12 +12,13 @@ ZeroPlatform employs a decentralized **Satellite Architecture** where each subsy
 graph TD
     subgraph Presentation ["Layer 5: Presentation & Orchestration"]
         UI["ZeroUI (Virtual Grid & SCADA)"]
+        UIReact["ZeroUI.React (Web & Edge HMI)"]
         Pipe["ZeroPipeline (DAG Scheduler & Canvas)"]
         Reports["ZeroReports (PDF & Thermal Labels)"]
     end
 
     subgraph Graphics3D ["Layer 4: Graphics, 3D & Vision"]
-        Graph["ZeroGraphics (RHI, D3D11, Vision)"]
+        Graph["ZeroGraphics (RHI, Interception, Vision)"]
         Twin["ZeroTwin3D (3D Digital Twin, glTF)"]
         Charts["ZeroCharts (Direct2D Telemetry)"]
         AV["ZeroAudioVisual (Acoustic Beamforming)"]
@@ -44,6 +45,7 @@ graph TD
         Prim["ZeroPrimitives (CRC32C, Fast Parsing)"]
         Tensor["ZeroTensor (Strided N-D Array & BLAS)"]
         Compute["ZeroCompute (D3D11 Compute Shaders)"]
+        Compress["ZeroCompression (Streaming Multi-Codec & AEAD)"]
         Docs["ZeroDocuments (Excel & CSV)"]
         Sys["ZeroSystem (Hardware Telemetry)"]
     end
@@ -65,6 +67,7 @@ graph TD
 | **Layer 1: Foundation & Compute** | **`ZeroPrimitives`** | [`kzxl/ZeroPrimitives`](https://github.com/kzxl/ZeroPrimitives) | Allocation-free byte manipulation, integer/float span parsers, compiled fast object mappers. |
 | | **`ZeroTensor`** | [`kzxl/ZeroTensor`](https://github.com/kzxl/ZeroTensor) | Multi-dimensional memory strides, zero-copy slicing, matrix multiplications, SVD/QR decomposition. |
 | | **`ZeroCompute`** | [`kzxl/ZeroCompute`](https://github.com/kzxl/ZeroCompute) | Direct3D 11 GPGPU compute dispatcher via COM VTable interop, CPU SIMD Vector256 fallback. |
+| | **`ZeroCompression`** | [`kzxl/ZeroCompression`](https://github.com/kzxl/ZeroCompression) | Streaming multi-codec compression (Zstandard, LZMA, Brotli, Gorilla float TSDB codec), sub-ms heuristic classifier (`DataClassifier`), AES-256-GCM AEAD, TAR/ZIP containers. |
 | | **`ZeroDocuments`** | [`kzxl/ZeroDocuments`](https://github.com/kzxl/ZeroDocuments) | Pure C# zero-dependency OpenXML Excel (.xlsx) reader/writer and RFC 4180 CSV engine. |
 | | **`ZeroSystem`** | [`kzxl/ZeroSystem`](https://github.com/kzxl/ZeroSystem) | Sovereign Windows native subsystem, hardware inventory telemetry, and OS diagnostics. |
 | **Layer 2: Storage & Comm** | **`ZeroData`** | [`kzxl/ZeroData`](https://github.com/kzxl/ZeroData) | Columnar data tables, zero-copy Arrow memory serialization, relational hash joins. |
@@ -78,11 +81,12 @@ graph TD
 | | **`ZeroNeural`** | [`kzxl/ZeroNeural`](https://github.com/kzxl/ZeroNeural) | Reverse-mode automatic differentiation (Autograd), deep learning layers, AdamW/SGD optimizer. |
 | | **`ZeroSignal`** | [`kzxl/ZeroSignal`](https://github.com/kzxl/ZeroSignal) | In-place radix-2 FFT, STFT spectrograms, zero-phase Butterworth filter, Extended Kalman Filter. |
 | | **`ZeroGeometry`** | [`kzxl/ZeroGeometry`](https://github.com/kzxl/ZeroGeometry) | 3D Iterative Closest Point (ICP), KdTree3D, 2D polygon Boolean clipping, Delaunay triangulation. |
-| **Layer 4: Graphics & 3D** | **`ZeroGraphics`** | [`kzxl/ZeroGraphics`](https://github.com/kzxl/ZeroGraphics) | Render Hardware Interface (RHI - Null & D3D11), D3D11/D2D, 144Hz waveforms, computational photography, CV & Barcode HRI suite. |
+| **Layer 4: Graphics & 3D** | **`ZeroGraphics`** | [`kzxl/ZeroGraphics`](https://github.com/kzxl/ZeroGraphics) | Render Hardware Interface (RHI - Null & D3D11) with explicit barriers & timeline fences, COM VTable D3D11/D2D, pure C# Graphics Interception (`ComVTableHook`), Zero-LOH NCC & Gaussian blur, AVX2 SIMD thresholding & color transforms, Async Staging Ring Buffer, 144Hz waveforms, computational photography, Barcode HRI suite. |
 | | **`ZeroTwin3D`** | [`kzxl/ZeroTwin3D`](https://github.com/kzxl/ZeroTwin3D) | Pure C# 3D digital twin spatial scene graph, Wavefront OBJ & glTF 2.0 / GLB 3D model loaders, D3D11 renderer. |
 | | **`ZeroCharts`** | [`kzxl/ZeroCharts`](https://github.com/kzxl/ZeroCharts) | Direct2D GPU high-density telemetry strip charts, dynamic multi-axis graphs. |
 | | **`ZeroAudioVisual`** | [`kzxl/ZeroAudioVisual`](https://github.com/kzxl/ZeroAudioVisual) | Acoustic predictive maintenance, multi-channel microphone array beamforming & defect localization. |
 | **Layer 5: Presentation** | **`ZeroUI`** | [`kzxl/ZeroUI`](https://github.com/kzxl/ZeroUI) | 10M+ rows virtual grid, single-HWND D3DCanvas, 40+ SCADA controls, Media & Creative Suite, dark theme. |
+| | **`ZeroUI.React`** | [`kzxl/ZeroUI.React`](https://github.com/kzxl/ZeroUI.React) | Enterprise & Industrial React component suite for SCADA, connected button clusters, universal theme token synchronization with Desktop. |
 | | **`ZeroPipeline`** | [`kzxl/ZeroPipeline`](https://github.com/kzxl/ZeroPipeline) | Kahn-sorted DAG inspection pipeline, JSON recipes, interactive graphical node graph canvas. |
 | | **`ZeroReports`** | [`kzxl/ZeroReports`](https://github.com/kzxl/ZeroReports) | Pure C# high-speed PDF & industrial thermal barcode label rendering without GDI+ (ZPL/TSPL). |
 
