@@ -10,24 +10,21 @@ All participants must abide by our [Code of Conduct](CODE_OF_CONDUCT.md). Please
 
 ---
 
-## 🏛️ Ecosystem Structure & Multi-Repo Satellite Architecture
+## 🏛️ Ecosystem Structure & 6-Tier Architecture
 
-ZeroPlatform is organized as an umbrella orchestrator coordinating independent satellite repositories across 12+ domains:
-- **`ZeroPrimitives`**: Pure C# primitive parsers and zero-alloc memory utilities.
-- **`ZeroTensor`**: N-D strided tensor layout and linear algebra.
-- **`ZeroCompute`**: Direct3D 11 Compute Shader dispatcher & AVX2 SIMD fallback.
-- **`ZeroData`**: High-performance Columnar DataFrame & hash joins.
-- **`ZeroStorage`**: Embedded TSDB, Gorilla Delta-of-Delta compression.
-- **`ZeroInference`**: Pure C# ONNX binary inference runtime.
-- **`ZeroNeural`**: Reverse-mode automatic differentiation & deep learning.
-- **`ZeroSignal`**: FFT, STFT, Butterworth filters, Extended Kalman Filter.
-- **`ZeroGeometry`**: 3D point cloud ICP, KdTree, Delaunay triangulation.
-- **`ZeroComm`**: Industrial protocols (Modbus TCP/RTU, MC Protocol 3E, Omron FINS).
-- **`ZeroGraphics`**: Direct3D 11 GPU rendering, computer vision, Mertens HDR.
-- **`ZeroUI`**: 10M+ rows virtual grid, 60 FPS SCADA controls, dark theme.
-- **`ZeroPipeline`**: DAG scheduler and inspection canvas.
-- **`ZeroNetwork`**: Embedded HTTP server, packet parser, parallel scanner.
-- **`ZeroDocuments`**: Pure C# OpenXML Excel (.xlsx) & CSV parser.
+ZeroPlatform is organized as an umbrella orchestrator coordinating **28 autonomous satellite repositories** classified under a strict **6-Tier Directed Acyclic Graph (DAG)**:
+
+- **Tier 0: Core Foundation (The Bedrock)**: [`ZeroPrimitives`](https://github.com/kzxl/ZeroPrimitives), [`ZeroConcurrency`](https://github.com/kzxl/ZeroConcurrency), [`ZeroSecurity`](https://github.com/kzxl/ZeroSecurity)
+- **Tier 1: Compute & System**: [`ZeroSystem`](https://github.com/kzxl/ZeroSystem), [`ZeroCompression`](https://github.com/kzxl/ZeroCompression), [`ZeroTensor`](https://github.com/kzxl/ZeroTensor), [`ZeroCompute`](https://github.com/kzxl/ZeroCompute)
+- **Tier 2: Transport & Storage**: [`ZeroNetwork`](https://github.com/kzxl/ZeroNetwork), [`ZeroComm`](https://github.com/kzxl/ZeroComm), [`ZeroIoT`](https://github.com/kzxl/ZeroIoT), [`ZeroRfid`](https://github.com/kzxl/ZeroRfid), [`ZeroStorage`](https://github.com/kzxl/ZeroStorage), [`ZeroData`](https://github.com/kzxl/ZeroData)
+- **Tier 3: Perception & Intelligence**: [`ZeroSignal`](https://github.com/kzxl/ZeroSignal), [`ZeroGeometry`](https://github.com/kzxl/ZeroGeometry), [`ZeroVideo`](https://github.com/kzxl/ZeroVideo), [`ZeroAudioVisual`](https://github.com/kzxl/ZeroAudioVisual), [`ZeroInference`](https://github.com/kzxl/ZeroInference), [`ZeroNeural`](https://github.com/kzxl/ZeroNeural)
+- **Tier 4: Graphics & Spatial 3D**: [`ZeroGraphics`](https://github.com/kzxl/ZeroGraphics), [`ZeroCharts`](https://github.com/kzxl/ZeroCharts), [`ZeroTwin3D`](https://github.com/kzxl/ZeroTwin3D), [`Zero3D`](https://github.com/kzxl/Zero3D)
+- **Tier 5: Presentation & Orchestration**: [`ZeroDocuments`](https://github.com/kzxl/ZeroDocuments), [`ZeroReports`](https://github.com/kzxl/ZeroReports), [`ZeroPipeline`](https://github.com/kzxl/ZeroPipeline), [`ZeroUI`](https://github.com/kzxl/ZeroUI), [`ZeroUI.React`](https://github.com/kzxl/ZeroUI.React)
+
+👉 Read the authoritative specifications:
+- **[Tier Taxonomy & Architectural Governance (SPEC-ARCH-001)](docs/architect/tier-taxonomy-specification.md)**
+- **[Subsystem Catalog & Git Repository Standards (GOV-REPO-001)](docs/governance/subsystem-catalog-and-git-descriptions.md)**
+- **[Autonomous Satellites Architecture (SPEC-ARCH-002)](docs/architect/satellites-architecture.md)**
 
 ---
 
@@ -44,7 +41,7 @@ ZeroPlatform is organized as an umbrella orchestrator coordinating independent s
    git clone https://github.com/kzxl/ZeroPlatform.git
    cd ZeroPlatform
    ```
-2. Clone or synchronize the satellite repositories:
+2. Clone or synchronize all 28 satellite repositories:
    ```powershell
    .\clone-ecosystem.ps1
    ```
@@ -59,12 +56,23 @@ ZeroPlatform is organized as an umbrella orchestrator coordinating independent s
 
 ---
 
-## 📐 Engineering Principles
+## 📐 Strict Architectural Invariants
 
-1. **Zero External Runtime Dependencies**: All subsystems are engineered in 100% pure C# or standard platform APIs.
-2. **Zero-Allocation Hot Paths**: Use `Span<T>`, `ReadOnlySpan<T>`, and memory pools in tight computational loops.
-3. **Multi-Targeting**: Maintain compatibility across `net8.0`, `net462`, and `netstandard2.0` where specified.
-4. **Standard Technical English**: All code, documentation, XML comments, and commit messages must be in clean, technical English.
+1. **The Downstream Invariant (Strict DAG)**: Subsystems in Tier $N$ may only reference subsystems in Tier $< N$. Upward or cyclic dependencies will fail automated validation.
+2. **Tier 0 Independence**: Core foundation libraries (`ZeroPrimitives`, `ZeroConcurrency`, `ZeroSecurity`) must have **0 external and 0 internal platform dependencies**.
+3. **Zero External Runtime Dependencies**: All core subsystems are engineered in 100% pure C# or standard platform APIs (no unmanaged native C++ binaries, Python wrappers, or external redistributables).
+4. **Hybrid Linking**: Satellite references to other satellites must use conditional project/package linking:
+   ```xml
+   <ItemGroup Condition="Exists('..\..\ZeroConcurrency\src\ZeroConcurrency\ZeroConcurrency.csproj')">
+     <ProjectReference Include="..\..\ZeroConcurrency\src\ZeroConcurrency\ZeroConcurrency.csproj" />
+   </ItemGroup>
+   <ItemGroup Condition="!Exists('..\..\ZeroConcurrency\src\ZeroConcurrency\ZeroConcurrency.csproj')">
+     <PackageReference Include="ZeroConcurrency" Version="1.0.0" />
+   </ItemGroup>
+   ```
+5. **Zero-Allocation Hot Paths**: Use `Span<T>`, `ReadOnlySpan<T>`, and memory pools in tight computational loops.
+6. **Multi-Targeting**: Maintain compatibility across `net8.0`, `net462`, and `netstandard2.0` where specified.
+7. **Standard Technical English**: All code, documentation, XML comments, and commit messages must be written in clean, professional technical English.
 
 ---
 

@@ -1,15 +1,105 @@
 <Solution>
-  <Folder Name="/ZeroUI/">
-    <Project Path="ZeroUI/src/ZeroUI.Core/ZeroUI.Core.csproj" />
-    <Project Path="ZeroUI/src/ZeroUI.WinForms/ZeroUI.WinForms.csproj" />
-    <Project Path="ZeroUI/src/ZeroUI.Wpf/ZeroUI.Wpf.csproj" />
-    <Project Path="ZeroUI/src/ZeroUI.Samples.BenchmarkDemo/ZeroUI.Samples.BenchmarkDemo.csproj" />
-    <Project Path="ZeroUI/src/ZeroUI.Samples.WpfDemo/ZeroUI.Samples.WpfDemo.csproj" />
-    <Project Path="ZeroUI/tests/ZeroUI.Benchmarks/ZeroUI.Benchmarks.csproj" />
-    <Project Path="ZeroUI/tests/ZeroUI.Core.Benchmarks/ZeroUI.Core.Benchmarks.csproj" />
-    <Project Path="ZeroUI/tests/ZeroUI.Core.Tests/ZeroUI.Core.Tests.csproj" />
+  <!-- ================================================================= -->
+  <!-- LAYER 0: CORE FOUNDATION (THE BEDROCK - ZERO DEPENDENCIES)        -->
+  <!-- ================================================================= -->
+  <Folder Name="/00_L0_CoreFoundation/ZeroPrimitives/">
+    <Project Path="ZeroPrimitives/src/ZeroPrimitives.Core/ZeroPrimitives.Core.csproj" />
+    <Project Path="ZeroPrimitives/tests/ZeroPrimitives.Tests/ZeroPrimitives.Tests.csproj" />
   </Folder>
-  <Folder Name="/ZeroGraphics/">
+  <Folder Name="/00_L0_CoreFoundation/ZeroConcurrency/">
+    <Project Path="ZeroConcurrency/src/ZeroConcurrency/ZeroConcurrency.csproj" />
+    <Project Path="ZeroConcurrency/tests/ZeroConcurrency.Tests/ZeroConcurrency.Tests.csproj" />
+  </Folder>
+  <Folder Name="/00_L0_CoreFoundation/ZeroSecurity/">
+    <Project Path="ZeroSecurity/src/ZeroSecurity/ZeroSecurity.csproj" />
+    <Project Path="ZeroSecurity/tests/ZeroSecurity.Tests/ZeroSecurity.Tests.csproj" />
+  </Folder>
+
+  <!-- ================================================================= -->
+  <!-- LAYER 1: COMPUTE & SYSTEM (HARDWARE & NUMERICAL ENGINE)           -->
+  <!-- ================================================================= -->
+  <Folder Name="/01_L1_ComputeAndSystem/ZeroSystem/">
+    <Project Path="ZeroSystem/src/ZeroSystem.Core/ZeroSystem.Core.csproj" />
+    <Project Path="ZeroSystem/tests/ZeroSystem.Tests/ZeroSystem.Tests.csproj" />
+  </Folder>
+  <Folder Name="/01_L1_ComputeAndSystem/ZeroCompression/">
+    <Project Path="ZeroCompression/src/ZeroCompression.Core/ZeroCompression.Core.csproj" />
+    <Project Path="ZeroCompression/tests/ZeroCompression.Tests/ZeroCompression.Tests.csproj" />
+  </Folder>
+  <Folder Name="/01_L1_ComputeAndSystem/ZeroTensor/">
+    <Project Path="ZeroTensor/src/ZeroTensor.Core/ZeroTensor.Core.csproj" />
+    <Project Path="ZeroTensor/tests/ZeroTensor.Tests/ZeroTensor.Tests.csproj" />
+  </Folder>
+  <Folder Name="/01_L1_ComputeAndSystem/ZeroCompute/">
+    <Project Path="ZeroCompute/src/ZeroCompute.Core/ZeroCompute.Core.csproj" />
+    <Project Path="ZeroCompute/tests/ZeroCompute.Tests/ZeroCompute.Tests.csproj" />
+  </Folder>
+
+  <!-- ================================================================= -->
+  <!-- LAYER 2: TRANSPORT & STORAGE (DATA PIPELINE & INDUSTRIAL COMM)    -->
+  <!-- ================================================================= -->
+  <Folder Name="/02_L2_TransportAndStorage/ZeroNetwork/">
+    <Project Path="ZeroNetwork/src/ZeroNetwork.Core/ZeroNetwork.Core.csproj" />
+    <Project Path="ZeroNetwork/tests/ZeroNetwork.Tests/ZeroNetwork.Tests.csproj" />
+  </Folder>
+  <Folder Name="/02_L2_TransportAndStorage/ZeroComm/">
+    <Project Path="ZeroComm/src/ZeroComm.Core/ZeroComm.Core.csproj" />
+    <Project Path="ZeroComm/tests/ZeroComm.Tests/ZeroComm.Tests.csproj" />
+  </Folder>
+  <Folder Name="/02_L2_TransportAndStorage/ZeroIoT/">
+    <Project Path="ZeroIoT/src/ZeroIoT/ZeroIoT.csproj" />
+    <Project Path="ZeroIoT/tests/ZeroIoT.Tests/ZeroIoT.Tests.csproj" />
+  </Folder>
+  <Folder Name="/02_L2_TransportAndStorage/ZeroRfid/">
+    <Project Path="ZeroRfid/src/ZeroRfid.Core/ZeroRfid.Core.csproj" />
+    <Project Path="ZeroRfid/src/ZeroRfid.Adapters.Abstractions/ZeroRfid.Adapters.Abstractions.csproj" />
+    <Project Path="ZeroRfid/src/ZeroRfid.Pipeline/ZeroRfid.Pipeline.csproj" />
+    <Project Path="ZeroRfid/src/ZeroRfid.Simulator/ZeroRfid.Simulator.csproj" />
+    <Project Path="ZeroRfid/tests/ZeroRfid.Tests/ZeroRfid.Tests.csproj" />
+  </Folder>
+  <Folder Name="/02_L2_TransportAndStorage/ZeroStorage/">
+    <Project Path="ZeroStorage/src/ZeroStorage.Core/ZeroStorage.Core.csproj" />
+    <Project Path="ZeroStorage/tests/ZeroStorage.Tests/ZeroStorage.Tests.csproj" />
+  </Folder>
+  <Folder Name="/02_L2_TransportAndStorage/ZeroData/">
+    <Project Path="ZeroData/src/ZeroData.Core/ZeroData.Core.csproj" />
+    <Project Path="ZeroData/tests/ZeroData.Tests/ZeroData.Tests.csproj" />
+  </Folder>
+
+  <!-- ================================================================= -->
+  <!-- LAYER 3: PERCEPTION & INTELLIGENCE (SIGNAL, VISION & AI)          -->
+  <!-- ================================================================= -->
+  <Folder Name="/03_L3_PerceptionAndIntelligence/ZeroSignal/">
+    <Project Path="ZeroSignal/src/ZeroSignal.Core/ZeroSignal.Core.csproj" />
+    <Project Path="ZeroSignal/tests/ZeroSignal.Tests/ZeroSignal.Tests.csproj" />
+  </Folder>
+  <Folder Name="/03_L3_PerceptionAndIntelligence/ZeroGeometry/">
+    <Project Path="ZeroGeometry/src/ZeroGeometry.Core/ZeroGeometry.Core.csproj" />
+    <Project Path="ZeroGeometry/tests/ZeroGeometry.Tests/ZeroGeometry.Tests.csproj" />
+  </Folder>
+  <Folder Name="/03_L3_PerceptionAndIntelligence/ZeroVideo/">
+    <Project Path="ZeroVideo/src/ZeroVideo/ZeroVideo.csproj" />
+    <Project Path="ZeroVideo/tests/ZeroVideo.Tests/ZeroVideo.Tests.csproj" />
+  </Folder>
+  <Folder Name="/03_L3_PerceptionAndIntelligence/ZeroAudioVisual/">
+    <Project Path="ZeroAudioVisual/src/ZeroAudioVisual/ZeroAudioVisual.csproj" />
+    <Project Path="ZeroAudioVisual/tests/ZeroAudioVisual.Tests/ZeroAudioVisual.Tests.csproj" />
+  </Folder>
+  <Folder Name="/03_L3_PerceptionAndIntelligence/ZeroInference/">
+    <Project Path="ZeroInference/src/ZeroInference.Core/ZeroInference.Core.csproj" />
+    <Project Path="ZeroInference/src/ZeroInference.Providers.OnnxRuntime/ZeroInference.Providers.OnnxRuntime.csproj" />
+    <Project Path="ZeroInference/tests/ZeroInference.Tests/ZeroInference.Tests.csproj" />
+    <Project Path="ZeroInference/tests/ZeroInference.Providers.OnnxRuntime.Tests/ZeroInference.Providers.OnnxRuntime.Tests.csproj" />
+  </Folder>
+  <Folder Name="/03_L3_PerceptionAndIntelligence/ZeroNeural/">
+    <Project Path="ZeroNeural/src/ZeroNeural.Core/ZeroNeural.Core.csproj" />
+    <Project Path="ZeroNeural/tests/ZeroNeural.Tests/ZeroNeural.Tests.csproj" />
+  </Folder>
+
+  <!-- ================================================================= -->
+  <!-- LAYER 4: GRAPHICS & SPATIAL 3D (GPU ACCELERATED VISUALIZATION)    -->
+  <!-- ================================================================= -->
+  <Folder Name="/04_L4_GraphicsAndSpatial3D/ZeroGraphics/">
     <Project Path="ZeroGraphics/src/ZeroGraphics.Core/ZeroGraphics.Core.csproj" />
     <Project Path="ZeroGraphics/src/ZeroGraphics.Direct2D/ZeroGraphics.Direct2D.csproj" />
     <Project Path="ZeroGraphics/src/ZeroGraphics.DirectX/ZeroGraphics.DirectX.csproj" />
@@ -19,111 +109,55 @@
     <Project Path="ZeroGraphics/samples/ZeroGraphics.Samples.Demo/ZeroGraphics.Samples.Demo.csproj" />
     <Project Path="ZeroGraphics/tests/ZeroGraphics.Tests/ZeroGraphics.Tests.csproj" />
   </Folder>
-  <Folder Name="/ZeroTensor/">
-    <Project Path="ZeroTensor/src/ZeroTensor.Core/ZeroTensor.Core.csproj" />
-    <Project Path="ZeroTensor/tests/ZeroTensor.Tests/ZeroTensor.Tests.csproj" />
+  <Folder Name="/04_L4_GraphicsAndSpatial3D/ZeroCharts/">
+    <Project Path="ZeroCharts/src/ZeroCharts/ZeroCharts.csproj" />
+    <Project Path="ZeroCharts/tests/ZeroCharts.Tests/ZeroCharts.Tests.csproj" />
   </Folder>
-  <Folder Name="/ZeroNeural/">
-    <Project Path="ZeroNeural/src/ZeroNeural.Core/ZeroNeural.Core.csproj" />
-    <Project Path="ZeroNeural/tests/ZeroNeural.Tests/ZeroNeural.Tests.csproj" />
+  <Folder Name="/04_L4_GraphicsAndSpatial3D/ZeroTwin3D/">
+    <Project Path="ZeroTwin3D/src/ZeroTwin3D/ZeroTwin3D.csproj" />
+    <Project Path="ZeroTwin3D/tests/ZeroTwin3D.Tests/ZeroTwin3D.Tests.csproj" />
   </Folder>
-  <Folder Name="/ZeroData/">
-    <Project Path="ZeroData/src/ZeroData.Core/ZeroData.Core.csproj" />
-    <Project Path="ZeroData/tests/ZeroData.Tests/ZeroData.Tests.csproj" />
+  <Folder Name="/04_L4_GraphicsAndSpatial3D/Zero3D/">
+    <Project Path="Zero3D/src/Zero3D/Zero3D.csproj" />
+    <Project Path="Zero3D/tests/Zero3D.Tests/Zero3D.Tests.csproj" />
   </Folder>
-  <Folder Name="/ZeroSignal/">
-    <Project Path="ZeroSignal/src/ZeroSignal.Core/ZeroSignal.Core.csproj" />
-    <Project Path="ZeroSignal/tests/ZeroSignal.Tests/ZeroSignal.Tests.csproj" />
+
+  <!-- ================================================================= -->
+  <!-- LAYER 5: PRESENTATION & ORCHESTRATION (APPLICATION & REPORTING)   -->
+  <!-- ================================================================= -->
+  <Folder Name="/05_L5_PresentationAndOrchestration/ZeroDocuments/">
+    <Project Path="ZeroDocuments/src/ZeroDocuments.Core/ZeroDocuments.Core.csproj" />
+    <Project Path="ZeroDocuments/tests/ZeroDocuments.Tests/ZeroDocuments.Tests.csproj" />
   </Folder>
-  <Folder Name="/ZeroInference/">
-    <Project Path="ZeroInference/src/ZeroInference.Core/ZeroInference.Core.csproj" />
-    <Project Path="ZeroInference/src/ZeroInference.Providers.OnnxRuntime/ZeroInference.Providers.OnnxRuntime.csproj" />
-    <Project Path="ZeroInference/tests/ZeroInference.Tests/ZeroInference.Tests.csproj" />
-    <Project Path="ZeroInference/tests/ZeroInference.Providers.OnnxRuntime.Tests/ZeroInference.Providers.OnnxRuntime.Tests.csproj" />
+  <Folder Name="/05_L5_PresentationAndOrchestration/ZeroReports/">
+    <Project Path="ZeroReports/src/ZeroReports/ZeroReports.csproj" />
+    <Project Path="ZeroReports/tests/ZeroReports.Tests/ZeroReports.Tests.csproj" />
   </Folder>
-  <Folder Name="/ZeroGeometry/">
-    <Project Path="ZeroGeometry/src/ZeroGeometry.Core/ZeroGeometry.Core.csproj" />
-    <Project Path="ZeroGeometry/tests/ZeroGeometry.Tests/ZeroGeometry.Tests.csproj" />
-  </Folder>
-  <Folder Name="/ZeroComm/">
-    <Project Path="ZeroComm/src/ZeroComm.Core/ZeroComm.Core.csproj" />
-    <Project Path="ZeroComm/tests/ZeroComm.Tests/ZeroComm.Tests.csproj" />
-  </Folder>
-  <Folder Name="/ZeroStorage/">
-    <Project Path="ZeroStorage/src/ZeroStorage.Core/ZeroStorage.Core.csproj" />
-    <Project Path="ZeroStorage/tests/ZeroStorage.Tests/ZeroStorage.Tests.csproj" />
-  </Folder>
-  <Folder Name="/ZeroCompression/">
-    <Project Path="ZeroCompression/src/ZeroCompression.Core/ZeroCompression.Core.csproj" />
-    <Project Path="ZeroCompression/tests/ZeroCompression.Tests/ZeroCompression.Tests.csproj" />
-  </Folder>
-  <Folder Name="/ZeroCompute/">
-    <Project Path="ZeroCompute/src/ZeroCompute.Core/ZeroCompute.Core.csproj" />
-    <Project Path="ZeroCompute/tests/ZeroCompute.Tests/ZeroCompute.Tests.csproj" />
-  </Folder>
-  <Folder Name="/Showcase/">
-    <Project Path="samples/ZeroPlatform.Samples.Showcase/ZeroPlatform.Samples.Showcase.csproj" />
-  </Folder>
-  <Folder Name="/ZeroPipeline/">
+  <Folder Name="/05_L5_PresentationAndOrchestration/ZeroPipeline/">
     <Project Path="ZeroPipeline/src/ZeroPipeline.Core/ZeroPipeline.Core.csproj" />
     <Project Path="ZeroPipeline/src/ZeroPipeline.Nodes/ZeroPipeline.Nodes.csproj" />
     <Project Path="ZeroPipeline/src/ZeroPipeline.Recipe/ZeroPipeline.Recipe.csproj" />
     <Project Path="ZeroPipeline/src/ZeroPipeline.UI/ZeroPipeline.UI.csproj" />
     <Project Path="ZeroPipeline/tests/ZeroPipeline.Tests/ZeroPipeline.Tests.csproj" />
   </Folder>
-  <Folder Name="/Integration/">
+  <Folder Name="/05_L5_PresentationAndOrchestration/ZeroUI/">
+    <Project Path="ZeroUI/src/ZeroUI.Core/ZeroUI.Core.csproj" />
+    <Project Path="ZeroUI/src/ZeroUI.WinForms/ZeroUI.WinForms.csproj" />
+    <Project Path="ZeroUI/src/ZeroUI.Wpf/ZeroUI.Wpf.csproj" />
+    <Project Path="ZeroUI/src/ZeroUI.Samples.BenchmarkDemo/ZeroUI.Samples.BenchmarkDemo.csproj" />
+    <Project Path="ZeroUI/src/ZeroUI.Samples.WpfDemo/ZeroUI.Samples.WpfDemo.csproj" />
+    <Project Path="ZeroUI/tests/ZeroUI.Benchmarks/ZeroUI.Benchmarks.csproj" />
+    <Project Path="ZeroUI/tests/ZeroUI.Core.Benchmarks/ZeroUI.Core.Benchmarks.csproj" />
+    <Project Path="ZeroUI/tests/ZeroUI.Core.Tests/ZeroUI.Core.Tests.csproj" />
+  </Folder>
+
+  <!-- ================================================================= -->
+  <!-- ORCHESTRATION & INTEGRATION (CROSS-LAYER INTEGRATION SUITE)       -->
+  <!-- ================================================================= -->
+  <Folder Name="/99_ShowcaseAndIntegration/Showcase/">
+    <Project Path="samples/ZeroPlatform.Samples.Showcase/ZeroPlatform.Samples.Showcase.csproj" />
+  </Folder>
+  <Folder Name="/99_ShowcaseAndIntegration/Integration/">
     <Project Path="tests/ZeroPlatform.Tests.Integration/ZeroPlatform.Tests.Integration.csproj" />
-  </Folder>
-  <Folder Name="/ZeroPrimitives/">
-    <Project Path="ZeroPrimitives/src/ZeroPrimitives.Core/ZeroPrimitives.Core.csproj" />
-    <Project Path="ZeroPrimitives/tests/ZeroPrimitives.Tests/ZeroPrimitives.Tests.csproj" />
-  </Folder>
-  <Folder Name="/ZeroIoT/">
-    <Project Path="ZeroIoT/src/ZeroIoT/ZeroIoT.csproj" />
-    <Project Path="ZeroIoT/tests/ZeroIoT.Tests/ZeroIoT.Tests.csproj" />
-  </Folder>
-  <Folder Name="/ZeroCharts/">
-    <Project Path="ZeroCharts/src/ZeroCharts/ZeroCharts.csproj" />
-    <Project Path="ZeroCharts/tests/ZeroCharts.Tests/ZeroCharts.Tests.csproj" />
-  </Folder>
-  <Folder Name="/ZeroReports/">
-    <Project Path="ZeroReports/src/ZeroReports/ZeroReports.csproj" />
-    <Project Path="ZeroReports/tests/ZeroReports.Tests/ZeroReports.Tests.csproj" />
-  </Folder>
-  <Folder Name="/ZeroAudioVisual/">
-    <Project Path="ZeroAudioVisual/src/ZeroAudioVisual/ZeroAudioVisual.csproj" />
-    <Project Path="ZeroAudioVisual/tests/ZeroAudioVisual.Tests/ZeroAudioVisual.Tests.csproj" />
-  </Folder>
-  <Folder Name="/ZeroTwin3D/">
-    <Project Path="ZeroTwin3D/src/ZeroTwin3D/ZeroTwin3D.csproj" />
-    <Project Path="ZeroTwin3D/tests/ZeroTwin3D.Tests/ZeroTwin3D.Tests.csproj" />
-  </Folder>
-  <Folder Name="/ZeroSystem/">
-    <Project Path="ZeroSystem/src/ZeroSystem.Core/ZeroSystem.Core.csproj" />
-    <Project Path="ZeroSystem/tests/ZeroSystem.Tests/ZeroSystem.Tests.csproj" />
-  </Folder>
-  <Folder Name="/ZeroSecurity/">
-    <Project Path="ZeroSecurity/src/ZeroSecurity/ZeroSecurity.csproj" />
-    <Project Path="ZeroSecurity/tests/ZeroSecurity.Tests/ZeroSecurity.Tests.csproj" />
-  </Folder>
-  <Folder Name="/ZeroNetwork/">
-    <Project Path="ZeroNetwork/src/ZeroNetwork.Core/ZeroNetwork.Core.csproj" />
-    <Project Path="ZeroNetwork/tests/ZeroNetwork.Tests/ZeroNetwork.Tests.csproj" />
-  </Folder>
-  <Folder Name="/ZeroDocuments/">
-    <Project Path="ZeroDocuments/src/ZeroDocuments.Core/ZeroDocuments.Core.csproj" />
-    <Project Path="ZeroDocuments/tests/ZeroDocuments.Tests/ZeroDocuments.Tests.csproj" />
-  </Folder>
-  <Folder Name="/ZeroVideo/">
-    <Project Path="ZeroVideo/src/ZeroVideo/ZeroVideo.csproj" />
-    <Project Path="ZeroVideo/tests/ZeroVideo.Tests/ZeroVideo.Tests.csproj" />
-  </Folder>
-  <Folder Name="/Zero3D/">
-    <Project Path="Zero3D/src/Zero3D/Zero3D.csproj" />
-    <Project Path="Zero3D/tests/Zero3D.Tests/Zero3D.Tests.csproj" />
-  </Folder>
-  <Folder Name="/ZeroConcurrency/">
-    <Project Path="ZeroConcurrency/src/ZeroConcurrency/ZeroConcurrency.csproj" />
-    <Project Path="ZeroConcurrency/tests/ZeroConcurrency.Tests/ZeroConcurrency.Tests.csproj" />
   </Folder>
 </Solution>

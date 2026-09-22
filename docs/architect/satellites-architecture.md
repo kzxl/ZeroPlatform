@@ -1,33 +1,76 @@
-# ZeroPlatform Satellites Architecture Guide
+# 🛰️ ZeroPlatform: Autonomous Satellites Architecture & Integration Guide
 
-Satellites are modular, domain-specific extensions that build upon the core foundations of **ZeroPlatform**:
-- **ZeroUI**: High-performance UI control system, docking, theme engine, and industrial SCADA components.
-- **ZeroGraphics**: Direct3D 11 / Direct2D hardware-accelerated rendering pipelines, analytical SDF cards, and real-time waveform oscilloscopes.
-
----
-
-## 🎯 Satellite Principles
-
-1. **Decoupled Autonomy**:
-   - Each satellite resides in its own root-level subsystem folder (e.g. `ZeroIoT`, `ZeroCharts`, `ZeroReports`, `ZeroAudioVisual`, `ZeroTwin3D`) and maintains its own package and repository lifecycle.
-   - Satellites must never modify the core codebase of `ZeroUI` or `ZeroGraphics`.
-
-2. **Dual-Targeting Support**:
-   - Satellites targeting desktop applications should support both `.NET Framework 4.6.2` (for legacy enterprise environments) and `.NET 8.0-windows` (for modern platforms).
-
-3. **Hardware Acceleration via ZeroGraphics**:
-   - If a satellite requires high-frequency rendering (e.g. streaming time-series charts, 2D vector diagrams, thermal maps), it should interface with `ZeroGraphics.DirectX` or `ZeroGraphics.Direct2D`.
+> **Specification**: SPEC-ARCH-002  
+> **Related Documents**: [Tier Taxonomy Specification (SPEC-ARCH-001)](tier-taxonomy-specification.md) • [Subsystem Catalog & Git Standards (GOV-REPO-001)](../governance/subsystem-catalog-and-git-descriptions.md)
 
 ---
 
-## 🚀 Planned Satellites Pipeline
+## 1. The Autonomous Satellite Philosophy
 
-👉 **[Read the Full Satellite Systems Architecture & Expansion Roadmap](../../../docs/architect/satellite-expansion-roadmap.md)**
+ZeroPlatform does not follow a monolithic code repository model. Instead, it is architected as an **Ecosystem of Sovereign Autonomous Satellites**:
 
-| Satellite | Responsibility | Target Technology | Status |
-| :--- | :--- | :--- | :---: |
-| **`ZeroIoT`** | Industrial protocol connectors (OPC-UA Binary, MQTT 3.1.1/5.0, Sparkplug B) | High-throughput memory pipeline & Pure C# Sockets | **Completed (P0)** |
-| **`ZeroCharts`** | High-density telemetry plots (10M+ pts), LTTB decimation, Candle, Heatmap, Gantt | D3D11 Instanced Quads & WinForms/ZeroUI controls | **Completed (P1)** |
-| **`ZeroReports`** | Document and label generation, thermal printer engine (ZPL II/TSPL), vector PDF | Pure C# Vector PDF 1.4 & Industrial Thermal Codecs | **Completed (P1)** |
-| **`ZeroAudioVisual`** | Real-time acoustic vibration monitoring, STFT Spectrogram, Bearing fault detection, RTP/H.264 | Zero-allocation Ring Buffers & Industrial RTP streaming | **Completed (P2)** |
-| **`ZeroTwin3D`** | 3D Digital Twin, STL/OBJ CAD mesh loader, 6-axis & SCARA robot kinematics, safety zones | Pure C# 3D Math, DH Solvers & Spatial Scene Graphs | **Completed (P2)** |
+1. **Sovereign Repositories**:
+   Each of the 28 subsystems resides in its own dedicated Git repository under `https://github.com/kzxl/<SubsystemName>.git` with its own issue tracker, CI/CD pipeline, and semantic versioning tag sequence.
+2. **Dual Identity**:
+   - **Standalone Library**: Can be cloned, compiled, and published to NuGet.org independently without downloading the rest of the ecosystem.
+   - **Unified Solution Member**: When cloned into the ZeroPlatform workspace, all subsystems integrate into `ZeroPlatform.slnx` organized into numbered tier folders.
+3. **Pure C# Sovereignty**:
+   Zero third-party runtime dependencies (no native C++ runtimes, no Python, no unmanaged bindings). Every satellite runs deterministically on standard .NET runtimes.
+
+---
+
+## 2. Satellite Classification in the 6-Tier DAG
+
+Every satellite is strictly assigned to one of six architectural tiers according to its foundational level:
+
+```mermaid
+graph TD
+    classDef l0 fill:#0f172a,stroke:#38bdf8,stroke-width:2px,color:#fff;
+    classDef l1 fill:#1e293b,stroke:#818cf8,stroke-width:2px,color:#fff;
+    classDef l2 fill:#14532d,stroke:#4ade80,stroke-width:2px,color:#fff;
+    classDef l3 fill:#701a75,stroke:#f472b6,stroke-width:2px,color:#fff;
+    classDef l4 fill:#7c2d12,stroke:#fb923c,stroke-width:2px,color:#fff;
+    classDef l5 fill:#831843,stroke:#f43f5e,stroke-width:2px,color:#fff;
+
+    L0["Tier 0: Core Foundation<br/>ZeroPrimitives • ZeroConcurrency • ZeroSecurity"]:::l0
+    L1["Tier 1: Compute & System<br/>ZeroSystem • ZeroCompression • ZeroTensor • ZeroCompute"]:::l1
+    L2["Tier 2: Transport & Storage<br/>ZeroNetwork • ZeroComm • ZeroIoT • ZeroRfid • ZeroStorage • ZeroData"]:::l2
+    L3["Tier 3: Perception & AI<br/>ZeroSignal • ZeroGeometry • ZeroVideo • ZeroAudioVisual • ZeroInference • ZeroNeural"]:::l3
+    L4["Tier 4: Graphics & Spatial 3D<br/>ZeroGraphics • ZeroCharts • ZeroTwin3D • Zero3D"]:::l4
+    L5["Tier 5: Presentation & Orchestration<br/>ZeroDocuments • ZeroReports • ZeroPipeline • ZeroUI • ZeroUI.React"]:::l5
+
+    L5 --> L4 & L3 & L2 & L1 & L0
+    L4 --> L3 & L1 & L0
+    L3 --> L2 & L1 & L0
+    L2 --> L1 & L0
+    L1 --> L0
+```
+
+---
+
+## 3. Satellite Inter-Dependency Contract (Hybrid Linking)
+
+To maintain autonomy while supporting developer-friendly project references in the root workspace, satellites utilize **Conditional Hybrid Linking**:
+
+```xml
+<!-- Example: ZeroVideo referencing Tier 0 ZeroConcurrency -->
+<ItemGroup Condition="Exists('..\..\ZeroConcurrency\src\ZeroConcurrency\ZeroConcurrency.csproj')">
+  <ProjectReference Include="..\..\ZeroConcurrency\src\ZeroConcurrency\ZeroConcurrency.csproj" />
+</ItemGroup>
+
+<ItemGroup Condition="!Exists('..\..\ZeroConcurrency\src\ZeroConcurrency\ZeroConcurrency.csproj')">
+  <PackageReference Include="ZeroConcurrency" Version="1.0.0" />
+</ItemGroup>
+```
+
+- **In Workspace (`ZeroPlatform.slnx`)**: The local project file is discovered, enabling seamless cross-library debugging, refactoring, and instant compilation across all 28 repositories.
+- **In Isolated CI/CD (GitHub Actions)**: The project falls back to published NuGet packages, ensuring completely independent builds without cloning the entire monorepo.
+
+---
+
+## 4. Satellite Governance Invariants
+
+1. **Downstream Rule**: Subsystems in Tier $N$ must only consume Tier $< N$. Upward or cyclic dependencies are strictly prohibited.
+2. **Tier 0 Independence**: Core foundation libraries (`ZeroPrimitives`, `ZeroConcurrency`, `ZeroSecurity`) must have **0 external and 0 internal platform dependencies**.
+3. **Pure BCL Guarantee**: Unmanaged binaries or wrappers are forbidden on hot execution loops.
+4. **Multi-Targeting**: Core libraries maintain dual-targeting (`net8.0`, `net462`, `netstandard2.0`) to service both modern edge nodes and legacy enterprise SCADA installations.
