@@ -42,6 +42,7 @@ Engineered around the **Multi-Repository Satellite Architecture**, all 25 subsys
 | **`ZeroAudioVisual`** | [`kzxl/ZeroAudioVisual`](https://github.com/kzxl/ZeroAudioVisual) | Acoustic predictive maintenance, multi-channel microphone array beamforming & audio-visual defect localization. |
 | **`ZeroSecurity`** | [`kzxl/ZeroSecurity`](https://github.com/kzxl/ZeroSecurity) | Pure C# BLAKE3/FastSha256, HMAC, HKDF, PBKDF2, Cuckoo/Bloom Filter, X25519 ECDH, ChaCha20/XChaCha20-Poly1305. |
 | **`ZeroSystem`** | [`kzxl/ZeroSystem`](https://github.com/kzxl/ZeroSystem) | Sovereign Windows native subsystem, hardware inventory telemetry (CPU, GPU, RAM, Storage, Network), and OS diagnostics. |
+| **`ZeroConcurrency`** | [`kzxl/ZeroConcurrency`](https://github.com/kzxl/ZeroConcurrency) | Pure C# lock-free SPSC/MPMC ring buffers, execution-context bypassing schedulers, zero-allocation pooled ValueTask sources, and Go-like CSP channels. |
 
 ---
 
@@ -50,6 +51,7 @@ Engineered around the **Multi-Repository Satellite Architecture**, all 25 subsys
 | Subsystem | Version | Status | Primary Focus |
 | :--- | :---: | :---: | :--- |
 | **`ZeroPrimitives`** | `v1.1.0` | Active | Hardware-accelerated CRC32C (SSE4.2/ARM64), zero-alloc span/pointer parsers & CSV tokenizer. |
+| **`ZeroConcurrency`** | `v1.0.0` | Active | Lock-free SPSC/MPMC ring buffers, 0-alloc ValueTask sources, Go-like CSP channels, ExecutionContext bypass. |
 | **`ZeroGraphics`** | `v1.4.2` | Active | RHI abstraction (Null & D3D11) with timeline fences & barriers, pure C# COM VTable graphics interception, Zero-LOH NCC & Gaussian blur, AVX2 SIMD filters, Async Staging Ring Buffer, Barcode HRI suite. |
 | **`ZeroUI`** | `v1.8.0` | Active | 10M+ rows virtual grid, single-HWND D3DCanvas, 40+ SCADA controls, Creative & Media Editors Suite, PackML state machine. |
 | **`ZeroUI.React`** | `v1.0.0` | Active | Web & Edge HMI component suite, SCADA connected button groups, unified token architecture. |

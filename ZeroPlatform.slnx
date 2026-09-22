@@ -122,4 +122,8 @@
     <Project Path="Zero3D/src/Zero3D/Zero3D.csproj" />
     <Project Path="Zero3D/tests/Zero3D.Tests/Zero3D.Tests.csproj" />
   </Folder>
+  <Folder Name="/ZeroConcurrency/">
+    <Project Path="ZeroConcurrency/src/ZeroConcurrency/ZeroConcurrency.csproj" />
+    <Project Path="ZeroConcurrency/tests/ZeroConcurrency.Tests/ZeroConcurrency.Tests.csproj" />
+  </Folder>
 </Solution>
