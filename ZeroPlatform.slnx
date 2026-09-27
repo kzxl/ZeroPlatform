@@ -34,6 +34,10 @@
     <Project Path="ZeroCompute/src/ZeroCompute.Core/ZeroCompute.Core.csproj" />
     <Project Path="ZeroCompute/tests/ZeroCompute.Tests/ZeroCompute.Tests.csproj" />
   </Folder>
+  <Folder Name="/01_L1_ComputeAndSystem/ZeroText/">
+    <Project Path="ZeroText/src/ZeroText/ZeroText.csproj" />
+    <Project Path="ZeroText/tests/ZeroText.Tests/ZeroText.Tests.csproj" />
+  </Folder>
 
   <!-- ================================================================= -->
   <!-- LAYER 2: TRANSPORT & STORAGE (DATA PIPELINE & INDUSTRIAL COMM)    -->
@@ -142,10 +146,10 @@
   </Folder>
   <Folder Name="/05_L5_PresentationAndOrchestration/ZeroUI/">
     <Project Path="ZeroUI/src/ZeroUI.Core/ZeroUI.Core.csproj" />
-    <Project Path="ZeroUI/src/ZeroUI.WinForms/ZeroUI.WinForms.csproj" />
-    <Project Path="ZeroUI/src/ZeroUI.Wpf/ZeroUI.Wpf.csproj" />
-    <Project Path="ZeroUI/src/ZeroUI.Samples.BenchmarkDemo/ZeroUI.Samples.BenchmarkDemo.csproj" />
-    <Project Path="ZeroUI/src/ZeroUI.Samples.WpfDemo/ZeroUI.Samples.WpfDemo.csproj" />
+    <Project Path="ZeroUI/src/WinForms/ZeroUI.WinForms/ZeroUI.WinForms.csproj" />
+    <Project Path="ZeroUI/src/Wpf/ZeroUI.Wpf/ZeroUI.Wpf.csproj" />
+    <Project Path="ZeroUI/demo/WinformDemo/WinformDemo.csproj" />
+    <Project Path="ZeroUI/demo/WpfDemo/WpfDemo.csproj" />
     <Project Path="ZeroUI/tests/ZeroUI.Benchmarks/ZeroUI.Benchmarks.csproj" />
     <Project Path="ZeroUI/tests/ZeroUI.Core.Benchmarks/ZeroUI.Core.Benchmarks.csproj" />
     <Project Path="ZeroUI/tests/ZeroUI.Core.Tests/ZeroUI.Core.Tests.csproj" />
