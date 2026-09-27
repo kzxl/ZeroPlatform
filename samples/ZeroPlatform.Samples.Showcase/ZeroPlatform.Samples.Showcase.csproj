@@ -12,7 +12,7 @@
 
   <ItemGroup>
     <ProjectReference Include="..\..\ZeroUI\src\ZeroUI.Core\ZeroUI.Core.csproj" />
-    <ProjectReference Include="..\..\ZeroUI\src\ZeroUI.WinForms\ZeroUI.WinForms.csproj" />
+    <ProjectReference Include="..\..\ZeroUI\src\WinForms\ZeroUI.WinForms\ZeroUI.WinForms.csproj" />
     <ProjectReference Include="..\..\ZeroGraphics\src\ZeroGraphics.Core\ZeroGraphics.Core.csproj" />
     <ProjectReference Include="..\..\ZeroGraphics\src\ZeroGraphics.Direct2D\ZeroGraphics.Direct2D.csproj" />
     <ProjectReference Include="..\..\ZeroGraphics\src\ZeroGraphics.DirectX\ZeroGraphics.DirectX.csproj" />
