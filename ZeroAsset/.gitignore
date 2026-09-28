@@ -1,8 +1,0 @@
-bin/
-obj/
-dist/
-packages/
-*.user
-*.suo
-.vs/
-*.nupkg

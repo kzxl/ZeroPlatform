@@ -1,8 +1,0 @@
-<Solution>
-  <Folder Name="/src/">
-    <Project Path="src/ZeroAsset/ZeroAsset.csproj" />
-  </Folder>
-  <Folder Name="/tests/">
-    <Project Path="tests/ZeroAsset.Tests/ZeroAsset.Tests.csproj" />
-  </Folder>
-</Solution>
