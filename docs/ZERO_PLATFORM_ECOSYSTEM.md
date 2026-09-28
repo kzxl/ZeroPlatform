@@ -55,6 +55,7 @@ graph TD
         ZeroCompression["🗜️ ZeroCompression<br/><i>Multi-Codec, Gorilla & AEAD</i>"]:::l1
         ZeroTensor["🧱 ZeroTensor<br/><i>N-D Strided Tensors & BLAS</i>"]:::l1
         ZeroCompute["⚙️ ZeroCompute<br/><i>Direct3D 11 Compute & CPU SIMD</i>"]:::l1
+        ZeroAsset["📦 ZeroAsset<br/><i>DAM, Variants & Curation</i>"]:::l1
     end
 
     subgraph L0 ["Tier 0: Core Foundation (The Bedrock)"]
@@ -72,7 +73,7 @@ graph TD
 
 ---
 
-## 📦 Complete 27-Repository Satellite Catalog
+## 📦 Complete 28-Repository Satellite Catalog
 
 ### Tier 0: Core Foundation (The Bedrock - Zero Dependencies)
 | Repository | GitHub Remote | NuGet Package | Key Capabilities |
@@ -88,6 +89,7 @@ graph TD
 | **`ZeroCompression`** | [`kzxl/ZeroCompression`](https://github.com/kzxl/ZeroCompression) | `ZeroCompression.Core` | Streaming multi-codec compression (Zstandard, LZMA, Brotli, Gorilla float TSDB codec), sub-ms heuristic classifier, AES-256-GCM AEAD, TAR/ZIP containers. |
 | **`ZeroTensor`** | [`kzxl/ZeroTensor`](https://github.com/kzxl/ZeroTensor) | `ZeroTensor.Core` | N-D strided memory layout, zero-copy slicing, Level-3 BLAS (GEMM), SVD/QR/Cholesky matrix decompositions. |
 | **`ZeroCompute`** | [`kzxl/ZeroCompute`](https://github.com/kzxl/ZeroCompute) | `ZeroCompute.Core` | Direct3D 11 Compute Shader dispatcher via COM VTable, UAV buffer/texture binding, and CPU AVX2 SIMD fallback kernels. |
+| **`ZeroAsset`** | [`kzxl/ZeroAsset`](https://github.com/kzxl/ZeroAsset) | `ZeroAsset` | Digital asset management (DAM), zero-byte variant branching (`#vc<n>`), hierarchical contiguous sorting, asset curation & cache keys. |
 
 ### Tier 2: Transport & Storage (Data & Comm Pipelines)
 | Repository | GitHub Remote | NuGet Package | Key Capabilities |
@@ -103,7 +105,7 @@ graph TD
 | Repository | GitHub Remote | NuGet Package | Key Capabilities |
 | :--- | :--- | :--- | :--- |
 | **`ZeroSignal`** | [`kzxl/ZeroSignal`](https://github.com/kzxl/ZeroSignal) | `ZeroSignal.Core` | In-place Cooley-Tukey FFT, real-time STFT spectrogram, zero-phase Butterworth `FiltFilt`, Extended Kalman Filter (EKF), VAD voice activity detector. |
-| **`ZeroGeometry`** | [`kzxl/ZeroGeometry`](https://github.com/kzxl/ZeroGeometry) | `ZeroGeometry.Core` | 3D ICP rigid cloud alignment, KdTree3D/RTree2D spatial queries, surface normal estimation, Sutherland-Hodgman clipping, 2D Delaunay triangulation. |
+| **`ZeroGeometry`** | [`kzxl/ZeroGeometry`](https://github.com/kzxl/ZeroGeometry) | `ZeroGeometry.Core` | 3D ICP rigid cloud alignment, KdTree3D/RTree2D spatial queries, surface normal estimation, Sutherland-Hodgman clipping, 2D Delaunay triangulation, 2D Homography DLT & RANSAC. |
 | **`ZeroVideo`** | [`kzxl/ZeroVideo`](https://github.com/kzxl/ZeroVideo) | `ZeroVideo` | Industrial Motion JPEG client, RTSP 1.0 session transport, RFC 3550 RTP demuxing, H.264 NALU scanner & Exp-Golomb SPS parser, zero-LOH `VideoFramePool`, PTS playback. |
 | **`ZeroAudioVisual`** | [`kzxl/ZeroAudioVisual`](https://github.com/kzxl/ZeroAudioVisual) | `ZeroAudioVisual` | Acoustic predictive maintenance, multi-channel microphone array beamforming & audio-visual defect localization. |
 | **`ZeroInference`** | [`kzxl/ZeroInference`](https://github.com/kzxl/ZeroInference) | `ZeroInference.Core` | Polymorphic `IInferenceSession`, Pure C# ONNX binary model parser, CPU execution graph & OnnxRuntime GPU providers, YOLOv8/v11 decoders (detection, pose, segment). |
@@ -112,7 +114,7 @@ graph TD
 ### Tier 4: Graphics & Spatial 3D (GPU Rendering)
 | Repository | GitHub Remote | NuGet Package | Key Capabilities |
 | :--- | :--- | :--- | :--- |
-| **`ZeroGraphics`** | [`kzxl/ZeroGraphics`](https://github.com/kzxl/ZeroGraphics) | `ZeroGraphics.Core` | Render Hardware Interface (RHI - Null & D3D11) with explicit barriers & timeline fences, COM VTable D3D11/D2D, pure C# Graphics Interception (`ComVTableHook`), Zero-LOH NCC & Gaussian blur, AVX2 SIMD thresholding & color transforms, Async Staging Ring Buffer, 144Hz waveforms, Barcode HRI suite. |
+| **`ZeroGraphics`** | [`kzxl/ZeroGraphics`](https://github.com/kzxl/ZeroGraphics) | `ZeroGraphics.Core` | Render Hardware Interface (RHI - Null & D3D11) with explicit barriers & timeline fences, COM VTable D3D11/D2D, pure C# Graphics Interception (`ComVTableHook`), Standardized Color Spaces & Bradford chromatic adaptation, Zero-LOH NCC & Gaussian blur, AVX2 SIMD thresholding & color transforms, Async Staging Ring Buffer, 144Hz waveforms, Barcode HRI suite. |
 | **`ZeroCharts`** | [`kzxl/ZeroCharts`](https://github.com/kzxl/ZeroCharts) | `ZeroCharts` | Direct2D GPU high-density telemetry strip charts, dynamic multi-axis graphs, and real-time streaming data visualizers. |
 | **`ZeroTwin3D`** | [`kzxl/ZeroTwin3D`](https://github.com/kzxl/ZeroTwin3D) | `ZeroTwin3D` | Pure C# 3D digital twin spatial scene graph, Wavefront OBJ & glTF 2.0 / GLB 3D model loaders, Direct3D 11 rendering pipeline, orbit/fly camera navigation. |
 | **`Zero3D`** | [`kzxl/Zero3D`](https://github.com/kzxl/Zero3D) | `Zero3D` | General-purpose 3D mathematics, camera matrices, lighting models, and geometry mesh rendering. |

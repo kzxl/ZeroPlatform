@@ -8,7 +8,7 @@
 
 ## 1. Purpose & Scope
 
-This specification establishes official GitHub metadata, short repository descriptions, searchable topic tags, tier classification badges, and dependency boundaries for all **28 autonomous satellite repositories** and the root orchestrator in the `kzxl` organization.
+This specification establishes official GitHub metadata, short repository descriptions, searchable topic tags, tier classification badges, and dependency boundaries for all **29 autonomous satellite repositories** and the root orchestrator in the `kzxl` organization.
 
 Maintaining consistent repository descriptions and topic tags ensures:
 1. **Discoverability**: Standardized GitHub Topics make subsystems easily searchable on GitHub and NuGet.
@@ -92,6 +92,13 @@ Include the corresponding badge markdown at the top of each repository's `README
 - **Permitted Dependencies**: `ZeroPrimitives`, `ZeroConcurrency`, `ZeroTensor`
 - **Downstream Consumers**: $L_3$ (`ZeroInference`), $L_4$ (`ZeroGraphics`)
 
+#### 8. [`kzxl/ZeroAsset`](https://github.com/kzxl/ZeroAsset)
+- **Tier**: Tier 1 (Asset & Storage)
+- **GitHub Description**: High-performance digital asset management, zero-byte variant branching, hierarchical curation, and content-addressable cache keys for .NET.
+- **GitHub Topics**: `csharp`, `dotnet`, `zeroplatform`, `tier-1`, `dam`, `digital-asset-management`, `virtual-copies`, `curation`, `cache-keys`, `sorting`
+- **Permitted Dependencies**: `ZeroPrimitives`, `ZeroConcurrency`
+- **Downstream Consumers**: Applications (`ZVision`), $L_2$ (`ZeroStorage`), $L_5$ (`ZeroUI`)
+
 ---
 
 ### Tier 2: Transport & Storage (Data & Comm Pipelines)
@@ -153,8 +160,8 @@ Include the corresponding badge markdown at the top of each repository's `README
 
 #### 15. [`kzxl/ZeroGeometry`](https://github.com/kzxl/ZeroGeometry)
 - **Tier**: Tier 3 (Perception & Intelligence)
-- **GitHub Description**: 3D point cloud ICP registration, KdTree3D/RTree2D spatial queries, surface normal estimation, and Sutherland-Hodgman clipping.
-- **GitHub Topics**: `csharp`, `dotnet`, `zeroplatform`, `tier-3`, `point-cloud`, `icp`, `kdtree`, `computational-geometry`, `delaunay`
+- **GitHub Description**: 3D point cloud ICP registration, KdTree3D/RTree2D spatial queries, surface normal estimation, Sutherland-Hodgman clipping, and 2D Homography DLT & RANSAC.
+- **GitHub Topics**: `csharp`, `dotnet`, `zeroplatform`, `tier-3`, `point-cloud`, `icp`, `kdtree`, `computational-geometry`, `delaunay`, `homography`, `ransac`
 - **Permitted Dependencies**: `ZeroPrimitives`, `ZeroConcurrency`, `ZeroTensor`
 - **Downstream Consumers**: `ZeroTwin3D`, `Zero3D`, `ZeroGraphics`
 
@@ -193,8 +200,8 @@ Include the corresponding badge markdown at the top of each repository's `README
 
 #### 20. [`kzxl/ZeroGraphics`](https://github.com/kzxl/ZeroGraphics)
 - **Tier**: Tier 4 (Graphics & Spatial 3D)
-- **GitHub Description**: Render Hardware Interface (RHI - D3D11), COM VTable hook, zero-LOH NCC & Gaussian blur, AVX2 SIMD filters, and Barcode HRI suite.
-- **GitHub Topics**: `csharp`, `dotnet`, `zeroplatform`, `tier-4`, `computer-vision`, `direct3d11`, `direct2d`, `simd`, `image-processing`, `rhi`
+- **GitHub Description**: Render Hardware Interface (RHI - D3D11), COM VTable hook, Standardized Color Spaces & Bradford chromatic adaptation, zero-LOH NCC & Gaussian blur, AVX2 SIMD filters, and Barcode HRI suite.
+- **GitHub Topics**: `csharp`, `dotnet`, `zeroplatform`, `tier-4`, `computer-vision`, `direct3d11`, `direct2d`, `simd`, `image-processing`, `rhi`, `color-science`
 - **Permitted Dependencies**: `ZeroPrimitives`, `ZeroConcurrency`, `ZeroTensor`, `ZeroCompute`, `ZeroVideo`, `ZeroInference`
 - **Downstream Consumers**: `ZeroCharts`, `ZeroUI`, `ZeroPipeline`
 
