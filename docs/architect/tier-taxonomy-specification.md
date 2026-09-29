@@ -122,10 +122,11 @@ graph TD
 
 | Subsystem | Primary Capabilities |
 | :--- | :--- |
-| **`ZeroSignal`** | In-place radix-2 Cooley-Tukey FFT, real-time STFT spectrograms, zero-phase Butterworth `FiltFilt`, Extended Kalman Filter (EKF), VAD voice activity detector. |
+| **`ZeroSignal`** | In-place radix-2 Cooley-Tukey FFT, zero-phase Butterworth `FiltFilt`, Extended Kalman Filter (EKF), DWT wavelets, and Levenberg-Marquardt non-linear least squares optimization. |
+| **`ZeroAudio`** | Pure C# audio DSP & streaming engine, WAV/RIFF codec, lock-free SPSC `AudioRingBuffer`, ArrayPool-backed `AudioBuffer`, cubic Hermite resampling, brickwall peak limiter, dynamic compressor, biquad equalizer, STFT spectrograms, Voice Activity Detection (VAD), acoustic vibration metrics & bearing defect diagnostic. |
 | **`ZeroGeometry`** | 3D ICP rigid cloud alignment, KdTree3D/RTree2D spatial queries, surface normal estimation, Sutherland-Hodgman clipping, Delaunay triangulation. |
 | **`ZeroVideo`** | Industrial Motion JPEG client, RTSP 1.0 session transport, RFC 3550 RTP demuxing, H.264 NALU scanner & Exp-Golomb SPS parser, zero-LOH `VideoFramePool`, PTS playback. |
-| **`ZeroAudioVisual`** | Acoustic predictive maintenance, multi-channel microphone array beamforming & audio-visual synchronization. |
+| **`ZeroAudioVisual`** | Acoustic predictive maintenance & video transport satellite (delegating acoustic DSP/spectrogram to `ZeroAudio`, video to `ZeroVideo`). |
 | **`ZeroInference`** | Polymorphic `IInferenceSession`, pure C# ONNX binary model parser, CPU execution graph & OnnxRuntime GPU providers, YOLOv8/v11 anchor-free decoders (detect, pose, seg). |
 | **`ZeroNeural`** | PyTorch-like reverse-mode automatic differentiation (Autograd) DAG tape, neural layers (`Linear`, `Sequential`, `Conv2D`, `Dropout`), AdamW/SGD. |
 
@@ -208,3 +209,42 @@ Each repository includes the standardized Tier badge in its header:
 | **3** | `#7c3aed` | `Tier 3 (Perception & AI)` |
 | **4** | `#ea580c` | `Tier 4 (Graphics & Spatial 3D)` |
 | **5** | `#e11d48` | `Tier 5 (Presentation & Apps)` |
+
+---
+
+## 6. Memory Allocation Doctrine: Minimal Allocation & Maximum Pragmatic Efficiency
+
+ZeroPlatform rejects dogmatic, extreme "Zero-Allocation-Everywhere" gymnastics that sacrifice code clarity and maintainability for negligible gain in cold paths. Instead, all 27+ subsystems adhere strictly to the **Minimal Allocation & Maximum Pragmatic Efficiency Standard**:
+
+```mermaid
+flowchart TD
+    subgraph DataPlane ["⚡ Hot Path (Data Plane) — 0 Allocations"]
+        H1["Per-Sample / Per-Packet / Per-Frame Loops"]
+        H2["Span&lt;T&gt; & ReadOnlySpan&lt;T&gt; Slicing"]
+        H3["ArrayPool&lt;T&gt;.Shared via try/finally"]
+        H4["Lock-Free SPSC / MPMC Ring Buffers"]
+        H5["SIMD Vector Operations (AVX2/NEON)"]
+    end
+
+    subgraph BatchPlane ["📦 Warm / Batch Plane — Minimal Allocation"]
+        W1["Block & Chunk Decompression / Parsing"]
+        W2["Zero-LOH Buffers (Cap chunk size &lt; 85KB)"]
+        W3["Pooled MemoryStream / ValueList"]
+    end
+
+    subgraph ControlPlane ["🏛️ Cold Path (Control Plane) — Pragmatic C# OOP"]
+        C1["Initialization, Pipeline Topology, Configuration"]
+        C2["Human-Readable Strings, IDs & Diagnostics"]
+        C3["Standard Collections (List&lt;T&gt;, Dictionary&lt;K,V&gt;)"]
+        C4["Standard Explicit BCL Exception Types"]
+    end
+
+    DataPlane --> BatchPlane --> ControlPlane
+```
+
+### Governing Rules:
+1. **Hot Path Strictness**: Any code executing continuously on telemetry streams, audio/video frames, socket packets, or inner DSP filters MUST NOT allocate on the managed heap. Use `Span<T>`, `ReadOnlyMemory<T>`, or rent from `ArrayPool<T>.Shared`.
+2. **Warm/Batch Pragmatism**: In block transforms (e.g., zero-phase `FiltFilt`, batch decompression, FFT runs), allocate or rent memory efficiently and return it promptly. Never leak memory into the Large Object Heap (LOH).
+3. **Cold Path Usability**: In initialization, dependency wiring, configuration parsing, diagnostic summaries, and user interface event dispatching, write clean, idiomatic, readable Standard C#. Do not replace readable strings and `List<T>` with obscure unsafe pointers or complex fixed buffers unless verified by profiling.
+4. **Safety Over Raw Pointers**: Favor safe BCL abstractions (`Span<T>`, `MemoryMarshal`, `Unsafe.Add`) over raw unmanaged pointers (`*`). Reserve raw unmanaged pointers strictly for COM VTable interop (DirectX, Direct2D, WIC) and low-level SIMD intrinsics.
+

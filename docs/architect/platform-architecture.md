@@ -34,7 +34,7 @@ graph TD
     subgraph L3 ["Tier 3: Perception & Intelligence (Vision & AI)"]
         Video["ZeroVideo"]:::l3
         Infer["ZeroInference & ZeroNeural"]:::l3
-        Sig["ZeroSignal & ZeroAudioVisual"]:::l3
+        Sig["ZeroSignal, ZeroAudio & ZeroAudioVisual"]:::l3
         Geom["ZeroGeometry"]:::l3
     end
 
