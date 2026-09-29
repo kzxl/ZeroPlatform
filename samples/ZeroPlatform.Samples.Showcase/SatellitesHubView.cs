@@ -5,8 +5,7 @@ using System.Drawing;
 using System.IO;
 using System.Text;
 using System.Windows.Forms;
-using ZeroAudioVisual.Acoustic;
-using ZeroAudioVisual.Analysis;
+using ZeroAudio.Analysis;
 using ZeroCharts.Axis;
 using ZeroCharts.Controls;
 using ZeroCharts.DataModels;
@@ -333,7 +332,7 @@ namespace ZeroPlatform.Samples.Showcase
             var card = new ZeroCard
             {
                 Dock = DockStyle.Fill,
-                Title = "🔊 Acoustic PdM & Audio (ZeroAudioVisual)",
+                Title = "🔊 Acoustic PdM & Audio (ZeroAudio)",
                 Subtitle = "Vibration Statistical Metrics & Rolling Bearing Fault Diagnostic"
             };
 
