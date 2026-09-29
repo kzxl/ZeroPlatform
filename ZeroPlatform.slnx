@@ -103,6 +103,11 @@
     <Project Path="ZeroNeural/src/ZeroNeural.Core/ZeroNeural.Core.csproj" />
     <Project Path="ZeroNeural/tests/ZeroNeural.Tests/ZeroNeural.Tests.csproj" />
   </Folder>
+  <Folder Name="/03_L3_PerceptionAndIntelligence/ZeroOcr/">
+    <Project Path="ZeroOcr/src/ZeroOcr.Core/ZeroOcr.Core.csproj" />
+    <Project Path="ZeroOcr/src/ZeroOcr.Windows/ZeroOcr.Windows.csproj" />
+    <Project Path="ZeroOcr/tests/ZeroOcr.Tests/ZeroOcr.Tests.csproj" />
+  </Folder>
 
   <!-- ================================================================= -->
   <!-- LAYER 4: GRAPHICS & SPATIAL 3D (GPU ACCELERATED VISUALIZATION)    -->
