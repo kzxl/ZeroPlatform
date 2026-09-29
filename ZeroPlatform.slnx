@@ -85,6 +85,10 @@
     <Project Path="ZeroVideo/src/ZeroVideo/ZeroVideo.csproj" />
     <Project Path="ZeroVideo/tests/ZeroVideo.Tests/ZeroVideo.Tests.csproj" />
   </Folder>
+  <Folder Name="/03_L3_PerceptionAndIntelligence/ZeroAudio/">
+    <Project Path="ZeroAudio/src/ZeroAudio.Core/ZeroAudio.Core.csproj" />
+    <Project Path="ZeroAudio/tests/ZeroAudio.Tests/ZeroAudio.Tests.csproj" />
+  </Folder>
   <Folder Name="/03_L3_PerceptionAndIntelligence/ZeroAudioVisual/">
     <Project Path="ZeroAudioVisual/src/ZeroAudioVisual/ZeroAudioVisual.csproj" />
     <Project Path="ZeroAudioVisual/tests/ZeroAudioVisual.Tests/ZeroAudioVisual.Tests.csproj" />
