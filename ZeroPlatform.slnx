@@ -178,6 +178,7 @@
   <Folder Name="/05_L5_PresentationAndOrchestration/ZeroAgent/">
     <Project Path="ZeroAgent/src/ZeroAgent.Core/ZeroAgent.Core.csproj" />
     <Project Path="ZeroAgent/src/ZeroAgent.Tools/ZeroAgent.Tools.csproj" />
+    <Project Path="ZeroAgent/src/ZeroAgent.Dialog/ZeroAgent.Dialog.csproj" />
     <Project Path="ZeroAgent/tests/ZeroAgent.Tests/ZeroAgent.Tests.csproj" />
   </Folder>
   <Folder Name="/05_L5_PresentationAndOrchestration/ZeroPrompt/">
