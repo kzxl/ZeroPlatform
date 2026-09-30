@@ -1,6 +1,6 @@
 # ==============================================================================
 # ZeroPlatform Ecosystem Subsystem Clone Utility
-# Synchronizes all 32 autonomous Zero repositories into the local workspace.
+# Synchronizes all 33 autonomous Zero repositories into the local workspace.
 # Categorized according to the ZeroPlatform 6-Tier Strict DAG Architecture.
 # ==============================================================================
 
@@ -53,7 +53,8 @@ $ecosystemTiers = [ordered]@{
         "ZeroPipeline",
         "ZeroUI",
         "ZeroUI.React",
-        "ZeroAgent"
+        "ZeroAgent",
+        "ZeroPrompt"
     )
 }
 

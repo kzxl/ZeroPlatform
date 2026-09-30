@@ -24,7 +24,7 @@ graph TD
     classDef l5 fill:#831843,stroke:#f43f5e,stroke-width:2px,color:#fff;
 
     subgraph L5 ["Tier 5: Presentation & Orchestration (User Layer)"]
-        UI["ZeroUI, ZeroUI.React & ZeroAgent"]:::l5
+        UI["ZeroUI, ZeroUI.React, ZeroAgent & ZeroPrompt"]:::l5
         Pipe["ZeroPipeline"]:::l5
         Docs["ZeroDocuments & ZeroReports"]:::l5
     end
@@ -130,12 +130,13 @@ graph TD
 | **`ZeroUI`** | [`kzxl/ZeroUI`](https://github.com/kzxl/ZeroUI) | ISA-101 Industrial HMI Design System Handbook (`STD-HMI-001`), Obsidian Dark ergonomics (`#11131F`), 48px+ touch targets, 10M+ rows virtual grid, single-HWND D3DCanvas, 40+ industrial SCADA controls, Media & Creative Editors Suite. |
 | **`ZeroUI.React`** | [`kzxl/ZeroUI.React`](https://github.com/kzxl/ZeroUI.React) | Enterprise & Industrial React component suite for SCADA, connected button clusters, universal theme token synchronization with Desktop. |
 | **`ZeroAgent`** | [`kzxl/ZeroAgent`](https://github.com/kzxl/ZeroAgent) | Autonomous AI Agent framework, deterministic ReAct reasoning loop, zero-reflection tool execution, semantic episodic memory via `ZeroVector`, and CSP multi-agent swarm coordination. |
+| **`ZeroPrompt`** | [`kzxl/ZeroPrompt`](https://github.com/kzxl/ZeroPrompt) | Pure C# prompt templating, Pushdown Automaton (PDA) JSON Grammar state machine, grammar-constrained logit masking, and dynamic few-shot exemplar selector. |
 
 ---
 
 ## ⚡ Quick Start
 
-### 1. Synchronize All 31 Subsystems
+### 1. Synchronize All 33 Subsystems
 ```powershell
 .\clone-ecosystem.ps1
 ```

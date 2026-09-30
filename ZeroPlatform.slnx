@@ -179,6 +179,10 @@
     <Project Path="ZeroAgent/src/ZeroAgent.Core/ZeroAgent.Core.csproj" />
     <Project Path="ZeroAgent/tests/ZeroAgent.Tests/ZeroAgent.Tests.csproj" />
   </Folder>
+  <Folder Name="/05_L5_PresentationAndOrchestration/ZeroPrompt/">
+    <Project Path="ZeroPrompt/src/ZeroPrompt.Core/ZeroPrompt.Core.csproj" />
+    <Project Path="ZeroPrompt/tests/ZeroPrompt.Tests/ZeroPrompt.Tests.csproj" />
+  </Folder>
 
   <!-- ================================================================= -->
   <!-- ORCHESTRATION & INTEGRATION (CROSS-LAYER INTEGRATION SUITE)       -->

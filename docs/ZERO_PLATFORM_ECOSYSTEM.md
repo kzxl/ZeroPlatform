@@ -137,6 +137,7 @@ graph TD
 | **`ZeroUI`** | [`kzxl/ZeroUI`](https://github.com/kzxl/ZeroUI) | `ZeroUI.Core` | ISA-101 Industrial HMI Design System Handbook (`STD-HMI-001`), Obsidian Dark ergonomics (`#11131F`), 48px+ touch targets, 10M+ rows virtual grid, single-HWND D3DCanvas, 40+ industrial SCADA controls, Media & Creative Editors Suite. |
 | **`ZeroUI.React`** | [`kzxl/ZeroUI.React`](https://github.com/kzxl/ZeroUI.React) | `@zeroui/react` | Enterprise & Industrial React component suite for SCADA, connected button clusters, universal theme token synchronization with Desktop. |
 | **`ZeroAgent`** | [`kzxl/ZeroAgent`](https://github.com/kzxl/ZeroAgent) | `ZeroAgent.Core` | Pure C# Cognitive ReAct execution loop (Thought-Action-Observation), Zero-reflection tool calling registry, episodic memory recall backed by ZeroVector, and CSP multi-agent swarm. |
+| **`ZeroPrompt`** | [`kzxl/ZeroPrompt`](https://github.com/kzxl/ZeroPrompt) | `ZeroPrompt.Core` | Pure C# prompt templating, Pushdown Automaton (PDA) JSON Grammar state machine, grammar-constrained logit masking, and dynamic few-shot exemplar selector. |
 
 ---
 
@@ -153,7 +154,7 @@ cd ZeroPlatform
 .\clone-ecosystem.ps1
 ```
 
-Once cloned, open `ZeroPlatform.slnx` in Visual Studio 2022+ or Rider to build, test, and run the complete suite across all 32 subsystems organized neatly by architectural tier.
+Once cloned, open `ZeroPlatform.slnx` in Visual Studio 2022+ or Rider to build, test, and run the complete suite across all 33 subsystems organized neatly by architectural tier.
 
 ---
 
