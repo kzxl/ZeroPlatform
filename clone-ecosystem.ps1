@@ -1,6 +1,6 @@
 # ==============================================================================
 # ZeroPlatform Ecosystem Subsystem Clone Utility
-# Synchronizes all 28 autonomous Zero repositories into the local workspace.
+# Synchronizes all 32 autonomous Zero repositories into the local workspace.
 # Categorized according to the ZeroPlatform 6-Tier Strict DAG Architecture.
 # ==============================================================================
 
@@ -10,13 +10,15 @@ $ecosystemTiers = [ordered]@{
     "Tier 0: Core Foundation (The Bedrock - Zero Dependencies)" = @(
         "ZeroPrimitives",
         "ZeroConcurrency",
-        "ZeroSecurity"
+        "ZeroSecurity",
+        "ZeroText"
     );
     "Tier 1: Compute & System (Hardware & Numerics)" = @(
         "ZeroSystem",
         "ZeroCompression",
         "ZeroTensor",
-        "ZeroCompute"
+        "ZeroCompute",
+        "ZeroAsset"
     );
     "Tier 2: Transport & Storage (Data & Comm Pipelines)" = @(
         "ZeroNetwork",
@@ -26,13 +28,15 @@ $ecosystemTiers = [ordered]@{
         "ZeroStorage",
         "ZeroData"
     );
-    "Tier 3: Perception & Intelligence (Signal, Vision & AI)" = @(
+    "Tier 3: Perception & Intelligence (Signal, Vision, OCR & AI)" = @(
         "ZeroSignal",
+        "ZeroAudio",
         "ZeroGeometry",
         "ZeroVideo",
         "ZeroAudioVisual",
         "ZeroInference",
-        "ZeroNeural"
+        "ZeroNeural",
+        "ZeroOcr"
     );
     "Tier 4: Graphics & Spatial 3D (GPU Rendering)" = @(
         "ZeroGraphics",
