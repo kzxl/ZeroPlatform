@@ -87,8 +87,8 @@ graph TD
 | :--- | :--- | :--- |
 | **`ZeroSystem`** | [`kzxl/ZeroSystem`](https://github.com/kzxl/ZeroSystem) | Sovereign Windows native subsystem, hardware inventory telemetry (CPU, GPU, RAM, Storage, Network), and OS diagnostics. |
 | **`ZeroCompression`** | [`kzxl/ZeroCompression`](https://github.com/kzxl/ZeroCompression) | Streaming multi-codec compression (Zstandard, LZMA, Brotli, Gorilla float TSDB codec), sub-ms heuristic classifier, AES-256-GCM AEAD, TAR/ZIP containers. |
-| **`ZeroTensor`** | [`kzxl/ZeroTensor`](https://github.com/kzxl/ZeroTensor) | N-D strided memory layout, zero-copy slicing, Level-3 BLAS (GEMM), SVD/QR/Cholesky matrix decompositions. |
-| **`ZeroCompute`** | [`kzxl/ZeroCompute`](https://github.com/kzxl/ZeroCompute) | Direct3D 11 Compute Shader dispatcher via COM VTable, UAV buffer/texture dispatching, and CPU AVX2 SIMD fallback kernels. |
+| **`ZeroTensor`** | [`kzxl/ZeroTensor`](https://github.com/kzxl/ZeroTensor) | N-D strided memory layout, FP16/FP32/FP64 & INT8 tensors, zero-copy slicing, Level-3 BLAS (GEMM), mixed-precision arithmetic, SVD/QR/Cholesky matrix decompositions, Safetensors/Npy. |
+| **`ZeroCompute`** | [`kzxl/ZeroCompute`](https://github.com/kzxl/ZeroCompute) | 5-level CPU Parallel Compute Runtime (cache-aware tiling, SIMD Padé transcendental approximations, cross-platform physical core affinity) & Direct3D 11 GPU Compute Shaders. |
 | **`ZeroAsset`** | [`kzxl/ZeroAsset`](https://github.com/kzxl/ZeroAsset) | Digital asset management (DAM), zero-byte variant branching (`#vc<n>`), hierarchical contiguous sorting, asset curation & cache keys. |
 
 ### Tier 2: Transport & Storage (Data & Comm Pipelines)
