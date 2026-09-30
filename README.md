@@ -46,7 +46,7 @@ graph TD
     subgraph L2 ["Tier 2: Transport & Storage (Data & Comm Pipelines)"]
         Comm["ZeroComm, ZeroIoT & ZeroRfid"]:::l2
         Net["ZeroNetwork"]:::l2
-        Store["ZeroStorage & ZeroData"]:::l2
+        Store["ZeroStorage, ZeroData & ZeroVector"]:::l2
     end
 
     subgraph L1 ["Tier 1: Compute & System (Hardware & Numerics)"]
@@ -98,6 +98,7 @@ graph TD
 | **`ZeroRfid`** | [`kzxl/ZeroRfid`](https://github.com/kzxl/ZeroRfid) | EPC Gen2 / ISO 18000-6C suite, UHF reader adapters, sliding-window anti-collision deduplication pipeline & simulator. |
 | **`ZeroStorage`** | [`kzxl/ZeroStorage`](https://github.com/kzxl/ZeroStorage) | Embedded TSDB, Facebook Gorilla Delta-of-Delta + XOR float compression (1.37 B/sample), MMF zero-copy persistence, IoT out-of-order ingestion, CRC32 WAL. |
 | **`ZeroData`** | [`kzxl/ZeroData`](https://github.com/kzxl/ZeroData) | Columnar DataFrame, SIMD relational hash joins (Inner/Left/Right/Outer), compiled expression tree SQL materializers, pure C# Arrow IPC. |
+| **`ZeroVector`** | [`kzxl/ZeroVector`](https://github.com/kzxl/ZeroVector) | High-throughput embedded Vector Database & SIMD similarity engine, AVX2/FMA metrics (Cosine, DotProduct, Euclidean, Manhattan, Hamming), Flat contiguous index & HNSW graph index. |
 
 ### Tier 3: Perception & Intelligence (Signal, Vision, OCR & AI)
 | Subsystem | Repository | Key Capabilities |

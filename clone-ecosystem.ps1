@@ -26,7 +26,8 @@ $ecosystemTiers = [ordered]@{
         "ZeroIoT",
         "ZeroRfid",
         "ZeroStorage",
-        "ZeroData"
+        "ZeroData",
+        "ZeroVector"
     );
     "Tier 3: Perception & Intelligence (Signal, Vision, OCR & AI)" = @(
         "ZeroSignal",

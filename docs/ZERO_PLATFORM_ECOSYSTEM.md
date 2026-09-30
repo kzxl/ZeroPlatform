@@ -49,6 +49,7 @@ graph TD
         ZeroRfid["🏷️ ZeroRfid<br/><i>EPC Gen2 / ISO 18000-6C Suite</i>"]:::l2
         ZeroStorage["💾 ZeroStorage<br/><i>Gorilla XOR TSDB & WAL</i>"]:::l2
         ZeroData["📊 ZeroData<br/><i>Columnar DataFrame & Arrow IPC</i>"]:::l2
+        ZeroVector["📐 ZeroVector<br/><i>Embedded Vector DB & HNSW</i>"]:::l2
     end
 
     subgraph L1 ["Tier 1: Compute & System (Hardware & Numerics)"]
@@ -74,7 +75,7 @@ graph TD
 
 ---
 
-## 📦 Complete 28-Repository Satellite Catalog
+## 📦 Complete 29-Repository Satellite Catalog
 
 ### Tier 0: Core Foundation (The Bedrock - Zero Dependencies)
 | Repository | GitHub Remote | NuGet Package | Key Capabilities |
@@ -101,6 +102,7 @@ graph TD
 | **`ZeroRfid`** | [`kzxl/ZeroRfid`](https://github.com/kzxl/ZeroRfid) | `ZeroRfid.Core` | EPC Gen2 / ISO 18000-6C suite, UHF reader adapters, sliding-window anti-collision deduplication pipeline & simulator. |
 | **`ZeroStorage`** | [`kzxl/ZeroStorage`](https://github.com/kzxl/ZeroStorage) | `ZeroStorage.Core` | Embedded TSDB, Facebook Gorilla Delta-of-Delta + XOR float compression (1.37 B/sample), MMF zero-copy persistence, IoT out-of-order ingestion, CRC32 WAL. |
 | **`ZeroData`** | [`kzxl/ZeroData`](https://github.com/kzxl/ZeroData) | `ZeroData.Core` | Columnar DataFrame, SIMD relational hash joins (Inner/Left/Right/Outer), compiled expression tree SQL materializers, pure C# Arrow IPC. |
+| **`ZeroVector`** | [`kzxl/ZeroVector`](https://github.com/kzxl/ZeroVector) | `ZeroVector.Core` | Embedded Vector Database & SIMD similarity metric engine, AVX2/FMA metrics (Cosine, DotProduct, Euclidean, Manhattan, Hamming), Flat contiguous index & HNSW graph index. |
 
 ### Tier 3: Perception & Intelligence (Signal, Vision, OCR & AI)
 | Repository | GitHub Remote | NuGet Package | Key Capabilities |

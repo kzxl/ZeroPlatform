@@ -69,6 +69,10 @@
     <Project Path="ZeroData/src/ZeroData.Core/ZeroData.Core.csproj" />
     <Project Path="ZeroData/tests/ZeroData.Tests/ZeroData.Tests.csproj" />
   </Folder>
+  <Folder Name="/02_L2_TransportAndStorage/ZeroVector/">
+    <Project Path="ZeroVector/src/ZeroVector.Core/ZeroVector.Core.csproj" />
+    <Project Path="ZeroVector/tests/ZeroVector.Tests/ZeroVector.Tests.csproj" />
+  </Folder>
 
   <!-- ================================================================= -->
   <!-- LAYER 3: PERCEPTION & INTELLIGENCE (SIGNAL, VISION & AI)          -->

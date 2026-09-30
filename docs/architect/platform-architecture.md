@@ -41,7 +41,7 @@ graph TD
     subgraph L2 ["Tier 2: Transport & Storage (Data & Comm Pipelines)"]
         Comm["ZeroComm, ZeroIoT & ZeroRfid"]:::l2
         Net["ZeroNetwork"]:::l2
-        Store["ZeroStorage & ZeroData"]:::l2
+        Store["ZeroStorage, ZeroData & ZeroVector"]:::l2
     end
 
     subgraph L1 ["Tier 1: Compute & System (Hardware & Numerics)"]
@@ -83,6 +83,7 @@ graph TD
 | | **`ZeroRfid`** | [`kzxl/ZeroRfid`](https://github.com/kzxl/ZeroRfid) | EPC Gen2 / ISO 18000-6C RFID reader suite, sliding-window anti-collision deduplication & hardware simulator. |
 | | **`ZeroStorage`** | [`kzxl/ZeroStorage`](https://github.com/kzxl/ZeroStorage) | Gorilla Delta-of-Delta + XOR floating-point time-series engine, write-ahead logging (WAL), memory-mapped files. |
 | | **`ZeroData`** | [`kzxl/ZeroData`](https://github.com/kzxl/ZeroData) | Columnar data tables, zero-copy Arrow memory serialization, relational hash joins (Inner/Left/Right/Outer). |
+| | **`ZeroVector`** | [`kzxl/ZeroVector`](https://github.com/kzxl/ZeroVector) | High-throughput embedded Vector Database & SIMD similarity engine, AVX2/FMA metrics, Flat contiguous index & HNSW graph index. |
 | **Tier 3: Perception & AI** | **`ZeroSignal`** | [`kzxl/ZeroSignal`](https://github.com/kzxl/ZeroSignal) | In-place radix-2 FFT, STFT spectrograms, zero-phase Butterworth filter, Extended Kalman Filter (EKF), VAD. |
 | *(Perception & Intelligence)* | **`ZeroGeometry`** | [`kzxl/ZeroGeometry`](https://github.com/kzxl/ZeroGeometry) | 3D Iterative Closest Point (ICP), KdTree3D/RTree2D, polygon Boolean clipping, Delaunay triangulation. |
 | | **`ZeroVideo`** | [`kzxl/ZeroVideo`](https://github.com/kzxl/ZeroVideo) | Industrial Motion JPEG client, RTSP 1.0 transport, RFC 3550 RTP, H.264 NALU/SPS Exp-Golomb, zero-LOH `VideoFramePool`. |
