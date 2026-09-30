@@ -37,7 +37,7 @@ graph TD
 
     subgraph L3 ["Tier 3: Perception & Intelligence (Vision, OCR & AI)"]
         Video["ZeroVideo"]:::l3
-        Infer["ZeroInference, ZeroNeural & ZeroTokenizer"]:::l3
+        Infer["ZeroInference, ZeroNeural, ZeroTokenizer & ZeroLlm"]:::l3
         Ocr["ZeroOcr"]:::l3
         Sig["ZeroSignal & ZeroAudioVisual"]:::l3
         Geom["ZeroGeometry"]:::l3
@@ -111,6 +111,7 @@ graph TD
 | **`ZeroNeural`** | [`kzxl/ZeroNeural`](https://github.com/kzxl/ZeroNeural) | PyTorch-like reverse-mode automatic differentiation (Autograd) DAG tape, neural layers (`Linear`, `Sequential`, `Conv2D`, `Dropout`), AdamW/SGD. |
 | **`ZeroOcr`** | [`kzxl/ZeroOcr`](https://github.com/kzxl/ZeroOcr) | Pure C# zero-allocation OCR abstractions, AVX2 SIMD preprocessor (ITU-R BT.601, binarization), dot-matrix morphology, HPP projection deskewing, parallel multi-ROI inspection, and native Windows WinRT OCR engine. |
 | **`ZeroTokenizer`** | [`kzxl/ZeroTokenizer`](https://github.com/kzxl/ZeroTokenizer) | Pure C# Byte-Pair Encoding (BPE), Tiktoken regex-aware tokenization (`cl100k_base`, `o200k_base`, LLaMA-3), and Knapsack context token budgeter. |
+| **`ZeroLlm`** | [`kzxl/ZeroLlm`](https://github.com/kzxl/ZeroLlm) | Pure C# Small Language Model runtime, GGUF v2/v3 binary parser, Paged KV-Cache allocator, Transformer decoder (RMSNorm, RoPE, SwiGLU, GQA), and token sampling engine. |
 
 ### Tier 4: Graphics & Spatial 3D (GPU Rendering)
 | Subsystem | Repository | Key Capabilities |

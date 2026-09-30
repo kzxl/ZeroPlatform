@@ -42,6 +42,7 @@ graph TD
         ZeroAudioVisual["🎙️ ZeroAudioVisual<br/><i>Beamforming & Acoustic Vision</i>"]:::l3
         ZeroGeometry["📐 ZeroGeometry<br/><i>ICP PointCloud, KdTree & Polygons</i>"]:::l3
         ZeroTokenizer["🔤 ZeroTokenizer<br/><i>BPE, Tiktoken & Knapsack Budget</i>"]:::l3
+        ZeroLlm["🧠 ZeroLlm<br/><i>SLM Runtime, GGUF & Paged KV</i>"]:::l3
     end
 
     subgraph L2 ["Tier 2: Transport & Storage (Data & Comm Pipelines)"]
@@ -77,7 +78,7 @@ graph TD
 
 ---
 
-## 📦 Complete 31-Repository Satellite Catalog
+## 📦 Complete 32-Repository Satellite Catalog
 
 ### Tier 0: Core Foundation (The Bedrock - Zero Dependencies)
 | Repository | GitHub Remote | NuGet Package | Key Capabilities |
@@ -117,6 +118,7 @@ graph TD
 | **`ZeroNeural`** | [`kzxl/ZeroNeural`](https://github.com/kzxl/ZeroNeural) | `ZeroNeural.Core` | PyTorch-like reverse-mode automatic differentiation (Autograd) DAG tape, neural layers (`Linear`, `Sequential`, `Conv2D`, `Dropout`), AdamW/SGD. |
 | **`ZeroOcr`** | [`kzxl/ZeroOcr`](https://github.com/kzxl/ZeroOcr) | `ZeroOcr.Core`, `ZeroOcr.Windows` | Pure C# zero-allocation OCR abstractions, AVX2 SIMD preprocessor (ITU-R BT.601, binarization), dot-matrix morphology, HPP projection deskewing, parallel multi-ROI inspection, and native Windows WinRT OCR engine. |
 | **`ZeroTokenizer`** | [`kzxl/ZeroTokenizer`](https://github.com/kzxl/ZeroTokenizer) | `ZeroTokenizer.Core` | High-throughput Pure C# BPE & Tiktoken tokenizer (`cl100k_base`), UTF-8 byte-level fallback, and Priority-Knapsack Token Budgeter. |
+| **`ZeroLlm`** | [`kzxl/ZeroLlm`](https://github.com/kzxl/ZeroLlm) | `ZeroLlm.Core` | Pure C# Small Language Model runtime, GGUF v2/v3 binary parser, Paged KV-Cache allocator, Transformer decoder (RMSNorm, RoPE, SwiGLU, GQA), and token sampling engine. |
 
 ### Tier 4: Graphics & Spatial 3D (GPU Rendering)
 | Repository | GitHub Remote | NuGet Package | Key Capabilities |
@@ -151,7 +153,7 @@ cd ZeroPlatform
 .\clone-ecosystem.ps1
 ```
 
-Once cloned, open `ZeroPlatform.slnx` in Visual Studio 2022+ or Rider to build, test, and run the complete suite across all 31 subsystems organized neatly by architectural tier.
+Once cloned, open `ZeroPlatform.slnx` in Visual Studio 2022+ or Rider to build, test, and run the complete suite across all 32 subsystems organized neatly by architectural tier.
 
 ---
 
