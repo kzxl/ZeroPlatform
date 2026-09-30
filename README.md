@@ -24,7 +24,7 @@ graph TD
     classDef l5 fill:#831843,stroke:#f43f5e,stroke-width:2px,color:#fff;
 
     subgraph L5 ["Tier 5: Presentation & Orchestration (User Layer)"]
-        UI["ZeroUI & ZeroUI.React"]:::l5
+        UI["ZeroUI, ZeroUI.React & ZeroAgent"]:::l5
         Pipe["ZeroPipeline"]:::l5
         Docs["ZeroDocuments & ZeroReports"]:::l5
     end
@@ -37,7 +37,7 @@ graph TD
 
     subgraph L3 ["Tier 3: Perception & Intelligence (Vision, OCR & AI)"]
         Video["ZeroVideo"]:::l3
-        Infer["ZeroInference & ZeroNeural"]:::l3
+        Infer["ZeroInference, ZeroNeural & ZeroTokenizer"]:::l3
         Ocr["ZeroOcr"]:::l3
         Sig["ZeroSignal & ZeroAudioVisual"]:::l3
         Geom["ZeroGeometry"]:::l3
@@ -110,6 +110,7 @@ graph TD
 | **`ZeroInference`** | [`kzxl/ZeroInference`](https://github.com/kzxl/ZeroInference) | Polymorphic `IInferenceSession`, Pure C# ONNX binary model parser, Transformer operators (RoPE `RotaryEmbedding`, CPU cache-tiled `FlashAttentionKernel`), CPU execution graph & OnnxRuntime GPU providers, YOLOv8/v11 decoders. |
 | **`ZeroNeural`** | [`kzxl/ZeroNeural`](https://github.com/kzxl/ZeroNeural) | PyTorch-like reverse-mode automatic differentiation (Autograd) DAG tape, neural layers (`Linear`, `Sequential`, `Conv2D`, `Dropout`), AdamW/SGD. |
 | **`ZeroOcr`** | [`kzxl/ZeroOcr`](https://github.com/kzxl/ZeroOcr) | Pure C# zero-allocation OCR abstractions, AVX2 SIMD preprocessor (ITU-R BT.601, binarization), dot-matrix morphology, HPP projection deskewing, parallel multi-ROI inspection, and native Windows WinRT OCR engine. |
+| **`ZeroTokenizer`** | [`kzxl/ZeroTokenizer`](https://github.com/kzxl/ZeroTokenizer) | Pure C# Byte-Pair Encoding (BPE), Tiktoken regex-aware tokenization (`cl100k_base`, `o200k_base`, LLaMA-3), and Knapsack context token budgeter. |
 
 ### Tier 4: Graphics & Spatial 3D (GPU Rendering)
 | Subsystem | Repository | Key Capabilities |
@@ -127,12 +128,13 @@ graph TD
 | **`ZeroPipeline`** | [`kzxl/ZeroPipeline`](https://github.com/kzxl/ZeroPipeline) | Directed acyclic graph (DAG) scheduler (Kahn sort), industrial inspection & vision nodes (Color Space, Homography 2D, Caliper, Barcode, OCR Inspection, AI), declarative JSON recipes, and visual node canvas. |
 | **`ZeroUI`** | [`kzxl/ZeroUI`](https://github.com/kzxl/ZeroUI) | ISA-101 Industrial HMI Design System Handbook (`STD-HMI-001`), Obsidian Dark ergonomics (`#11131F`), 48px+ touch targets, 10M+ rows virtual grid, single-HWND D3DCanvas, 40+ industrial SCADA controls, Media & Creative Editors Suite. |
 | **`ZeroUI.React`** | [`kzxl/ZeroUI.React`](https://github.com/kzxl/ZeroUI.React) | Enterprise & Industrial React component suite for SCADA, connected button clusters, universal theme token synchronization with Desktop. |
+| **`ZeroAgent`** | [`kzxl/ZeroAgent`](https://github.com/kzxl/ZeroAgent) | Autonomous AI Agent framework, deterministic ReAct reasoning loop, zero-reflection tool execution, semantic episodic memory via `ZeroVector`, and CSP multi-agent swarm coordination. |
 
 ---
 
 ## ⚡ Quick Start
 
-### 1. Synchronize All 30 Subsystems
+### 1. Synchronize All 31 Subsystems
 ```powershell
 .\clone-ecosystem.ps1
 ```

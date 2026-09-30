@@ -37,7 +37,8 @@ $ecosystemTiers = [ordered]@{
         "ZeroAudioVisual",
         "ZeroInference",
         "ZeroNeural",
-        "ZeroOcr"
+        "ZeroOcr",
+        "ZeroTokenizer"
     );
     "Tier 4: Graphics & Spatial 3D (GPU Rendering)" = @(
         "ZeroGraphics",
@@ -50,7 +51,8 @@ $ecosystemTiers = [ordered]@{
         "ZeroReports",
         "ZeroPipeline",
         "ZeroUI",
-        "ZeroUI.React"
+        "ZeroUI.React",
+        "ZeroAgent"
     )
 }
 

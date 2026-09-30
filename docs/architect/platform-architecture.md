@@ -20,7 +20,7 @@ graph TD
     classDef l5 fill:#831843,stroke:#f43f5e,stroke-width:2px,color:#fff;
 
     subgraph L5 ["Tier 5: Presentation & Orchestration (User Layer)"]
-        UI["ZeroUI & ZeroUI.React"]:::l5
+        UI["ZeroUI, ZeroUI.React & ZeroAgent"]:::l5
         Pipe["ZeroPipeline"]:::l5
         Docs["ZeroDocuments & ZeroReports"]:::l5
     end
@@ -33,7 +33,7 @@ graph TD
 
     subgraph L3 ["Tier 3: Perception & Intelligence (Vision & AI)"]
         Video["ZeroVideo"]:::l3
-        Infer["ZeroInference & ZeroNeural"]:::l3
+        Infer["ZeroInference, ZeroNeural & ZeroTokenizer"]:::l3
         Sig["ZeroSignal, ZeroAudio & ZeroAudioVisual"]:::l3
         Geom["ZeroGeometry"]:::l3
     end
@@ -90,6 +90,7 @@ graph TD
 | | **`ZeroAudioVisual`** | [`kzxl/ZeroAudioVisual`](https://github.com/kzxl/ZeroAudioVisual) | Acoustic predictive maintenance, multi-channel microphone array beamforming & defect localization. |
 | | **`ZeroInference`** | [`kzxl/ZeroInference`](https://github.com/kzxl/ZeroInference) | Polymorphic `IInferenceSession`, ONNX parser, CPU & OnnxRuntime GPU providers, YOLOv8/v11 anchor-free decoders. |
 | | **`ZeroNeural`** | [`kzxl/ZeroNeural`](https://github.com/kzxl/ZeroNeural) | Reverse-mode automatic differentiation (Autograd), deep learning layers, AdamW/SGD optimizer. |
+| | **`ZeroTokenizer`** | [`kzxl/ZeroTokenizer`](https://github.com/kzxl/ZeroTokenizer) | High-throughput Pure C# BPE & Tiktoken tokenizer, Byte-level fallback, and Priority-Knapsack Token Budgeter. |
 | **Tier 4: Graphics & Spatial 3D** | **`ZeroGraphics`** | [`kzxl/ZeroGraphics`](https://github.com/kzxl/ZeroGraphics) | Render Hardware Interface (RHI - Null & D3D11) with explicit barriers & timeline fences, COM VTable D3D11/D2D, COM VTable graphics interception (`ComVTableHook`), Zero-LOH NCC & Gaussian blur, AVX2 SIMD filters, Async Staging Ring Buffer, Barcode HRI suite. |
 | *(GPU Rendering)* | **`ZeroCharts`** | [`kzxl/ZeroCharts`](https://github.com/kzxl/ZeroCharts) | Direct2D GPU high-density telemetry strip charts, dynamic multi-axis graphs. |
 | | **`ZeroTwin3D`** | [`kzxl/ZeroTwin3D`](https://github.com/kzxl/ZeroTwin3D) | Pure C# 3D digital twin spatial scene graph, Wavefront OBJ & glTF 2.0 / GLB 3D model loaders, D3D11 renderer. |
@@ -99,6 +100,7 @@ graph TD
 | | **`ZeroPipeline`** | [`kzxl/ZeroPipeline`](https://github.com/kzxl/ZeroPipeline) | Kahn-sorted DAG inspection pipeline, JSON recipes, interactive graphical node graph canvas. |
 | | **`ZeroUI`** | [`kzxl/ZeroUI`](https://github.com/kzxl/ZeroUI) | 10M+ rows virtual grid, single-HWND D3DCanvas, 40+ SCADA controls, Media & Creative Suite, dark theme. |
 | | **`ZeroUI.React`** | [`kzxl/ZeroUI.React`](https://github.com/kzxl/ZeroUI.React) | Enterprise & Industrial React component suite for SCADA, connected button clusters, universal theme token synchronization with Desktop. |
+| | **`ZeroAgent`** | [`kzxl/ZeroAgent`](https://github.com/kzxl/ZeroAgent) | Pure C# Cognitive ReAct execution loop, Zero-reflection tool calling registry, episodic memory recall, and CSP multi-agent swarm. |
 
 ---
 

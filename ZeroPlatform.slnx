@@ -112,6 +112,10 @@
     <Project Path="ZeroOcr/src/ZeroOcr.Windows/ZeroOcr.Windows.csproj" />
     <Project Path="ZeroOcr/tests/ZeroOcr.Tests/ZeroOcr.Tests.csproj" />
   </Folder>
+  <Folder Name="/03_L3_PerceptionAndIntelligence/ZeroTokenizer/">
+    <Project Path="ZeroTokenizer/src/ZeroTokenizer.Core/ZeroTokenizer.Core.csproj" />
+    <Project Path="ZeroTokenizer/tests/ZeroTokenizer.Tests/ZeroTokenizer.Tests.csproj" />
+  </Folder>
 
   <!-- ================================================================= -->
   <!-- LAYER 4: GRAPHICS & SPATIAL 3D (GPU ACCELERATED VISUALIZATION)    -->
@@ -166,6 +170,10 @@
     <Project Path="ZeroUI/tests/ZeroUI.Benchmarks/ZeroUI.Benchmarks.csproj" />
     <Project Path="ZeroUI/tests/ZeroUI.Core.Benchmarks/ZeroUI.Core.Benchmarks.csproj" />
     <Project Path="ZeroUI/tests/ZeroUI.Core.Tests/ZeroUI.Core.Tests.csproj" />
+  </Folder>
+  <Folder Name="/05_L5_PresentationAndOrchestration/ZeroAgent/">
+    <Project Path="ZeroAgent/src/ZeroAgent.Core/ZeroAgent.Core.csproj" />
+    <Project Path="ZeroAgent/tests/ZeroAgent.Tests/ZeroAgent.Tests.csproj" />
   </Folder>
 
   <!-- ================================================================= -->

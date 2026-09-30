@@ -23,6 +23,7 @@ graph TD
         ZeroPipeline["🔗 ZeroPipeline<br/><i>DAG Engine, Metrology & Canvas</i>"]:::l5
         ZeroReports["🖨️ ZeroReports<br/><i>PDF & Thermal Barcode Labels</i>"]:::l5
         ZeroDocuments["📄 ZeroDocuments<br/><i>Pure C# Excel & CSV Engine</i>"]:::l5
+        ZeroAgent["🤖 ZeroAgent<br/><i>ReAct Loop, Memory & Swarm</i>"]:::l5
     end
 
     subgraph L4 ["Tier 4: Graphics, 3D & Digital Twin (GPU Rendering)"]
@@ -40,6 +41,7 @@ graph TD
         ZeroSignal["📡 ZeroSignal<br/><i>FFT, STFT, FiltFilt & EKF</i>"]:::l3
         ZeroAudioVisual["🎙️ ZeroAudioVisual<br/><i>Beamforming & Acoustic Vision</i>"]:::l3
         ZeroGeometry["📐 ZeroGeometry<br/><i>ICP PointCloud, KdTree & Polygons</i>"]:::l3
+        ZeroTokenizer["🔤 ZeroTokenizer<br/><i>BPE, Tiktoken & Knapsack Budget</i>"]:::l3
     end
 
     subgraph L2 ["Tier 2: Transport & Storage (Data & Comm Pipelines)"]
@@ -75,7 +77,7 @@ graph TD
 
 ---
 
-## 📦 Complete 29-Repository Satellite Catalog
+## 📦 Complete 31-Repository Satellite Catalog
 
 ### Tier 0: Core Foundation (The Bedrock - Zero Dependencies)
 | Repository | GitHub Remote | NuGet Package | Key Capabilities |
@@ -114,6 +116,7 @@ graph TD
 | **`ZeroInference`** | [`kzxl/ZeroInference`](https://github.com/kzxl/ZeroInference) | `ZeroInference.Core` | Polymorphic `IInferenceSession`, Pure C# ONNX binary model parser, Transformer operators (RoPE `RotaryEmbedding`, CPU cache-tiled `FlashAttentionKernel`), CPU execution graph & OnnxRuntime GPU providers, YOLOv8/v11 decoders. |
 | **`ZeroNeural`** | [`kzxl/ZeroNeural`](https://github.com/kzxl/ZeroNeural) | `ZeroNeural.Core` | PyTorch-like reverse-mode automatic differentiation (Autograd) DAG tape, neural layers (`Linear`, `Sequential`, `Conv2D`, `Dropout`), AdamW/SGD. |
 | **`ZeroOcr`** | [`kzxl/ZeroOcr`](https://github.com/kzxl/ZeroOcr) | `ZeroOcr.Core`, `ZeroOcr.Windows` | Pure C# zero-allocation OCR abstractions, AVX2 SIMD preprocessor (ITU-R BT.601, binarization), dot-matrix morphology, HPP projection deskewing, parallel multi-ROI inspection, and native Windows WinRT OCR engine. |
+| **`ZeroTokenizer`** | [`kzxl/ZeroTokenizer`](https://github.com/kzxl/ZeroTokenizer) | `ZeroTokenizer.Core` | High-throughput Pure C# BPE & Tiktoken tokenizer (`cl100k_base`), UTF-8 byte-level fallback, and Priority-Knapsack Token Budgeter. |
 
 ### Tier 4: Graphics & Spatial 3D (GPU Rendering)
 | Repository | GitHub Remote | NuGet Package | Key Capabilities |
@@ -131,6 +134,7 @@ graph TD
 | **`ZeroPipeline`** | [`kzxl/ZeroPipeline`](https://github.com/kzxl/ZeroPipeline) | `ZeroPipeline.Core` | Directed acyclic graph (DAG) scheduler (Kahn sort), industrial inspection & vision nodes (Color Space, Homography 2D, Caliper, Barcode, OCR Inspection, AI), declarative JSON recipes, and visual node canvas. |
 | **`ZeroUI`** | [`kzxl/ZeroUI`](https://github.com/kzxl/ZeroUI) | `ZeroUI.Core` | ISA-101 Industrial HMI Design System Handbook (`STD-HMI-001`), Obsidian Dark ergonomics (`#11131F`), 48px+ touch targets, 10M+ rows virtual grid, single-HWND D3DCanvas, 40+ industrial SCADA controls, Media & Creative Editors Suite. |
 | **`ZeroUI.React`** | [`kzxl/ZeroUI.React`](https://github.com/kzxl/ZeroUI.React) | `@zeroui/react` | Enterprise & Industrial React component suite for SCADA, connected button clusters, universal theme token synchronization with Desktop. |
+| **`ZeroAgent`** | [`kzxl/ZeroAgent`](https://github.com/kzxl/ZeroAgent) | `ZeroAgent.Core` | Pure C# Cognitive ReAct execution loop (Thought-Action-Observation), Zero-reflection tool calling registry, episodic memory recall backed by ZeroVector, and CSP multi-agent swarm. |
 
 ---
 
@@ -147,7 +151,7 @@ cd ZeroPlatform
 .\clone-ecosystem.ps1
 ```
 
-Once cloned, open `ZeroPlatform.slnx` in Visual Studio 2022+ or Rider to build, test, and run the complete suite across all 27 subsystems organized neatly by architectural tier.
+Once cloned, open `ZeroPlatform.slnx` in Visual Studio 2022+ or Rider to build, test, and run the complete suite across all 31 subsystems organized neatly by architectural tier.
 
 ---
 
