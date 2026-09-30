@@ -10,6 +10,7 @@ using ZeroGraphics.Waveform.Controls;
 using ZeroPipeline.Core.Execution;
 using ZeroPipeline.Core.Graph;
 using ZeroPipeline.Core.Nodes;
+using ZeroPipeline.Nodes.Comm;
 using ZeroPipeline.Nodes.Inspection;
 using ZeroPipeline.Nodes.Storage;
 using ZeroPipeline.Nodes.Vision;
@@ -32,6 +33,7 @@ namespace ZeroPlatform.Samples.Showcase
         private PipelineExecutor? _pipelineExecutor;
         private InspectionResult? _lastInspectionResult;
         private TimeSeriesLogSinkNode? _tsdbLogger;
+        private PlcRegisterSinkNode? _plcSink;
         private ZeroDescriptions? _descPipeline;
         private int _pipelineCycleCount = 0;
         private ZeroPipelineStudioControl? _studioControl;
@@ -152,7 +154,7 @@ namespace ZeroPlatform.Samples.Showcase
                 Title = "ZeroPipeline Live Workflow",
                 Subtitle = "Real-Time AOI DAG & TSDB Logger",
                 Width = 340,
-                Height = 210
+                Height = 230
             };
 
             _descPipeline = new ZeroDescriptions
@@ -164,10 +166,11 @@ namespace ZeroPlatform.Samples.Showcase
                 ValueColor = Color.FromArgb(0, 255, 136)
             };
             _descPipeline.Add("Recipe", "AOI Metrology DAG (v1.0)");
-            _descPipeline.Add("DAG Order", "5 Nodes (Kahn Sort)");
+            _descPipeline.Add("DAG Order", "6 Nodes (Kahn Sort)");
             _descPipeline.Add("Cycles Run", "0");
             _descPipeline.Add("Latest Part", "30.00 mm (PASSED)", Color.FromArgb(0, 255, 136));
             _descPipeline.Add("TSDB Points", "0 (Gorilla XOR)");
+            _descPipeline.Add("PLC Modbus", "Reg[100]=OK, Reg[101]=3000");
 
             pipelineCard.Controls.Add(_descPipeline);
             stack.Controls.Add(pipelineCard);
@@ -382,12 +385,14 @@ namespace ZeroPlatform.Samples.Showcase
             var caliper = new EdgeCaliperNode(10, 30, 90, 30, 20.0, name: "CaliperRake");
             var judge = new DimensionJudgeNode("PinWidth", 30.0, 28.5, 31.5, name: "JudgePin");
             _tsdbLogger = new TimeSeriesLogSinkNode(metricId: 1, blockSize: 10, name: "TSDB");
+            _plcSink = new PlcRegisterSinkNode(statusRegisterAddress: 100, valueRegisterAddress: 101, name: "PlcOutput");
             var sink = new ActionSinkNode<InspectionResult>(r => _lastInspectionResult = r, "UIConsumer");
 
             graph.Connect(source.Output, gray.Input);
             graph.Connect(gray.Output, caliper.Input);
             graph.Connect(caliper.Output, judge.Input);
             graph.Connect(judge.Output, _tsdbLogger.Input);
+            graph.Connect(judge.Output, _plcSink.Input);
             graph.Connect(judge.Output, sink.Input);
 
             _pipelineExecutor = new PipelineExecutor(graph);
@@ -447,6 +452,7 @@ namespace ZeroPlatform.Samples.Showcase
                     _descPipeline.SetValue("Cycles Run", _pipelineCycleCount.ToString());
                     _descPipeline.SetValue("Latest Part", statusText, color);
                     _descPipeline.SetValue("TSDB Points", $"{_tsdbLogger?.TotalLoggedPoints ?? 0} (Gorilla XOR)");
+                    _descPipeline.SetValue("PLC Modbus", $"Reg[100]={(_plcSink?.LastStatusWritten == 1 ? "OK" : "NG")}, Reg[101]={_plcSink?.LastValueWritten}");
                 }
             }
         }
@@ -473,14 +479,21 @@ namespace ZeroPlatform.Samples.Showcase
             tsdb.AddInputPin("Record", typeof(InspectionResult));
             tsdb.Properties["RetentionDays"] = "30";
 
+            var plc = new CanvasNode("PlcOutput", "PLC Modbus Sink", "PlcRegisterSinkNode", "Comm", 860f, 260f);
+            plc.AddInputPin("Signal", typeof(InspectionResult));
+            plc.Properties["ModbusAddress"] = "100";
+            plc.Properties["UnitId"] = "1";
+
             studio.Canvas.AddNode(cam);
             studio.Canvas.AddNode(thresh);
             studio.Canvas.AddNode(caliper);
             studio.Canvas.AddNode(tsdb);
+            studio.Canvas.AddNode(plc);
 
             studio.Canvas.Connect(cam.Outputs[0], thresh.Inputs[0]);
             studio.Canvas.Connect(thresh.Outputs[0], caliper.Inputs[0]);
             studio.Canvas.Connect(caliper.Outputs[0], tsdb.Inputs[0]);
+            studio.Canvas.Connect(caliper.Outputs[0], plc.Inputs[0]);
         }
 
         protected override void Dispose(bool disposing)
