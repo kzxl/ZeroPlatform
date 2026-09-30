@@ -8,7 +8,7 @@
 
 **ZeroPlatform** is a sovereign, enterprise-grade software ecosystem for industrial automation, computer vision, digital signal processing (DSP), edge AI, high-speed time-series persistence, and hardware-accelerated HMI/SCADA visual studio controls.
 
-Engineered around the **Multi-Repository Satellite Architecture**, all 29 autonomous subsystems (28 pure C# .NET subsystems + 1 industrial web UI suite) operate as sovereign repositories with independent release lifecycles, unified under this workspace orchestrator.
+Engineered around the **Multi-Repository Satellite Architecture**, all 30 autonomous subsystems (29 pure C# .NET subsystems + 1 industrial web UI suite) operate as sovereign repositories with independent release lifecycles, unified under this workspace orchestrator.
 
 👉 **[6-Tier Architecture Spec](docs/architect/platform-architecture.md)** | **[Tier Governance Spec (SPEC-ARCH-001)](docs/architect/tier-taxonomy-specification.md)** | **[Git Standards & Repo Directory (GOV-REPO-001)](docs/governance/subsystem-catalog-and-git-descriptions.md)** | **[Subsystem Catalog](docs/ZERO_PLATFORM_ECOSYSTEM.md)**
 
@@ -37,9 +37,10 @@ graph TD
         Twin["ZeroTwin3D & Zero3D"]:::l4
     end
 
-    subgraph L3 ["Tier 3: Perception & Intelligence (Vision & AI)"]
+    subgraph L3 ["Tier 3: Perception & Intelligence (Vision, OCR & AI)"]
         Video["ZeroVideo"]:::l3
         Infer["ZeroInference & ZeroNeural"]:::l3
+        Ocr["ZeroOcr"]:::l3
         Sig["ZeroSignal & ZeroAudioVisual"]:::l3
         Geom["ZeroGeometry"]:::l3
     end
@@ -100,7 +101,7 @@ graph TD
 | **`ZeroStorage`** | [`kzxl/ZeroStorage`](https://github.com/kzxl/ZeroStorage) | Embedded TSDB, Facebook Gorilla Delta-of-Delta + XOR float compression (1.37 B/sample), MMF zero-copy persistence, IoT out-of-order ingestion, CRC32 WAL. |
 | **`ZeroData`** | [`kzxl/ZeroData`](https://github.com/kzxl/ZeroData) | Columnar DataFrame, SIMD relational hash joins (Inner/Left/Right/Outer), compiled expression tree SQL materializers, pure C# Arrow IPC. |
 
-### Tier 3: Perception & Intelligence (Signal, Vision & AI)
+### Tier 3: Perception & Intelligence (Signal, Vision, OCR & AI)
 | Subsystem | Repository | Key Capabilities |
 | :--- | :--- | :--- |
 | **`ZeroSignal`** | [`kzxl/ZeroSignal`](https://github.com/kzxl/ZeroSignal) | In-place Cooley-Tukey FFT, real-time STFT spectrogram, zero-phase Butterworth `FiltFilt`, Extended Kalman Filter (EKF), VAD voice activity detector. |
@@ -109,6 +110,7 @@ graph TD
 | **`ZeroAudioVisual`** | [`kzxl/ZeroAudioVisual`](https://github.com/kzxl/ZeroAudioVisual) | Acoustic predictive maintenance, multi-channel microphone array beamforming & audio-visual defect localization. |
 | **`ZeroInference`** | [`kzxl/ZeroInference`](https://github.com/kzxl/ZeroInference) | Polymorphic `IInferenceSession`, Pure C# ONNX binary model parser, CPU execution graph & OnnxRuntime GPU providers, YOLOv8/v11 decoders (detection, pose, segment). |
 | **`ZeroNeural`** | [`kzxl/ZeroNeural`](https://github.com/kzxl/ZeroNeural) | PyTorch-like reverse-mode automatic differentiation (Autograd) DAG tape, neural layers (`Linear`, `Sequential`, `Conv2D`, `Dropout`), AdamW/SGD. |
+| **`ZeroOcr`** | [`kzxl/ZeroOcr`](https://github.com/kzxl/ZeroOcr) | Pure C# zero-allocation OCR abstractions, AVX2 SIMD preprocessor (ITU-R BT.601, binarization), dot-matrix morphology, HPP projection deskewing, parallel multi-ROI inspection, and native Windows WinRT OCR engine. |
 
 ### Tier 4: Graphics & Spatial 3D (GPU Rendering)
 | Subsystem | Repository | Key Capabilities |
@@ -123,7 +125,7 @@ graph TD
 | :--- | :--- | :--- |
 | **`ZeroDocuments`** | [`kzxl/ZeroDocuments`](https://github.com/kzxl/ZeroDocuments) | Pure C# zero-dependency OpenXML Excel (.xlsx) reader/writer and RFC 4180 CSV tokenizer/parser. |
 | **`ZeroReports`** | [`kzxl/ZeroReports`](https://github.com/kzxl/ZeroReports) | Pure C# high-speed PDF & industrial thermal barcode label rendering without GDI+ (ZPL/TSPL/ESC-POS emulation). |
-| **`ZeroPipeline`** | [`kzxl/ZeroPipeline`](https://github.com/kzxl/ZeroPipeline) | Directed acyclic graph (DAG) scheduler (Kahn sort), industrial inspection & vision nodes (Color Space, Homography 2D, Caliper, Barcode, AI), declarative JSON recipes, and visual node canvas. |
+| **`ZeroPipeline`** | [`kzxl/ZeroPipeline`](https://github.com/kzxl/ZeroPipeline) | Directed acyclic graph (DAG) scheduler (Kahn sort), industrial inspection & vision nodes (Color Space, Homography 2D, Caliper, Barcode, OCR Inspection, AI), declarative JSON recipes, and visual node canvas. |
 | **`ZeroUI`** | [`kzxl/ZeroUI`](https://github.com/kzxl/ZeroUI) | 10M+ rows virtual grid, single-HWND D3DCanvas, 40+ industrial SCADA controls (PlantMimicCanvas P&ID, Gauges), Media & Creative Editors Suite, dark theme (`#12151C`). |
 | **`ZeroUI.React`** | [`kzxl/ZeroUI.React`](https://github.com/kzxl/ZeroUI.React) | Enterprise & Industrial React component suite for SCADA, connected button clusters, universal theme token synchronization with Desktop. |
 
@@ -131,7 +133,7 @@ graph TD
 
 ## ⚡ Quick Start
 
-### 1. Synchronize All 29 Subsystems
+### 1. Synchronize All 30 Subsystems
 ```powershell
 .\clone-ecosystem.ps1
 ```

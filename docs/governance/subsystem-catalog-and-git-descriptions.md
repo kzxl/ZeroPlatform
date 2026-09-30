@@ -8,7 +8,7 @@
 
 ## 1. Purpose & Scope
 
-This specification establishes official GitHub metadata, short repository descriptions, searchable topic tags, tier classification badges, and dependency boundaries for all **29 autonomous satellite repositories** and the root orchestrator in the `kzxl` organization.
+This specification establishes official GitHub metadata, short repository descriptions, searchable topic tags, tier classification badges, and dependency boundaries for all **30 autonomous satellite repositories** and the root orchestrator in the `kzxl` organization.
 
 Maintaining consistent repository descriptions and topic tags ensures:
 1. **Discoverability**: Standardized GitHub Topics make subsystems easily searchable on GitHub and NuGet.
@@ -193,6 +193,13 @@ Include the corresponding badge markdown at the top of each repository's `README
 - **Permitted Dependencies**: `ZeroPrimitives`, `ZeroConcurrency`, `ZeroTensor`, `ZeroCompute`
 - **Downstream Consumers**: `ZeroInference`, `ZeroPipeline`
 
+#### 20. [`kzxl/ZeroOcr`](https://github.com/kzxl/ZeroOcr)
+- **Tier**: Tier 3 (Perception & Intelligence)
+- **GitHub Description**: Pure C# sovereign OCR abstractions, AVX2 SIMD preprocessor, dot-matrix morphology, HPP projection deskewing, parallel multi-ROI inspection, and native Windows WinRT OCR engine.
+- **GitHub Topics**: `csharp`, `dotnet`, `zeroplatform`, `tier-3`, `ocr`, `optical-character-recognition`, `simd`, `avx2`, `winrt`, `morphology`, `inspection`
+- **Permitted Dependencies**: `ZeroPrimitives`, `ZeroConcurrency`, `ZeroTensor`
+- **Downstream Consumers**: `ZeroPipeline`, `ZeroDocuments`, `ZeroUI`, `ZVision`
+
 ---
 
 ### Tier 4: Graphics & Spatial 3D (GPU Rendering)
@@ -245,21 +252,21 @@ Include the corresponding badge markdown at the top of each repository's `README
 - **Permitted Dependencies**: `ZeroPrimitives`, `ZeroConcurrency`, `ZeroDocuments`, `ZeroGraphics`
 - **Downstream Consumers**: `ZeroUI`, Enterprise Applications
 
-#### 26. [`kzxl/ZeroPipeline`](https://github.com/kzxl/ZeroPipeline)
+#### 27. [`kzxl/ZeroPipeline`](https://github.com/kzxl/ZeroPipeline)
 - **Tier**: Tier 5 (Presentation & Orchestration)
-- **GitHub Description**: Directed acyclic graph (DAG) scheduler (Kahn sort), industrial inspection nodes, declarative JSON recipes, and visual node canvas.
-- **GitHub Topics**: `csharp`, `dotnet`, `zeroplatform`, `tier-5`, `dag-workflow`, `pipeline-orchestrator`, `machine-vision`, `industrial-aoi`
+- **GitHub Description**: Directed acyclic graph (DAG) scheduler (Kahn sort), industrial inspection nodes (Metrology, Barcode, OCR Inspection), declarative JSON recipes, and visual node canvas.
+- **GitHub Topics**: `csharp`, `dotnet`, `zeroplatform`, `tier-5`, `dag-workflow`, `pipeline-orchestrator`, `machine-vision`, `industrial-aoi`, `ocr-inspection`
 - **Permitted Dependencies**: All underlying tiers ($L_0 \dots L_4$)
 - **Downstream Consumers**: `ZeroUI`, Showcase, Production Applications
 
-#### 27. [`kzxl/ZeroUI`](https://github.com/kzxl/ZeroUI)
+#### 28. [`kzxl/ZeroUI`](https://github.com/kzxl/ZeroUI)
 - **Tier**: Tier 5 (Presentation & Orchestration)
 - **GitHub Description**: 10M+ rows virtual grid, single-HWND D3DCanvas, 40+ industrial SCADA controls (PlantMimicCanvas P&ID, Gauges), dark theme.
 - **GitHub Topics**: `csharp`, `dotnet`, `zeroplatform`, `tier-5`, `winforms`, `wpf`, `scada`, `industrial-ui`, `virtual-grid`, `d3d-canvas`
 - **Permitted Dependencies**: All underlying tiers ($L_0 \dots L_4$)
 - **Downstream Consumers**: Enterprise Desktop HMI Applications
 
-#### 28. [`kzxl/ZeroUI.React`](https://github.com/kzxl/ZeroUI.React)
+#### 29. [`kzxl/ZeroUI.React`](https://github.com/kzxl/ZeroUI.React)
 - **Tier**: Tier 5 (Presentation & Orchestration)
 - **GitHub Description**: Enterprise & industrial React component suite for SCADA, connected button clusters, and universal theme token synchronization.
 - **GitHub Topics**: `typescript`, `react`, `zeroplatform`, `tier-5`, `scada-web`, `industrial-hmi`, `vite`, `theme-tokens`
@@ -269,7 +276,7 @@ Include the corresponding badge markdown at the top of each repository's `README
 ---
 
 ### Root Orchestrator
-#### 29. [`kzxl/ZeroPlatform`](https://github.com/kzxl/ZeroPlatform)
+#### 30. [`kzxl/ZeroPlatform`](https://github.com/kzxl/ZeroPlatform)
 - **Role**: Sovereign Central Ecosystem Orchestrator & Multi-Repo Workspace
-- **GitHub Description**: Sovereign pure C# industrial software ecosystem: 28 autonomous subsystems spanning foundational lock-free primitives, DSP, GPU vision, TSDB, AI, and SCADA UI.
-- **GitHub Topics**: `csharp`, `dotnet`, `zeroplatform`, `monorepo-orchestrator`, `industrial-automation`, `scada`, `edge-computing`, `computer-vision`, `deep-learning`, `lock-free`
+- **GitHub Description**: Sovereign pure C# industrial software ecosystem: 29 autonomous subsystems + 1 web UI suite spanning foundational lock-free primitives, DSP, GPU vision, TSDB, OCR, AI, and SCADA UI.
+- **GitHub Topics**: `csharp`, `dotnet`, `zeroplatform`, `monorepo-orchestrator`, `industrial-automation`, `scada`, `edge-computing`, `computer-vision`, `deep-learning`, `lock-free`, `ocr`

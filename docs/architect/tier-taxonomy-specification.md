@@ -39,9 +39,10 @@ graph TD
         Twin["ZeroTwin3D & Zero3D"]:::l4
     end
 
-    subgraph L3 ["Tier 3: Perception & Intelligence (Vision & AI)"]
+    subgraph L3 ["Tier 3: Perception & Intelligence (Vision, OCR & AI)"]
         Video["ZeroVideo"]:::l3
         Infer["ZeroInference & ZeroNeural"]:::l3
+        Ocr["ZeroOcr"]:::l3
         Sig["ZeroSignal & ZeroAudioVisual"]:::l3
         Geom["ZeroGeometry"]:::l3
     end
@@ -129,6 +130,7 @@ graph TD
 | **`ZeroAudioVisual`** | Acoustic predictive maintenance & video transport satellite (delegating acoustic DSP/spectrogram to `ZeroAudio`, video to `ZeroVideo`). |
 | **`ZeroInference`** | Polymorphic `IInferenceSession`, pure C# ONNX binary model parser, CPU execution graph & OnnxRuntime GPU providers, YOLOv8/v11 anchor-free decoders (detect, pose, seg). |
 | **`ZeroNeural`** | PyTorch-like reverse-mode automatic differentiation (Autograd) DAG tape, neural layers (`Linear`, `Sequential`, `Conv2D`, `Dropout`), AdamW/SGD. |
+| **`ZeroOcr`** | Pure C# zero-allocation OCR abstractions, AVX2 SIMD preprocessor (ITU-R BT.601, binarization), dot-matrix morphology, HPP projection deskewing, parallel multi-ROI inspection, and native Windows WinRT OCR engine. |
 
 ---
 
