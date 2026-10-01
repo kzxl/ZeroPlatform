@@ -810,119 +810,158 @@ namespace ZeroPlatform.Samples.ChatBot
             return false;
         }
 
+        private bool ApplyItemQuantityChange(OrderItemDraft item, decimal newQty, int lineNum, out string responseMessage)
+        {
+            decimal oldQty = item.Quantity;
+            CaptureUndoSnapshot($"Trước khi đổi số lượng dòng {lineNum} ({item.ItemName}) từ {oldQty} sang {newQty}");
+            item.Quantity = newQty;
+            RefreshGridFromOrder();
+
+            var prod = _matcher.Products.FirstOrDefault(p => p.Sku.Equals(item.Sku, StringComparison.OrdinalIgnoreCase))
+                       ?? new MasterProduct(item.Sku, item.ItemName, item.UnitPrice, item.Unit, item.Warehouse);
+            SetActiveProductSubject(prod, lineNum);
+
+            responseMessage = $"Xong rồi nhé! Mình đã cập nhật số lượng dòng **#{lineNum}** ({item.ItemName}):\n\n" +
+                              $"• Số lượng cũ: **{oldQty} {item.Unit}** ➔ Mới: **{item.Quantity} {item.Unit}**\n" +
+                              $"• Đơn giá: **{item.UnitPrice:#,##0} đ**\n" +
+                              $"• Thành tiền mới: **{item.TotalAmount:#,##0} đ**\n\n" +
+                              $"👉 **Tổng giá trị đơn hàng: {_currentOrder.TotalAmount:#,##0} đ**";
+            return true;
+        }
+
         private bool TryHandleItemQuantityMutation(string text, out string responseMessage)
         {
             responseMessage = string.Empty;
+            if (_currentOrder.Items.Count == 0) return false;
 
-            // Pattern 1: By Line Number: "đổi/sửa số lượng dòng (thứ) X thành/là Y"
-            var matchLine = Regex.Match(text, 
-                @"^(?:đổi|sửa|chỉnh|cập\s*nhật)\s+số\s+lượng\s+dòng\s*(?:thứ\s*)?(\d+)\s+(?:thành|là|=|lên|xuống)?\s*(\d+)", 
+            // Pattern 1A: By Line Number at the start: 
+            // "dòng 1 đổi sl thành 40", "dòng 1 đổi sl 40", "dòng 1 sửa sl thành 40", "dòng 1 sl 40", "dòng 1 thành 40", "dòng 1 đổi số lượng 40"
+            var mLineLead = Regex.Match(text, 
+                @"^dòng\s*(?:thứ\s*|số\s*)?(\d+)\s+(?:(?:đổi|sửa|chỉnh|cập\s*nhật)\s+)?(?:số\s*lượng|sl|số\s*lg|slg|qty)?\s*(?:thành|là|=|lên|xuống|sang)?\s*(\d+)\s*(?:cái|bộ|chiếc|máy|con|hộp|thùng)?$", 
                 RegexOptions.IgnoreCase);
 
-            if (matchLine.Success && 
-                int.TryParse(matchLine.Groups[1].Value, out int lineNum) && 
-                decimal.TryParse(matchLine.Groups[2].Value, out decimal newQtyLine))
+            if (mLineLead.Success && 
+                int.TryParse(mLineLead.Groups[1].Value, out int lineNumLead) && 
+                decimal.TryParse(mLineLead.Groups[2].Value, out decimal newQtyLineLead))
             {
-                if (lineNum >= 1 && lineNum <= _currentOrder.Items.Count)
+                if (lineNumLead >= 1 && lineNumLead <= _currentOrder.Items.Count)
                 {
-                    var item = _currentOrder.Items[lineNum - 1];
-                    decimal oldQty = item.Quantity;
-                    CaptureUndoSnapshot($"Trước khi đổi số lượng dòng {lineNum} từ {oldQty} sang {newQtyLine}");
-                    item.Quantity = newQtyLine;
-                    RefreshGridFromOrder();
-
-                    var prod = _matcher.Products.FirstOrDefault(p => p.Sku.Equals(item.Sku, StringComparison.OrdinalIgnoreCase))
-                               ?? new MasterProduct(item.Sku, item.ItemName, item.UnitPrice, item.Unit, item.Warehouse);
-                    SetActiveProductSubject(prod, lineNum);
-
-                    responseMessage = $"Xong rồi nhé! Mình đã cập nhật số lượng dòng **#{lineNum}** ({item.ItemName}):\n\n" +
-                                      $"• Số lượng cũ: **{oldQty} {item.Unit}** ➔ Mới: **{item.Quantity} {item.Unit}**\n" +
-                                      $"• Thành tiền mới: **{item.TotalAmount:#,##0} đ**\n\n" +
-                                      $"👉 **Tổng giá trị đơn hàng: {_currentOrder.TotalAmount:#,##0} đ**";
-                    return true;
+                    return ApplyItemQuantityChange(_currentOrder.Items[lineNumLead - 1], newQtyLineLead, lineNumLead, out responseMessage);
                 }
             }
 
-            // Pattern 2: By Item Target: "đổi/sửa/chỉnh số lượng [của] <target> thành/là/= <qty>"
-            var matchTarget = Regex.Match(text, 
-                @"^(?:đổi|sửa|chỉnh|cập\s*nhật)\s+số\s+lượng\s+(?:của\s+)?(.+?)\s+(?:thành|thành\s+số\s+lượng|là|=|lên|xuống)\s*(\d+)", 
+            // Pattern 1B: Action / Field first with Line Number: 
+            // "đổi/sửa [sl/số lượng] dòng (thứ) X [sl/số lượng] thành/là Y" or "sl dòng 1 là 40"
+            var mLineAction = Regex.Match(text, 
+                @"^(?:(?:đổi|sửa|chỉnh|cập\s*nhật)\s+)?(?:số\s*lượng|sl|số\s*lg|slg|qty)\s+(?:của\s+)?dòng\s*(?:thứ\s*|số\s*)?(\d+)\s*(?:thành|là|=|lên|xuống|sang)?\s*(\d+)\s*(?:cái|bộ|chiếc|máy|con|hộp|thùng)?$", 
                 RegexOptions.IgnoreCase);
 
-            if (matchTarget.Success && decimal.TryParse(matchTarget.Groups[2].Value, out decimal newQtyTarget))
+            if (!mLineAction.Success)
             {
-                string targetText = matchTarget.Groups[1].Value.Trim();
-                var item = FindOrderItem(targetText);
-                if (item != null)
-                {
-                    decimal oldQty = item.Quantity;
-                    CaptureUndoSnapshot($"Trước khi đổi số lượng {item.ItemName} từ {oldQty} sang {newQtyTarget}");
-                    item.Quantity = newQtyTarget;
-                    RefreshGridFromOrder();
-
-                    var prod = _matcher.Products.FirstOrDefault(p => p.Sku.Equals(item.Sku, StringComparison.OrdinalIgnoreCase))
-                               ?? new MasterProduct(item.Sku, item.ItemName, item.UnitPrice, item.Unit, item.Warehouse);
-                    SetActiveProductSubject(prod, item.LineIndex);
-
-                    responseMessage = $"Xong rồi nhé! Mình đã cập nhật số lượng mặt hàng **{item.ItemName}** (dòng #{item.LineIndex}):\n\n" +
-                                      $"• Số lượng cũ: **{oldQty} {item.Unit}** ➔ Mới: **{item.Quantity} {item.Unit}**\n" +
-                                      $"• Đơn giá: **{item.UnitPrice:#,##0} đ**\n" +
-                                      $"• Thành tiền mới: **{item.TotalAmount:#,##0} đ**\n\n" +
-                                      $"👉 **Tổng giá trị đơn hàng: {_currentOrder.TotalAmount:#,##0} đ**";
-                    return true;
-                }
-            }
-
-            // Pattern 3: Relative Increase / Decrease: "tăng/giảm số lượng [của] <target> [lên/xuống] <qty>"
-            var matchIncDec = Regex.Match(text, 
-                @"^(tăng|giảm)\s+số\s+lượng\s+(?:của\s+)?(.+?)\s+(?:thành|lên|xuống)?\s*(\d+)$", 
-                RegexOptions.IgnoreCase);
-
-            if (matchIncDec.Success && decimal.TryParse(matchIncDec.Groups[3].Value, out decimal deltaQty))
-            {
-                string action = matchIncDec.Groups[1].Value.ToLowerInvariant();
-                string targetText = matchIncDec.Groups[2].Value.Trim();
-                var item = FindOrderItem(targetText);
-                if (item != null)
-                {
-                    decimal oldQty = item.Quantity;
-                    decimal newQty = action == "tăng" ? oldQty + deltaQty : Math.Max(1, oldQty - deltaQty);
-                    CaptureUndoSnapshot($"Trước khi {action} số lượng {item.ItemName} từ {oldQty} sang {newQty}");
-                    item.Quantity = newQty;
-                    RefreshGridFromOrder();
-
-                    var prod = _matcher.Products.FirstOrDefault(p => p.Sku.Equals(item.Sku, StringComparison.OrdinalIgnoreCase))
-                               ?? new MasterProduct(item.Sku, item.ItemName, item.UnitPrice, item.Unit, item.Warehouse);
-                    SetActiveProductSubject(prod, item.LineIndex);
-
-                    responseMessage = $"Đã {action} số lượng cho mặt hàng **{item.ItemName}** (dòng #{item.LineIndex}):\n\n" +
-                                      $"• Số lượng: **{oldQty} ➔ {newQty} {item.Unit}**\n" +
-                                      $"• Thành tiền mới: **{item.TotalAmount:#,##0} đ**\n\n" +
-                                      $"👉 **Tổng giá trị đơn hàng: {_currentOrder.TotalAmount:#,##0} đ**";
-                    return true;
-                }
-            }
-
-            // Pattern 4: Elliptical quantity change when an active product subject is set: "đổi số lượng thành 10", "số lượng 10"
-            if (_lastActiveProduct != null && _currentOrder.Items.Count > 0)
-            {
-                var matchEllip = Regex.Match(text, 
-                    @"^(?:đổi|sửa|chỉnh)?\s*số\s+lượng\s+(?:thành|là|=)?\s*(\d+)$", 
+                mLineAction = Regex.Match(text, 
+                    @"^(?:đổi|sửa|chỉnh|cập\s*nhật)\s+(?:của\s+)?dòng\s*(?:thứ\s*|số\s*)?(\d+)\s*(?:số\s*lượng|sl|số\s*lg|slg|qty)?\s*(?:thành|là|=|lên|xuống|sang)?\s*(\d+)\s*(?:cái|bộ|chiếc|máy|con|hộp|thùng)?$", 
                     RegexOptions.IgnoreCase);
+            }
 
-                if (matchEllip.Success && decimal.TryParse(matchEllip.Groups[1].Value, out decimal newQtyEllip))
+            if (mLineAction.Success && 
+                int.TryParse(mLineAction.Groups[1].Value, out int lineNumAction) && 
+                decimal.TryParse(mLineAction.Groups[2].Value, out decimal newQtyLineAction))
+            {
+                if (lineNumAction >= 1 && lineNumAction <= _currentOrder.Items.Count)
                 {
-                    var item = FindOrderItem(_lastActiveProduct.Name);
+                    return ApplyItemQuantityChange(_currentOrder.Items[lineNumAction - 1], newQtyLineAction, lineNumAction, out responseMessage);
+                }
+            }
+
+            // Pattern 2A: Target Product Lead: 
+            // "chuột đổi sl thành 50", "chuột sửa số lượng thành 5", "nó đổi sl thành 10", "chuột sl 40"
+            var mTargetLead = Regex.Match(text, 
+                @"^(.+?)\s+(?:đổi|sửa|chỉnh|cập\s*nhật)\s+(?:số\s*lượng|sl|số\s*lg|slg|qty)\s*(?:thành|là|=|sang)?\s*(\d+)\s*(?:cái|bộ|chiếc|máy|con|hộp|thùng)?$", 
+                RegexOptions.IgnoreCase);
+
+            if (mTargetLead.Success && decimal.TryParse(mTargetLead.Groups[2].Value, out decimal newQtyTargetLead))
+            {
+                string targetText = mTargetLead.Groups[1].Value.Trim();
+                var item = FindOrderItem(targetText);
+                if (item != null)
+                {
+                    return ApplyItemQuantityChange(item, newQtyTargetLead, item.LineIndex, out responseMessage);
+                }
+            }
+
+            // Pattern 2B: Action / Field first with Target Product: 
+            // "đổi/sửa/chỉnh [sl/số lượng] [của] <target> thành/là/= <qty>" or "sl của chuột là 50"
+            var mActionTarget = Regex.Match(text, 
+                @"^(?:(?:đổi|sửa|chỉnh|cập\s*nhật)\s+)?(?:số\s*lượng|sl|số\s*lg|slg|qty)\s+(?:của\s+)?(.+?)\s+(?:thành|thành\s+số\s+lượng|thành\s+sl|là|=|lên|xuống|sang)\s*(\d+)\s*(?:cái|bộ|chiếc|máy|con|hộp|thùng)?$", 
+                RegexOptions.IgnoreCase);
+
+            if (mActionTarget.Success && decimal.TryParse(mActionTarget.Groups[2].Value, out decimal newQtyActionTarget))
+            {
+                string targetText = mActionTarget.Groups[1].Value.Trim();
+                var item = FindOrderItem(targetText);
+                if (item != null)
+                {
+                    return ApplyItemQuantityChange(item, newQtyActionTarget, item.LineIndex, out responseMessage);
+                }
+            }
+
+            // Pattern 2C: Direct item target mutation: "đổi/sửa [của] <target> thành <qty> [cái/bộ...]"
+            var mDirectTarget = Regex.Match(text, 
+                @"^(?:đổi|sửa|chỉnh|cập\s*nhật)\s+(?:của\s+)?(.+?)\s+(?:thành|là|=|sang)\s+(\d+)\s*(?:cái|bộ|chiếc|máy|con|hộp|thùng)?$", 
+                RegexOptions.IgnoreCase);
+
+            if (mDirectTarget.Success && decimal.TryParse(mDirectTarget.Groups[2].Value, out decimal newQtyDirect))
+            {
+                string targetText = mDirectTarget.Groups[1].Value.Trim();
+                if (!Regex.IsMatch(targetText, @"^(?:kho|giá|đơn\s*hàng|đơn|khách\s*hàng)$", RegexOptions.IgnoreCase))
+                {
+                    var item = FindOrderItem(targetText);
+                    if (item != null)
+                    {
+                        return ApplyItemQuantityChange(item, newQtyDirect, item.LineIndex, out responseMessage);
+                    }
+                }
+            }
+
+            // Pattern 3: Relative Increase / Decrease: "tăng/giảm [sl/số lượng] [của] <target> [lên/xuống] <qty>"
+            var matchIncDec = Regex.Match(text, 
+                @"^(tăng|giảm)\s+(?:số\s*lượng|sl|số\s*lg|slg|qty)?\s*(?:của\s+)?(.+?)\s+(?:thành|lên|xuống)?\s*(\d+)\s*(?:cái|bộ|chiếc|máy|con|hộp|thùng)?$", 
+                RegexOptions.IgnoreCase);
+
+            if (!matchIncDec.Success)
+            {
+                matchIncDec = Regex.Match(text, 
+                    @"^(.+?)\s+(tăng|giảm)\s+(?:số\s*lượng|sl|số\s*lg|slg|qty)?\s*(?:thành|lên|xuống)?\s*(\d+)\s*(?:cái|bộ|chiếc|máy|con|hộp|thùng)?$", 
+                    RegexOptions.IgnoreCase);
+            }
+
+            if (matchIncDec.Success)
+            {
+                string action = (matchIncDec.Groups[1].Value.Equals("tăng", StringComparison.OrdinalIgnoreCase) || matchIncDec.Groups[1].Value.Equals("giảm", StringComparison.OrdinalIgnoreCase))
+                    ? matchIncDec.Groups[1].Value.ToLowerInvariant()
+                    : matchIncDec.Groups[2].Value.ToLowerInvariant();
+                string targetText = (matchIncDec.Groups[1].Value.Equals("tăng", StringComparison.OrdinalIgnoreCase) || matchIncDec.Groups[1].Value.Equals("giảm", StringComparison.OrdinalIgnoreCase))
+                    ? matchIncDec.Groups[2].Value.Trim()
+                    : matchIncDec.Groups[1].Value.Trim();
+                string deltaStr = matchIncDec.Groups[3].Value;
+
+                if (decimal.TryParse(deltaStr, out decimal deltaQty))
+                {
+                    var item = FindOrderItem(targetText);
                     if (item != null)
                     {
                         decimal oldQty = item.Quantity;
-                        CaptureUndoSnapshot($"Trước khi đổi số lượng {item.ItemName} từ {oldQty} sang {newQtyEllip}");
-                        item.Quantity = newQtyEllip;
+                        decimal newQty = action == "tăng" ? oldQty + deltaQty : Math.Max(1, oldQty - deltaQty);
+                        CaptureUndoSnapshot($"Trước khi {action} số lượng {item.ItemName} từ {oldQty} sang {newQty}");
+                        item.Quantity = newQty;
                         RefreshGridFromOrder();
 
-                        SetActiveProductSubject(_lastActiveProduct, item.LineIndex);
+                        var prod = _matcher.Products.FirstOrDefault(p => p.Sku.Equals(item.Sku, StringComparison.OrdinalIgnoreCase))
+                                   ?? new MasterProduct(item.Sku, item.ItemName, item.UnitPrice, item.Unit, item.Warehouse);
+                        SetActiveProductSubject(prod, item.LineIndex);
 
-                        responseMessage = $"Đã cập nhật số lượng cho chủ thể đang chọn **{item.ItemName}** (dòng #{item.LineIndex}):\n\n" +
-                                          $"• Số lượng: **{oldQty} ➔ {newQtyEllip} {item.Unit}**\n" +
+                        responseMessage = $"Đã {action} số lượng cho mặt hàng **{item.ItemName}** (dòng #{item.LineIndex}):\n\n" +
+                                          $"• Số lượng: **{oldQty} ➔ {newQty} {item.Unit}**\n" +
                                           $"• Thành tiền mới: **{item.TotalAmount:#,##0} đ**\n\n" +
                                           $"👉 **Tổng giá trị đơn hàng: {_currentOrder.TotalAmount:#,##0} đ**";
                         return true;
@@ -930,47 +969,106 @@ namespace ZeroPlatform.Samples.ChatBot
                 }
             }
 
+            // Pattern 4: Elliptical quantity change when an active product subject is set: "đổi sl thành 10", "sl 10", "số lượng 10"
+            if (_lastActiveProduct != null && _currentOrder.Items.Count > 0)
+            {
+                var matchEllip = Regex.Match(text, 
+                    @"^(?:(?:đổi|sửa|chỉnh|cập\s*nhật)\s+)?(?:số\s*lượng|sl|số\s*lg|slg|qty)\s*(?:thành|là|=|sang)?\s*(\d+)\s*(?:cái|bộ|chiếc|máy|con|hộp|thùng)?$", 
+                    RegexOptions.IgnoreCase);
+
+                if (matchEllip.Success && decimal.TryParse(matchEllip.Groups[1].Value, out decimal newQtyEllip))
+                {
+                    var item = FindOrderItem(_lastActiveProduct.Name);
+                    if (item != null)
+                    {
+                        return ApplyItemQuantityChange(item, newQtyEllip, item.LineIndex, out responseMessage);
+                    }
+                }
+            }
+
             return false;
+        }
+
+        private bool ApplyItemPriceChange(OrderItemDraft item, decimal newPrice, int lineNum, out string responseMessage)
+        {
+            decimal oldPrice = item.UnitPrice;
+            CaptureUndoSnapshot($"Trước khi đổi đơn giá dòng {lineNum} ({item.ItemName}) từ {oldPrice:#,##0} đ sang {newPrice:#,##0} đ");
+            item.UnitPrice = newPrice;
+            RefreshGridFromOrder();
+
+            var prod = _matcher.Products.FirstOrDefault(p => p.Sku.Equals(item.Sku, StringComparison.OrdinalIgnoreCase))
+                       ?? new MasterProduct(item.Sku, item.ItemName, item.UnitPrice, item.Unit, item.Warehouse);
+            prod.Price = newPrice;
+            SetActiveProductSubject(prod, lineNum);
+
+            responseMessage = $"Xong rồi nhé! Mình đã cập nhật đơn giá dòng **#{lineNum}** ({item.ItemName}):\n\n" +
+                              $"• Đơn giá cũ: **{oldPrice:#,##0} đ** ➔ Mới: **{item.UnitPrice:#,##0} đ**\n" +
+                              $"• Số lượng: **{item.Quantity} {item.Unit}**\n" +
+                              $"• Thành tiền mới: **{item.TotalAmount:#,##0} đ**\n\n" +
+                              $"👉 **Tổng giá trị đơn hàng: {_currentOrder.TotalAmount:#,##0} đ**";
+            return true;
         }
 
         private bool TryHandleItemPriceMutation(string text, out string responseMessage)
         {
             responseMessage = string.Empty;
+            if (_currentOrder.Items.Count == 0) return false;
 
-            // Pattern 1: Line number: "đổi/sửa/chỉnh giá dòng (thứ) X thành/là/sang <price>"
-            var matchLine = Regex.Match(text, 
-                @"^(?:đổi|sửa|chỉnh|cập\s*nhật)\s+(?:đơn\s+)?giá\s+dòng\s*(?:thứ\s*)?(\d+)\s+(?:thành|là|=|sang|lên|xuống)?\s*(.+)$", 
+            // Pattern 1A: Line Lead: "dòng 1 đổi/sửa giá thành 3.5tr" or "dòng 1 giá 3.5tr"
+            var mLineLead = Regex.Match(text, 
+                @"^dòng\s*(?:thứ\s*|số\s*)?(\d+)\s+(?:(?:đổi|sửa|chỉnh|cập\s*nhật)\s+)?(?:đơn\s+)?giá\s*(?:thành|là|=|sang)?\s*(.+)$", 
                 RegexOptions.IgnoreCase);
 
-            if (matchLine.Success && 
-                int.TryParse(matchLine.Groups[1].Value, out int lineNum) && 
-                ParseVietnameseCurrency(matchLine.Groups[2].Value) is decimal newPriceLine)
+            if (mLineLead.Success && 
+                int.TryParse(mLineLead.Groups[1].Value, out int lineNumLead) && 
+                ParseVietnameseCurrency(mLineLead.Groups[2].Value) is decimal newPriceLineLead)
             {
-                if (lineNum >= 1 && lineNum <= _currentOrder.Items.Count)
+                if (lineNumLead >= 1 && lineNumLead <= _currentOrder.Items.Count)
                 {
-                    var item = _currentOrder.Items[lineNum - 1];
-                    decimal oldPrice = item.UnitPrice;
-                    CaptureUndoSnapshot($"Trước khi đổi đơn giá dòng {lineNum} từ {oldPrice:#,##0} đ sang {newPriceLine:#,##0} đ");
-                    item.UnitPrice = newPriceLine;
-                    RefreshGridFromOrder();
-
-                    var prod = _matcher.Products.FirstOrDefault(p => p.Sku.Equals(item.Sku, StringComparison.OrdinalIgnoreCase))
-                               ?? new MasterProduct(item.Sku, item.ItemName, item.UnitPrice, item.Unit, item.Warehouse);
-                    prod.Price = newPriceLine;
-                    SetActiveProductSubject(prod, lineNum);
-
-                    responseMessage = $"Xong rồi nhé! Mình đã cập nhật đơn giá dòng **#{lineNum}** ({item.ItemName}):\n\n" +
-                                      $"• Đơn giá cũ: **{oldPrice:#,##0} đ** ➔ Mới: **{item.UnitPrice:#,##0} đ**\n" +
-                                      $"• Số lượng: **{item.Quantity} {item.Unit}**\n" +
-                                      $"• Thành tiền mới: **{item.TotalAmount:#,##0} đ**\n\n" +
-                                      $"👉 **Tổng giá trị đơn hàng: {_currentOrder.TotalAmount:#,##0} đ**";
-                    return true;
+                    return ApplyItemPriceChange(_currentOrder.Items[lineNumLead - 1], newPriceLineLead, lineNumLead, out responseMessage);
                 }
             }
 
-            // Pattern 2: Target product: "đổi/sửa/chỉnh giá [của] <target> thành/là/= <price>"
+            // Pattern 1B: Action / Field first: "đổi/sửa [đơn] giá dòng (thứ) X thành <price>" or "đổi dòng 1 giá thành <price>"
+            var mLineAction = Regex.Match(text, 
+                @"^(?:(?:đổi|sửa|chỉnh|cập\s*nhật)\s+)?(?:đơn\s+)?giá\s+(?:của\s+)?dòng\s*(?:thứ\s*|số\s*)?(\d+)\s+(?:thành|là|=|sang|lên|xuống)?\s*(.+)$", 
+                RegexOptions.IgnoreCase);
+
+            if (!mLineAction.Success)
+            {
+                mLineAction = Regex.Match(text, 
+                    @"^(?:đổi|sửa|chỉnh|cập\s*nhật)\s+(?:của\s+)?dòng\s*(?:thứ\s*|số\s*)?(\d+)\s*(?:đơn\s+)?giá\s*(?:thành|là|=|sang)?\s*(.+)$", 
+                    RegexOptions.IgnoreCase);
+            }
+
+            if (mLineAction.Success && 
+                int.TryParse(mLineAction.Groups[1].Value, out int lineNumAction) && 
+                ParseVietnameseCurrency(mLineAction.Groups[2].Value) is decimal newPriceLineAction)
+            {
+                if (lineNumAction >= 1 && lineNumAction <= _currentOrder.Items.Count)
+                {
+                    return ApplyItemPriceChange(_currentOrder.Items[lineNumAction - 1], newPriceLineAction, lineNumAction, out responseMessage);
+                }
+            }
+
+            // Pattern 2A: Target Lead: "chuột đổi giá thành 200k"
+            var mTargetLead = Regex.Match(text, 
+                @"^(.+?)\s+(?:đổi|sửa|chỉnh|cập\s*nhật)\s+(?:đơn\s+)?giá\s*(?:thành|là|=|sang)?\s*(.+)$", 
+                RegexOptions.IgnoreCase);
+
+            if (mTargetLead.Success && ParseVietnameseCurrency(mTargetLead.Groups[2].Value) is decimal newPriceTargetLead)
+            {
+                string targetText = mTargetLead.Groups[1].Value.Trim();
+                var item = FindOrderItem(targetText);
+                if (item != null)
+                {
+                    return ApplyItemPriceChange(item, newPriceTargetLead, item.LineIndex, out responseMessage);
+                }
+            }
+
+            // Pattern 2B: Action / Field first: "đổi/sửa/chỉnh [đơn] giá [của] <target> thành/là/= <price>"
             var matchTarget = Regex.Match(text, 
-                @"^(?:đổi|sửa|chỉnh|cập\s*nhật)\s+(?:đơn\s+)?giá\s+(?:của\s+)?(.+?)\s+(?:thành|là|=|sang)\s+(.+)$", 
+                @"^(?:(?:đổi|sửa|chỉnh|cập\s*nhật)\s+)?(?:đơn\s+)?giá\s+(?:của\s+)?(.+?)\s+(?:thành|là|=|sang)\s+(.+)$", 
                 RegexOptions.IgnoreCase);
 
             if (matchTarget.Success && ParseVietnameseCurrency(matchTarget.Groups[2].Value) is decimal newPriceTarget)
@@ -979,22 +1077,7 @@ namespace ZeroPlatform.Samples.ChatBot
                 var item = FindOrderItem(targetText);
                 if (item != null)
                 {
-                    decimal oldPrice = item.UnitPrice;
-                    CaptureUndoSnapshot($"Trước khi đổi đơn giá {item.ItemName} từ {oldPrice:#,##0} đ sang {newPriceTarget:#,##0} đ");
-                    item.UnitPrice = newPriceTarget;
-                    RefreshGridFromOrder();
-
-                    var prod = _matcher.Products.FirstOrDefault(p => p.Sku.Equals(item.Sku, StringComparison.OrdinalIgnoreCase))
-                               ?? new MasterProduct(item.Sku, item.ItemName, item.UnitPrice, item.Unit, item.Warehouse);
-                    prod.Price = newPriceTarget;
-                    SetActiveProductSubject(prod, item.LineIndex);
-
-                    responseMessage = $"Xong rồi nhé! Mình đã cập nhật đơn giá mặt hàng **{item.ItemName}** (dòng #{item.LineIndex}):\n\n" +
-                                      $"• Đơn giá cũ: **{oldPrice:#,##0} đ** ➔ Mới: **{item.UnitPrice:#,##0} đ**\n" +
-                                      $"• Số lượng: **{item.Quantity} {item.Unit}**\n" +
-                                      $"• Thành tiền mới: **{item.TotalAmount:#,##0} đ**\n\n" +
-                                      $"👉 **Tổng giá trị đơn hàng: {_currentOrder.TotalAmount:#,##0} đ**";
-                    return true;
+                    return ApplyItemPriceChange(item, newPriceTarget, item.LineIndex, out responseMessage);
                 }
             }
 
@@ -1002,7 +1085,7 @@ namespace ZeroPlatform.Samples.ChatBot
             if (_lastActiveProduct != null && _currentOrder.Items.Count > 0)
             {
                 var matchEllip = Regex.Match(text, 
-                    @"^(?:đổi|sửa|chỉnh)?\s*(?:đơn\s+)?giá\s+(?:thành|là|=|sang)\s+(.+)$", 
+                    @"^(?:(?:đổi|sửa|chỉnh|cập\s*nhật)\s+)?(?:đơn\s+)?giá\s+(?:thành|là|=|sang)\s+(.+)$", 
                     RegexOptions.IgnoreCase);
 
                 if (matchEllip.Success && ParseVietnameseCurrency(matchEllip.Groups[1].Value) is decimal newPriceEllip)
@@ -1010,19 +1093,7 @@ namespace ZeroPlatform.Samples.ChatBot
                     var item = FindOrderItem(_lastActiveProduct.Name);
                     if (item != null)
                     {
-                        decimal oldPrice = item.UnitPrice;
-                        CaptureUndoSnapshot($"Trước khi đổi đơn giá {item.ItemName} sang {newPriceEllip:#,##0} đ");
-                        item.UnitPrice = newPriceEllip;
-                        RefreshGridFromOrder();
-
-                        _lastActiveProduct.Price = newPriceEllip;
-                        SetActiveProductSubject(_lastActiveProduct, item.LineIndex);
-
-                        responseMessage = $"Đã cập nhật đơn giá cho chủ thể đang chọn **{item.ItemName}** (dòng #{item.LineIndex}):\n\n" +
-                                          $"• Đơn giá cũ: **{oldPrice:#,##0} đ** ➔ Mới: **{item.UnitPrice:#,##0} đ**\n" +
-                                          $"• Thành tiền mới: **{item.TotalAmount:#,##0} đ**\n\n" +
-                                          $"👉 **Tổng giá trị đơn hàng: {_currentOrder.TotalAmount:#,##0} đ**";
-                        return true;
+                        return ApplyItemPriceChange(item, newPriceEllip, item.LineIndex, out responseMessage);
                     }
                 }
             }
@@ -1136,6 +1207,39 @@ namespace ZeroPlatform.Samples.ChatBot
             else if (Regex.IsMatch(text, @"kho\s*tổng", RegexOptions.IgnoreCase)) targetWh = "Kho Tổng";
 
             if (string.IsNullOrEmpty(targetWh)) return false;
+
+            // Pattern A0: Line number lead: "dòng 1 đổi/chuyển kho sang Kho Y", "dòng 1 chuyển sang Kho Y", "dòng 1 kho 02"
+            var mLineLead = Regex.Match(text, 
+                @"^dòng\s*(?:thứ\s*|số\s*)?(\d+)\s+(?:(?:đổi|chuyển|sửa|cập\s*nhật)\s+)?kho\s*(?:thành|sang|qua|về)?\s*kho", 
+                RegexOptions.IgnoreCase);
+
+            if (!mLineLead.Success)
+            {
+                mLineLead = Regex.Match(text, 
+                    @"^dòng\s*(?:thứ\s*|số\s*)?(\d+)\s+(?:chuyển\s+)?(?:sang|qua|về)\s+kho", 
+                    RegexOptions.IgnoreCase);
+            }
+
+            if (mLineLead.Success && int.TryParse(mLineLead.Groups[1].Value, out int lineNumLead))
+            {
+                if (lineNumLead >= 1 && lineNumLead <= _currentOrder.Items.Count)
+                {
+                    var item = _currentOrder.Items[lineNumLead - 1];
+                    string oldWh = item.Warehouse;
+                    CaptureUndoSnapshot($"Trước khi chuyển kho dòng {lineNumLead} từ {oldWh} sang {targetWh}");
+                    item.Warehouse = targetWh;
+                    RefreshGridFromOrder();
+
+                    var prod = _matcher.Products.FirstOrDefault(p => p.Sku.Equals(item.Sku, StringComparison.OrdinalIgnoreCase))
+                               ?? new MasterProduct(item.Sku, item.ItemName, item.UnitPrice, item.Unit, item.Warehouse);
+                    SetActiveProductSubject(prod, lineNumLead);
+
+                    responseMessage = $"Đã cập nhật kho xuất của dòng **#{lineNumLead}** ({item.ItemName}):\n\n" +
+                                      $"• Kho xuất cũ: **{oldWh}** ➔ Kho mới: **{targetWh}**\n" +
+                                      $"• Số lượng: **{item.Quantity} {item.Unit}**";
+                    return true;
+                }
+            }
 
             // Pattern A: Line number: "đổi kho dòng (thứ) X sang Kho Y"
             var matchLine = Regex.Match(text, 
@@ -1748,8 +1852,11 @@ namespace ZeroPlatform.Samples.ChatBot
                         conf = 0.98f;
                     }
 
+                    // Guard: Check if prodText is a command fragment (e.g. "dòng 1 đổi sl thành", "đổi", "sửa", "sl", "kho")
+                    bool isCommandPhrase = Regex.IsMatch(prodText, @"\b(dòng\s*\d*|đổi|sửa|chỉnh|cập\s*nhật|xóa|hủy|bỏ|chuyển|thành|sang|lên|xuống|kho\s*0[12]|kho\s*tổng|số\s*lượng|sl)\b", RegexOptions.IgnoreCase);
+
                     // Ad-hoc on-the-fly registration if not in catalog:
-                    if (prod == null && !string.IsNullOrWhiteSpace(prodText) && !genericPronouns.Contains(prodText) && prodText.Length >= 2)
+                    if (prod == null && !string.IsNullOrWhiteSpace(prodText) && !genericPronouns.Contains(prodText) && !isCommandPhrase && prodText.Length >= 2)
                     {
                         string cleanTitle = System.Globalization.CultureInfo.CurrentCulture.TextInfo.ToTitleCase(prodText.ToLowerInvariant());
                         decimal defPrice = customPrice ?? 500_000m;
