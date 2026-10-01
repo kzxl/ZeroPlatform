@@ -22,7 +22,14 @@ namespace ZeroPlatform.Samples.ChatBot
             Application.EnableVisualStyles();
             Application.SetCompatibleTextRenderingDefault(false);
 #endif
-            Application.Run(new ChatBotForm());
+            if (args.Any(a => a.Equals("--industrial", StringComparison.OrdinalIgnoreCase) || a.Equals("--scada", StringComparison.OrdinalIgnoreCase)))
+            {
+                Application.Run(new ChatBotForm());
+            }
+            else
+            {
+                Application.Run(new SalesOrderCopilotForm());
+            }
         }
     }
 }
