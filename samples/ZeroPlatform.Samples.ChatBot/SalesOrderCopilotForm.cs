@@ -55,7 +55,6 @@ namespace ZeroPlatform.Samples.ChatBot
 
             InitializeComponents();
             BindCustomerCatalog();
-            CaptureUndoSnapshot("Khởi tạo đơn rỗng");
         }
 
         private void InitializeComponents()
@@ -555,17 +554,18 @@ namespace ZeroPlatform.Samples.ChatBot
 
         private async Task RollbackUndoAsync()
         {
-            if (_undoStack.Count > 1)
+            if (_undoStack.Count > 0)
             {
-                _undoStack.Pop(); // current state
-                var previous = _undoStack.Peek();
+                var previous = _undoStack.Pop();
+                var orderBeforeRollback = _currentOrder.Clone();
                 _currentOrder = previous.State.Clone();
                 RefreshGridFromOrder();
 
                 // Restore active subjects from restored order
                 if (!string.IsNullOrEmpty(_currentOrder.CustomerCode))
                 {
-                    var c = _matcher.Customers.FirstOrDefault(x => x.Code == _currentOrder.CustomerCode);
+                    var c = _matcher.Customers.FirstOrDefault(x => x.Code == _currentOrder.CustomerCode)
+                            ?? new MasterCustomer(_currentOrder.CustomerCode, _currentOrder.CustomerName, _currentOrder.DefaultWarehouse);
                     SetActiveCustomerSubject(c);
                 }
                 else
@@ -573,23 +573,59 @@ namespace ZeroPlatform.Samples.ChatBot
                     SetActiveCustomerSubject(null);
                 }
 
+                // Analyze what changed: restored items vs removed items
+                var restoredItems = _currentOrder.Items
+                    .Where(ni => !orderBeforeRollback.Items.Any(oi => oi.Sku.Equals(ni.Sku, StringComparison.OrdinalIgnoreCase)))
+                    .ToList();
+
+                var removedItems = orderBeforeRollback.Items
+                    .Where(oi => !_currentOrder.Items.Any(ni => ni.Sku.Equals(oi.Sku, StringComparison.OrdinalIgnoreCase)))
+                    .ToList();
+
                 if (_currentOrder.Items.Count > 0)
                 {
-                    var lastItem = _currentOrder.Items.Last();
-                    var p = _matcher.Products.FirstOrDefault(x => x.Sku == lastItem.Sku);
-                    SetActiveProductSubject(p, _currentOrder.Items.Count);
+                    // Prioritize the restored item as the active product subject so follow-up commands work immediately
+                    var activeItem = restoredItems.FirstOrDefault() ?? _currentOrder.Items.Last();
+                    var p = _matcher.Products.FirstOrDefault(x => x.Sku == activeItem.Sku)
+                            ?? new MasterProduct(activeItem.Sku, activeItem.ItemName, activeItem.UnitPrice, activeItem.Unit, activeItem.Warehouse);
+                    SetActiveProductSubject(p, activeItem.LineIndex);
                 }
                 else
                 {
                     SetActiveProductSubject(null, null);
                 }
 
-                _chatBox.ShowThinkingIndicator("Đang hoàn tác trạng thái chứng từ...");
+                _chatBox.ShowThinkingIndicator("Đang hoàn tác và khôi phục dữ liệu đơn hàng...");
                 await Task.Delay(250);
+
+                string responseMessage;
+                if (restoredItems.Count > 0)
+                {
+                    string restoredList = string.Join("\n", restoredItems.Select(i => $"• Đã thêm lại: **{i.ItemName}** (Số lượng: **{i.Quantity} {i.Unit}** - Đơn giá: **{i.UnitPrice:#,##0} đ** - Kho: **{i.Warehouse}**)"));
+                    responseMessage = $"↺ **ĐÃ HOÀN TÁC THÀNH CÔNG (ĐÃ THÊM LẠI HÀNG ĐÃ XÓA)**!\n\n" +
+                                      $"Thao tác xóa đã được hủy bỏ và mặt hàng đã được **thêm lại vào đơn hàng**:\n" +
+                                      $"{restoredList}\n\n" +
+                                      $"👉 **Tổng giá trị đơn hàng hiện tại: {_currentOrder.TotalAmount:#,##0} đ** ({_currentOrder.Items.Count} dòng mặt hàng).\n\n" +
+                                      $"*(Bạn có thể tiếp tục thao tác hoặc chỉnh sửa mặt hàng vừa thêm lại)*";
+                }
+                else if (removedItems.Count > 0)
+                {
+                    string removedList = string.Join("\n", removedItems.Select(i => $"• Đã rút khỏi đơn: **{i.ItemName}** ({i.Quantity} {i.Unit})"));
+                    responseMessage = $"↺ **ĐÃ HOÀN TÁC THÀNH CÔNG**!\n\n" +
+                                      $"Thao tác thêm hàng đã được hủy bỏ và các mặt hàng sau đã được rút khỏi đơn:\n" +
+                                      $"{removedList}\n\n" +
+                                      $"👉 **Tổng giá trị đơn hàng hiện tại: {_currentOrder.TotalAmount:#,##0} đ** ({_currentOrder.Items.Count} dòng mặt hàng).";
+                }
+                else
+                {
+                    responseMessage = $"↺ **ĐÃ HOÀN TÁC THÀNH CÔNG**!\n\n" +
+                                      $"Đã khôi phục lại trạng thái chứng từ: **{previous.Description}**.\n\n" +
+                                      $"👉 **Tổng giá trị đơn hàng hiện tại: {_currentOrder.TotalAmount:#,##0} đ** ({_currentOrder.Items.Count} dòng mặt hàng).";
+                }
+
                 await _chatBox.AppendAssistantActionMessageAnimatedAsync(
-                    $"↺ **ĐÃ HOÀN TÁC THÀNH CÔNG**!\n\n" +
-                    $"Đã khôi phục lại trạng thái chứng từ: **{previous.Description}**.",
-                    canUndo: false);
+                    responseMessage,
+                    canUndo: _undoStack.Count > 0);
             }
             else
             {
@@ -1227,7 +1263,8 @@ namespace ZeroPlatform.Samples.ChatBot
 
                     responseMessage = $"🗑 Đã xóa dòng **#{lineNum}** (**{item.ItemName}**) ra khỏi đơn hàng!\n\n" +
                                       $"• Số mặt hàng còn lại: **{_currentOrder.Items.Count}** dòng\n" +
-                                      $"• Tổng giá trị đơn sau khi xóa: **{_currentOrder.TotalAmount:#,##0} đ**";
+                                      $"• Tổng giá trị đơn sau khi xóa: **{_currentOrder.TotalAmount:#,##0} đ**\n\n" +
+                                      $"*(💡 Bạn có thể bấm [↺ Hoàn tác] hoặc nói 'thêm lại' để phục hồi lại mặt hàng này bất kỳ lúc nào)*";
                     return true;
                 }
             }
@@ -1258,7 +1295,8 @@ namespace ZeroPlatform.Samples.ChatBot
 
                     responseMessage = $"🗑 Đã xóa mặt hàng **{item.ItemName}** ({item.Sku}) ra khỏi đơn hàng!\n\n" +
                                       $"• Số mặt hàng còn lại: **{_currentOrder.Items.Count}** dòng\n" +
-                                      $"• Tổng giá trị đơn sau khi xóa: **{_currentOrder.TotalAmount:#,##0} đ**";
+                                      $"• Tổng giá trị đơn sau khi xóa: **{_currentOrder.TotalAmount:#,##0} đ**\n\n" +
+                                      $"*(💡 Bạn có thể bấm [↺ Hoàn tác] hoặc nói 'thêm lại' để phục hồi lại mặt hàng này bất kỳ lúc nào)*";
                     return true;
                 }
             }
@@ -1282,7 +1320,8 @@ namespace ZeroPlatform.Samples.ChatBot
 
                     responseMessage = $"🗑 Đã bỏ mặt hàng **{item.ItemName}** ({item.Sku}) ra khỏi đơn hàng!\n\n" +
                                       $"• Số mặt hàng còn lại: **{_currentOrder.Items.Count}** dòng\n" +
-                                      $"• Tổng giá trị đơn sau khi xóa: **{_currentOrder.TotalAmount:#,##0} đ**";
+                                      $"• Tổng giá trị đơn sau khi xóa: **{_currentOrder.TotalAmount:#,##0} đ**\n\n" +
+                                      $"*(💡 Bạn có thể bấm [↺ Hoàn tác] hoặc nói 'thêm lại' để phục hồi lại mặt hàng này bất kỳ lúc nào)*";
                     return true;
                 }
             }
@@ -1297,6 +1336,26 @@ namespace ZeroPlatform.Samples.ChatBot
 
             // 0. Pre-Processing: Dialogue State & Anaphora / Coreference Resolution
             string resolved = ResolveCopilotAnaphora(clean);
+
+            // 0.0 Command: Undo / Hoàn tác / Thêm lại
+            if (resolved.Equals("hoàn tác", StringComparison.OrdinalIgnoreCase) ||
+                resolved.Equals("undo", StringComparison.OrdinalIgnoreCase) ||
+                resolved.Equals("quay lại", StringComparison.OrdinalIgnoreCase) ||
+                resolved.Equals("thêm lại", StringComparison.OrdinalIgnoreCase) ||
+                resolved.Equals("thêm lại đi", StringComparison.OrdinalIgnoreCase) ||
+                resolved.Equals("khôi phục lại", StringComparison.OrdinalIgnoreCase) ||
+                resolved.IndexOf("thêm lại món vừa xóa", StringComparison.OrdinalIgnoreCase) >= 0 ||
+                resolved.IndexOf("thêm lại hàng vừa xóa", StringComparison.OrdinalIgnoreCase) >= 0 ||
+                resolved.IndexOf("thêm lại mặt hàng vừa xóa", StringComparison.OrdinalIgnoreCase) >= 0 ||
+                resolved.IndexOf("thêm lại sản phẩm vừa xóa", StringComparison.OrdinalIgnoreCase) >= 0 ||
+                resolved.IndexOf("thêm lại dòng vừa xóa", StringComparison.OrdinalIgnoreCase) >= 0 ||
+                resolved.IndexOf("lấy lại món vừa xóa", StringComparison.OrdinalIgnoreCase) >= 0 ||
+                resolved.IndexOf("hoàn tác xóa", StringComparison.OrdinalIgnoreCase) >= 0 ||
+                resolved.IndexOf("hủy thao tác xóa", StringComparison.OrdinalIgnoreCase) >= 0)
+            {
+                await RollbackUndoAsync();
+                return;
+            }
 
             // 0.1 Command: Quick Reset
             if (resolved.Equals("làm mới", StringComparison.OrdinalIgnoreCase) ||
@@ -1538,6 +1597,12 @@ namespace ZeroPlatform.Samples.ChatBot
             }
             else
             {
+                // Discard the unneeded snapshot because no modifications occurred
+                if (_undoStack.Count > 0)
+                {
+                    _undoStack.Pop();
+                }
+
                 await _chatBox.AppendAssistantActionMessageAnimatedAsync(
                     "Tôi chưa nhận diện được tên khách hàng hoặc sản phẩm trong câu nói.\n\n" +
                     "Bạn có thể nói theo mẫu:\n" +
