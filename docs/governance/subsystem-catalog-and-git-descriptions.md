@@ -8,7 +8,7 @@
 
 ## 1. Purpose & Scope
 
-This specification establishes official GitHub metadata, short repository descriptions, searchable topic tags, tier classification badges, and dependency boundaries for all **30 autonomous satellite repositories** and the root orchestrator in the `kzxl` organization.
+This specification establishes official GitHub metadata, short repository descriptions, searchable topic tags, tier classification badges, and dependency boundaries for all **37 autonomous satellite repositories** and the root orchestrator in the `kzxl` organization.
 
 Maintaining consistent repository descriptions and topic tags ensures:
 1. **Discoverability**: Standardized GitHub Topics make subsystems easily searchable on GitHub and NuGet.
@@ -59,41 +59,48 @@ Include the corresponding badge markdown at the top of each repository's `README
 - **Permitted Dependencies**: None (BCL only)
 - **Downstream Consumers**: All Tiers ($L_1 \dots L_5$)
 
+#### 4. [`kzxl/ZeroText`](https://github.com/kzxl/ZeroText)
+- **Tier**: Tier 0 (Core Foundation)
+- **GitHub Description**: Pure C# zero-allocation text algorithms, fast regex, KMP substring search, and Vietnamese diacritics removal normalizer.
+- **GitHub Topics**: `csharp`, `dotnet`, `zeroplatform`, `tier-0`, `text-processing`, `regex`, `kmp`, `vietnamese-normalizer`, `zero-allocation`
+- **Permitted Dependencies**: None (BCL only)
+- **Downstream Consumers**: All Tiers ($L_1 \dots L_5$)
+
 ---
 
 ### Tier 1: Compute & System (Hardware & Numerics)
-> **Dependency Invariant**: $L_1 \rightarrow L_0$. May only depend on Tier 0 (`ZeroPrimitives`, `ZeroConcurrency`, `ZeroSecurity`).
+> **Dependency Invariant**: $L_1 \rightarrow L_0$. May only depend on Tier 0 (`ZeroPrimitives`, `ZeroConcurrency`, `ZeroSecurity`, `ZeroText`).
 
-#### 4. [`kzxl/ZeroSystem`](https://github.com/kzxl/ZeroSystem)
+#### 5. [`kzxl/ZeroSystem`](https://github.com/kzxl/ZeroSystem)
 - **Tier**: Tier 1 (Compute & System)
 - **GitHub Description**: Sovereign Windows OS native subsystem, hardware inventory telemetry (CPU, GPU, RAM, Storage, Network), and OS diagnostics.
 - **GitHub Topics**: `csharp`, `dotnet`, `zeroplatform`, `tier-1`, `system-telemetry`, `hardware-monitoring`, `win32`, `os-diagnostics`
 - **Permitted Dependencies**: `ZeroPrimitives`, `ZeroConcurrency`
 - **Downstream Consumers**: $L_2 \dots L_5$
 
-#### 5. [`kzxl/ZeroCompression`](https://github.com/kzxl/ZeroCompression)
+#### 6. [`kzxl/ZeroCompression`](https://github.com/kzxl/ZeroCompression)
 - **Tier**: Tier 1 (Compute & System)
 - **GitHub Description**: Streaming multi-codec compression (Zstandard, LZMA, Brotli, Gorilla TSDB codec), heuristic data classifier, and TAR/ZIP containers.
 - **GitHub Topics**: `csharp`, `dotnet`, `zeroplatform`, `tier-1`, `compression`, `zstandard`, `lzma`, `brotli`, `gorilla`, `streaming`
 - **Permitted Dependencies**: `ZeroPrimitives`, `ZeroConcurrency`, `ZeroSecurity`
 - **Downstream Consumers**: $L_2$ (`ZeroStorage`), $L_5$ (`ZeroDocuments`)
 
-#### 6. [`kzxl/ZeroTensor`](https://github.com/kzxl/ZeroTensor)
+#### 7. [`kzxl/ZeroTensor`](https://github.com/kzxl/ZeroTensor)
 - **Tier**: Tier 1 (Compute & System)
-- **GitHub Description**: Pure C# N-dimensional tensor engine with strided slicing, Level-3 BLAS (GEMM), and SVD/QR/Cholesky matrix decompositions.
+- **GitHub Description**: Pure C# N-dimensional tensor engine with strided slicing, Level-3 BLAS (GEMM), BFloat16/INT4 quantization, and SVD/QR/Cholesky matrix decompositions.
 - **GitHub Topics**: `csharp`, `dotnet`, `zeroplatform`, `tier-1`, `tensor`, `numpy`, `linear-algebra`, `blas`, `matrix-decomposition`
 - **Permitted Dependencies**: `ZeroPrimitives`, `ZeroConcurrency`
 - **Downstream Consumers**: $L_3$ (`ZeroInference`, `ZeroNeural`, `ZeroSignal`), $L_4$ (`ZeroGraphics`)
 
-#### 7. [`kzxl/ZeroCompute`](https://github.com/kzxl/ZeroCompute)
+#### 8. [`kzxl/ZeroCompute`](https://github.com/kzxl/ZeroCompute)
 - **Tier**: Tier 1 (Compute & System)
-- **GitHub Description**: Direct3D 11 Compute Shader dispatcher via COM VTable, UAV buffer/texture binding, and AVX2 SIMD fallback kernels.
+- **GitHub Description**: Direct3D 11 Compute Shader dispatcher via COM VTable, UAV buffer/texture binding, and 5-level CPU parallel compute runtime with NUMA/cache-aware tiling.
 - **GitHub Topics**: `csharp`, `dotnet`, `zeroplatform`, `tier-1`, `compute-shaders`, `direct3d11`, `gpu-computing`, `simd`, `avx2`
 - **Permitted Dependencies**: `ZeroPrimitives`, `ZeroConcurrency`, `ZeroTensor`
 - **Downstream Consumers**: $L_3$ (`ZeroInference`), $L_4$ (`ZeroGraphics`)
 
-#### 8. [`kzxl/ZeroAsset`](https://github.com/kzxl/ZeroAsset)
-- **Tier**: Tier 1 (Asset & Storage)
+#### 9. [`kzxl/ZeroAsset`](https://github.com/kzxl/ZeroAsset)
+- **Tier**: Tier 1 (Compute & System)
 - **GitHub Description**: High-performance digital asset management, zero-byte variant branching, hierarchical curation, and content-addressable cache keys for .NET.
 - **GitHub Topics**: `csharp`, `dotnet`, `zeroplatform`, `tier-1`, `dam`, `digital-asset-management`, `virtual-copies`, `curation`, `cache-keys`, `sorting`
 - **Permitted Dependencies**: `ZeroPrimitives`, `ZeroConcurrency`
@@ -104,129 +111,157 @@ Include the corresponding badge markdown at the top of each repository's `README
 ### Tier 2: Transport & Storage (Data & Comm Pipelines)
 > **Dependency Invariant**: $L_2 \rightarrow L_0, L_1$. May depend on Tier 0 and Tier 1.
 
-#### 8. [`kzxl/ZeroNetwork`](https://github.com/kzxl/ZeroNetwork)
+#### 10. [`kzxl/ZeroNetwork`](https://github.com/kzxl/ZeroNetwork)
 - **Tier**: Tier 2 (Transport & Storage)
 - **GitHub Description**: High-performance network infrastructure, IP/CIDR math, IEEE OUI identification, ARP table scanning, and embedded micro-HTTP server.
 - **GitHub Topics**: `csharp`, `dotnet`, `zeroplatform`, `tier-2`, `networking`, `http-server`, `arp-scan`, `ip-math`, `raw-sockets`
 - **Permitted Dependencies**: `ZeroPrimitives`, `ZeroConcurrency`
 - **Downstream Consumers**: `ZeroComm`, `ZeroIoT`, `ZeroVideo`, `ZeroUI`
 
-#### 9. [`kzxl/ZeroComm`](https://github.com/kzxl/ZeroComm)
+#### 11. [`kzxl/ZeroComm`](https://github.com/kzxl/ZeroComm)
 - **Tier**: Tier 2 (Transport & Storage)
 - **GitHub Description**: Asynchronous industrial fieldbus drivers (Modbus TCP/RTU, Siemens S7, Mitsubishi MC 3E, Omron FINS) with circular DMA ingestion.
 - **GitHub Topics**: `csharp`, `dotnet`, `zeroplatform`, `tier-2`, `industrial-automation`, `modbus`, `mitsubishi-mc`, `omron-fins`, `fieldbus`
 - **Permitted Dependencies**: `ZeroPrimitives`, `ZeroConcurrency`, `ZeroNetwork`
 - **Downstream Consumers**: `ZeroIoT`, `ZeroPipeline`, `ZeroUI`
 
-#### 10. [`kzxl/ZeroIoT`](https://github.com/kzxl/ZeroIoT)
+#### 12. [`kzxl/ZeroIoT`](https://github.com/kzxl/ZeroIoT)
 - **Tier**: Tier 2 (Transport & Storage)
-- **GitHub Description**: Industrial IoT edge connectors, lightweight MQTT v3.1.1/v5.0 client, OPC UA binary client, and telemetry sensor bridge.
+- **GitHub Description**: Industrial IoT edge connectors, lightweight MQTT v3.1.1/v5.0 client with QoS 2, OPC UA binary client with X.509 mTLS, and telemetry sensor bridge.
 - **GitHub Topics**: `csharp`, `dotnet`, `zeroplatform`, `tier-2`, `iiot`, `mqtt`, `opc-ua`, `telemetry`, `edge-gateway`
 - **Permitted Dependencies**: `ZeroPrimitives`, `ZeroConcurrency`, `ZeroSecurity`, `ZeroNetwork`, `ZeroComm`
 - **Downstream Consumers**: `ZeroPipeline`, `ZeroUI`
 
-#### 11. [`kzxl/ZeroRfid`](https://github.com/kzxl/ZeroRfid)
+#### 13. [`kzxl/ZeroRfid`](https://github.com/kzxl/ZeroRfid)
 - **Tier**: Tier 2 (Transport & Storage)
 - **GitHub Description**: EPC Gen2 / ISO 18000-6C RFID reader adapters, sliding-window anti-collision deduplication pipeline, and physical simulator.
 - **GitHub Topics**: `csharp`, `dotnet`, `zeroplatform`, `tier-2`, `rfid`, `epc-gen2`, `inventory-tracking`, `hardware-simulator`
 - **Permitted Dependencies**: `ZeroPrimitives`, `ZeroConcurrency`, `ZeroNetwork`
 - **Downstream Consumers**: `ZeroPipeline`, `ZeroUI`
 
-#### 12. [`kzxl/ZeroStorage`](https://github.com/kzxl/ZeroStorage)
+#### 14. [`kzxl/ZeroStorage`](https://github.com/kzxl/ZeroStorage)
 - **Tier**: Tier 2 (Transport & Storage)
-- **GitHub Description**: Embedded TSDB, Facebook Gorilla Delta-of-Delta + XOR float compression, MMF zero-copy persistence, and CRC32 WAL.
+- **GitHub Description**: Embedded TSDB, Facebook Gorilla Delta-of-Delta + XOR float compression (1.37 B/sample), MMF zero-copy persistence, and CRC32 WAL.
 - **GitHub Topics**: `csharp`, `dotnet`, `zeroplatform`, `tier-2`, `tsdb`, `gorilla-compression`, `memory-mapped-files`, `time-series`, `wal`
 - **Permitted Dependencies**: `ZeroPrimitives`, `ZeroConcurrency`, `ZeroCompression`
 - **Downstream Consumers**: `ZeroData`, `ZeroCharts`, `ZeroPipeline`, `ZeroUI`
 
-#### 13. [`kzxl/ZeroData`](https://github.com/kzxl/ZeroData)
+#### 15. [`kzxl/ZeroData`](https://github.com/kzxl/ZeroData)
 - **Tier**: Tier 2 (Transport & Storage)
-- **GitHub Description**: Pure C# columnar DataFrame, SIMD relational hash joins, compiled expression tree SQL materializers, and Apache Arrow IPC.
-- **GitHub Topics**: `csharp`, `dotnet`, `zeroplatform`, `tier-2`, `dataframe`, `columnar-data`, `polars-equivalent`, `arrow`, `sql`
+- **GitHub Description**: Pure C# columnar DataFrame, SIMD relational hash joins, Dynamic NL-to-SQL builder & schema metadata, compiled SQL expressions, Arrow IPC, and CodeGen.
+- **GitHub Topics**: `csharp`, `dotnet`, `zeroplatform`, `tier-2`, `dataframe`, `columnar-data`, `polars-equivalent`, `arrow`, `sql`, `nl-to-sql`
 - **Permitted Dependencies**: `ZeroPrimitives`, `ZeroConcurrency`, `ZeroTensor`, `ZeroStorage`
-- **Downstream Consumers**: `ZeroCharts`, `ZeroReports`, `ZeroUI`
+- **Downstream Consumers**: `ZeroCharts`, `ZeroReports`, `ZeroUI`, `ZeroAgent`
+
+#### 16. [`kzxl/ZeroVector`](https://github.com/kzxl/ZeroVector)
+- **Tier**: Tier 2 (Transport & Storage)
+- **GitHub Description**: Embedded Vector Database & SIMD similarity metric engine, AVX2/FMA metrics (Cosine, DotProduct, Euclidean), Flat contiguous index & HNSW graph index.
+- **GitHub Topics**: `csharp`, `dotnet`, `zeroplatform`, `tier-2`, `vector-database`, `hnsw`, `similarity-search`, `embeddings`, `simd`, `rag`
+- **Permitted Dependencies**: `ZeroPrimitives`, `ZeroConcurrency`, `ZeroTensor`
+- **Downstream Consumers**: `ZeroAgent`, `ZeroPipeline`, `ZeroInference`
 
 ---
 
-### Tier 3: Perception & Intelligence (Signal, Vision & AI)
+### Tier 3: Perception & Intelligence (Signal, Vision, OCR, Audio & AI)
 > **Dependency Invariant**: $L_3 \rightarrow L_0, L_1, L_2$. May depend on Tiers 0, 1, and 2.
 
-#### 14. [`kzxl/ZeroSignal`](https://github.com/kzxl/ZeroSignal)
+#### 17. [`kzxl/ZeroSignal`](https://github.com/kzxl/ZeroSignal)
 - **Tier**: Tier 3 (Perception & Intelligence)
 - **GitHub Description**: In-place Cooley-Tukey FFT, real-time STFT spectrogram, zero-phase Butterworth FiltFilt, and Extended Kalman Filter (EKF).
 - **GitHub Topics**: `csharp`, `dotnet`, `zeroplatform`, `tier-3`, `dsp`, `fft`, `spectrogram`, `butterworth`, `kalman-filter`
 - **Permitted Dependencies**: `ZeroPrimitives`, `ZeroConcurrency`, `ZeroTensor`
 - **Downstream Consumers**: `ZeroAudioVisual`, `ZeroCharts`, `ZeroPipeline`
 
-#### 15. [`kzxl/ZeroGeometry`](https://github.com/kzxl/ZeroGeometry)
+#### 18. [`kzxl/ZeroAudio`](https://github.com/kzxl/ZeroAudio)
+- **Tier**: Tier 3 (Perception & Intelligence)
+- **GitHub Description**: High-performance audio capture/playback, WAV/PCM codecs, channel mixing, circular DMA audio buffer, and sub-ms acoustic streaming.
+- **GitHub Topics**: `csharp`, `dotnet`, `zeroplatform`, `tier-3`, `audio`, `dsp`, `wav`, `pcm`, `sound-processing`, `acoustic`
+- **Permitted Dependencies**: `ZeroPrimitives`, `ZeroConcurrency`, `ZeroSignal`
+- **Downstream Consumers**: `ZeroAudioVisual`, `ZeroPipeline`, `ZeroUI`
+
+#### 19. [`kzxl/ZeroGeometry`](https://github.com/kzxl/ZeroGeometry)
 - **Tier**: Tier 3 (Perception & Intelligence)
 - **GitHub Description**: 3D point cloud ICP registration, KdTree3D/RTree2D spatial queries, surface normal estimation, Sutherland-Hodgman clipping, and 2D Homography DLT & RANSAC.
 - **GitHub Topics**: `csharp`, `dotnet`, `zeroplatform`, `tier-3`, `point-cloud`, `icp`, `kdtree`, `computational-geometry`, `delaunay`, `homography`, `ransac`
 - **Permitted Dependencies**: `ZeroPrimitives`, `ZeroConcurrency`, `ZeroTensor`
 - **Downstream Consumers**: `ZeroTwin3D`, `Zero3D`, `ZeroGraphics`
 
-#### 16. [`kzxl/ZeroVideo`](https://github.com/kzxl/ZeroVideo)
+#### 20. [`kzxl/ZeroVideo`](https://github.com/kzxl/ZeroVideo)
 - **Tier**: Tier 3 (Perception & Intelligence)
 - **GitHub Description**: Pure C# video streaming engine, RTSP/RTP transport, H.264 SPS Exp-Golomb parser, industrial MJPEG client, and zero-LOH frame pool.
 - **GitHub Topics**: `csharp`, `dotnet`, `zeroplatform`, `tier-3`, `video-streaming`, `rtsp`, `rtp`, `h264`, `mjpeg`, `camera-stream`
 - **Permitted Dependencies**: `ZeroPrimitives`, `ZeroConcurrency`, `ZeroNetwork`
 - **Downstream Consumers**: `ZeroGraphics`, `ZeroPipeline`, `ZeroUI`
 
-#### 17. [`kzxl/ZeroAudioVisual`](https://github.com/kzxl/ZeroAudioVisual)
+#### 21. [`kzxl/ZeroAudioVisual`](https://github.com/kzxl/ZeroAudioVisual)
 - **Tier**: Tier 3 (Perception & Intelligence)
 - **GitHub Description**: Industrial acoustic predictive maintenance, microphone array beamforming, and synchronized audio-visual defect localization.
 - **GitHub Topics**: `csharp`, `dotnet`, `zeroplatform`, `tier-3`, `acoustic-monitoring`, `predictive-maintenance`, `beamforming`, `audiovisual`
-- **Permitted Dependencies**: `ZeroPrimitives`, `ZeroConcurrency`, `ZeroSignal`, `ZeroVideo`
+- **Permitted Dependencies**: `ZeroPrimitives`, `ZeroConcurrency`, `ZeroSignal`, `ZeroAudio`, `ZeroVideo`
 - **Downstream Consumers**: `ZeroCharts`, `ZeroPipeline`, `ZeroUI`
 
-#### 18. [`kzxl/ZeroInference`](https://github.com/kzxl/ZeroInference)
+#### 22. [`kzxl/ZeroInference`](https://github.com/kzxl/ZeroInference)
 - **Tier**: Tier 3 (Perception & Intelligence)
 - **GitHub Description**: Pure C# ONNX binary model parser, CPU execution graph & OnnxRuntime GPU providers, and YOLOv8/v11 anchor-free decoders.
 - **GitHub Topics**: `csharp`, `dotnet`, `zeroplatform`, `tier-3`, `onnx`, `ai-inference`, `yolov8`, `yolov11`, `deep-learning`, `edge-ai`
 - **Permitted Dependencies**: `ZeroPrimitives`, `ZeroConcurrency`, `ZeroTensor`, `ZeroCompute`
 - **Downstream Consumers**: `ZeroGraphics`, `ZeroPipeline`, `ZeroUI`
 
-#### 19. [`kzxl/ZeroNeural`](https://github.com/kzxl/ZeroNeural)
+#### 23. [`kzxl/ZeroNeural`](https://github.com/kzxl/ZeroNeural)
 - **Tier**: Tier 3 (Perception & Intelligence)
 - **GitHub Description**: Pure C# reverse-mode automatic differentiation (Autograd) DAG tape, neural layers (Linear, Conv2D), and AdamW/SGD optimizers.
 - **GitHub Topics**: `csharp`, `dotnet`, `zeroplatform`, `tier-3`, `autograd`, `deep-learning`, `pytorch-equivalent`, `neural-network`
 - **Permitted Dependencies**: `ZeroPrimitives`, `ZeroConcurrency`, `ZeroTensor`, `ZeroCompute`
 - **Downstream Consumers**: `ZeroInference`, `ZeroPipeline`
 
-#### 20. [`kzxl/ZeroOcr`](https://github.com/kzxl/ZeroOcr)
+#### 24. [`kzxl/ZeroOcr`](https://github.com/kzxl/ZeroOcr)
 - **Tier**: Tier 3 (Perception & Intelligence)
 - **GitHub Description**: Pure C# sovereign OCR abstractions, AVX2 SIMD preprocessor, dot-matrix morphology, HPP projection deskewing, parallel multi-ROI inspection, and native Windows WinRT OCR engine.
 - **GitHub Topics**: `csharp`, `dotnet`, `zeroplatform`, `tier-3`, `ocr`, `optical-character-recognition`, `simd`, `avx2`, `winrt`, `morphology`, `inspection`
 - **Permitted Dependencies**: `ZeroPrimitives`, `ZeroConcurrency`, `ZeroTensor`
 - **Downstream Consumers**: `ZeroPipeline`, `ZeroDocuments`, `ZeroUI`, `ZVision`
 
+#### 25. [`kzxl/ZeroTokenizer`](https://github.com/kzxl/ZeroTokenizer)
+- **Tier**: Tier 3 (Perception & Intelligence)
+- **GitHub Description**: High-throughput Pure C# BPE & Tiktoken tokenizer (`cl100k_base`, `o200k_base`, LLaMA-3), UTF-8 byte-level fallback, and Priority-Knapsack Token Budgeter.
+- **GitHub Topics**: `csharp`, `dotnet`, `zeroplatform`, `tier-3`, `tokenizer`, `bpe`, `tiktoken`, `llm`, `token-budget`, `nlp`
+- **Permitted Dependencies**: `ZeroPrimitives`, `ZeroConcurrency`, `ZeroText`
+- **Downstream Consumers**: `ZeroLlm`, `ZeroAgent`, `ZeroPrompt`
+
+#### 26. [`kzxl/ZeroLlm`](https://github.com/kzxl/ZeroLlm)
+- **Tier**: Tier 3 (Perception & Intelligence)
+- **GitHub Description**: Pure C# Small Language Model runtime, GGUF v2/v3 binary parser, Paged KV-Cache allocator, Transformer decoder (RMSNorm, RoPE, SwiGLU, GQA), and token sampling engine.
+- **GitHub Topics**: `csharp`, `dotnet`, `zeroplatform`, `tier-3`, `slm`, `llm`, `gguf`, `transformer`, `paged-kv-cache`, `edge-ai`
+- **Permitted Dependencies**: `ZeroPrimitives`, `ZeroConcurrency`, `ZeroTensor`, `ZeroCompute`, `ZeroTokenizer`
+- **Downstream Consumers**: `ZeroAgent`, `ZeroPrompt`, `ZeroUI`
+
 ---
 
 ### Tier 4: Graphics & Spatial 3D (GPU Rendering)
 > **Dependency Invariant**: $L_4 \rightarrow L_0 \dots L_3$. May depend on Tiers 0, 1, 2, and 3.
 
-#### 20. [`kzxl/ZeroGraphics`](https://github.com/kzxl/ZeroGraphics)
+#### 27. [`kzxl/ZeroGraphics`](https://github.com/kzxl/ZeroGraphics)
 - **Tier**: Tier 4 (Graphics & Spatial 3D)
-- **GitHub Description**: Render Hardware Interface (RHI - D3D11), COM VTable hook, Standardized Color Spaces & Bradford chromatic adaptation, zero-LOH NCC & Gaussian blur, AVX2 SIMD filters, and Barcode HRI suite.
-- **GitHub Topics**: `csharp`, `dotnet`, `zeroplatform`, `tier-4`, `computer-vision`, `direct3d11`, `direct2d`, `simd`, `image-processing`, `rhi`, `color-science`
+- **GitHub Description**: Render Hardware Interface (RHI - Null, D3D11, and cross-platform Vulkan 1.0+ `VulkanRhiDevice`), COM VTable hook, Standardized Color Spaces & Bradford chromatic adaptation, zero-LOH NCC & Gaussian blur, AVX2 SIMD filters, and Barcode HRI suite.
+- **GitHub Topics**: `csharp`, `dotnet`, `zeroplatform`, `tier-4`, `computer-vision`, `direct3d11`, `direct2d`, `vulkan`, `simd`, `image-processing`, `rhi`, `color-science`
 - **Permitted Dependencies**: `ZeroPrimitives`, `ZeroConcurrency`, `ZeroTensor`, `ZeroCompute`, `ZeroVideo`, `ZeroInference`
 - **Downstream Consumers**: `ZeroCharts`, `ZeroUI`, `ZeroPipeline`
 
-#### 21. [`kzxl/ZeroCharts`](https://github.com/kzxl/ZeroCharts)
+#### 28. [`kzxl/ZeroCharts`](https://github.com/kzxl/ZeroCharts)
 - **Tier**: Tier 4 (Graphics & Spatial 3D)
 - **GitHub Description**: Direct2D GPU high-density telemetry strip charts, dynamic multi-axis graphs, and 60-144Hz streaming waveform visualizers.
 - **GitHub Topics**: `csharp`, `dotnet`, `zeroplatform`, `tier-4`, `charts`, `telemetry`, `direct2d`, `data-visualization`, `waveform`
 - **Permitted Dependencies**: `ZeroPrimitives`, `ZeroConcurrency`, `ZeroGraphics`, `ZeroStorage`, `ZeroSignal`
 - **Downstream Consumers**: `ZeroUI`, `ZeroPipeline`
 
-#### 22. [`kzxl/ZeroTwin3D`](https://github.com/kzxl/ZeroTwin3D)
+#### 29. [`kzxl/ZeroTwin3D`](https://github.com/kzxl/ZeroTwin3D)
 - **Tier**: Tier 4 (Graphics & Spatial 3D)
 - **GitHub Description**: Pure C# 3D digital twin scene graph, OBJ & glTF 2.0 / GLB loaders, Direct3D 11 rendering pipeline, and orbit/fly camera navigation.
 - **GitHub Topics**: `csharp`, `dotnet`, `zeroplatform`, `tier-4`, `digital-twin`, `3d-rendering`, `gltf`, `obj-loader`, `direct3d11`
 - **Permitted Dependencies**: `ZeroPrimitives`, `ZeroConcurrency`, `ZeroGeometry`, `ZeroGraphics`
 - **Downstream Consumers**: `ZeroUI`, `ZeroPipeline`
 
-#### 23. [`kzxl/Zero3D`](https://github.com/kzxl/Zero3D)
+#### 30. [`kzxl/Zero3D`](https://github.com/kzxl/Zero3D)
 - **Tier**: Tier 4 (Graphics & Spatial 3D)
 - **GitHub Description**: Pure C# 3D mathematics, camera matrices, illumination models, bounding volumes, and geometry mesh rendering.
 - **GitHub Topics**: `csharp`, `dotnet`, `zeroplatform`, `tier-4`, `3d-math`, `mesh-rendering`, `camera-projection`, `spatial-computing`
@@ -238,45 +273,59 @@ Include the corresponding badge markdown at the top of each repository's `README
 ### Tier 5: Presentation & Orchestration (User Layer & Reporting)
 > **Dependency Invariant**: $L_5 \rightarrow L_0 \dots L_4$. Highest application and integration layer.
 
-#### 24. [`kzxl/ZeroDocuments`](https://github.com/kzxl/ZeroDocuments)
+#### 31. [`kzxl/ZeroDocuments`](https://github.com/kzxl/ZeroDocuments)
 - **Tier**: Tier 5 (Presentation & Orchestration)
 - **GitHub Description**: Pure C# zero-dependency OpenXML Excel (.xlsx) streaming reader/writer and RFC 4180 CSV tokenizer/parser.
 - **GitHub Topics**: `csharp`, `dotnet`, `zeroplatform`, `tier-5`, `openxml`, `excel`, `xlsx`, `csv`, `document-processing`
 - **Permitted Dependencies**: `ZeroPrimitives`, `ZeroConcurrency`, `ZeroCompression`
 - **Downstream Consumers**: `ZeroReports`, `ZeroUI`, Enterprise Applications
 
-#### 25. [`kzxl/ZeroReports`](https://github.com/kzxl/ZeroReports)
+#### 32. [`kzxl/ZeroReports`](https://github.com/kzxl/ZeroReports)
 - **Tier**: Tier 5 (Presentation & Orchestration)
 - **GitHub Description**: Pure C# high-speed PDF & industrial thermal barcode label rendering without GDI+ (ZPL, TSPL, ESC-POS emulation).
 - **GitHub Topics**: `csharp`, `dotnet`, `zeroplatform`, `tier-5`, `pdf-generation`, `label-printing`, `zpl`, `barcode-label`, `thermal-printer`
 - **Permitted Dependencies**: `ZeroPrimitives`, `ZeroConcurrency`, `ZeroDocuments`, `ZeroGraphics`
 - **Downstream Consumers**: `ZeroUI`, Enterprise Applications
 
-#### 27. [`kzxl/ZeroPipeline`](https://github.com/kzxl/ZeroPipeline)
+#### 33. [`kzxl/ZeroPipeline`](https://github.com/kzxl/ZeroPipeline)
 - **Tier**: Tier 5 (Presentation & Orchestration)
 - **GitHub Description**: Directed acyclic graph (DAG) scheduler (Kahn sort), industrial inspection nodes (Metrology, Barcode, OCR Inspection), declarative JSON recipes, and visual node canvas.
 - **GitHub Topics**: `csharp`, `dotnet`, `zeroplatform`, `tier-5`, `dag-workflow`, `pipeline-orchestrator`, `machine-vision`, `industrial-aoi`, `ocr-inspection`
 - **Permitted Dependencies**: All underlying tiers ($L_0 \dots L_4$)
 - **Downstream Consumers**: `ZeroUI`, Showcase, Production Applications
 
-#### 28. [`kzxl/ZeroUI`](https://github.com/kzxl/ZeroUI)
+#### 34. [`kzxl/ZeroUI`](https://github.com/kzxl/ZeroUI)
 - **Tier**: Tier 5 (Presentation & Orchestration)
-- **GitHub Description**: 10M+ rows virtual grid, single-HWND D3DCanvas, 40+ industrial SCADA controls (PlantMimicCanvas P&ID, Gauges), dark theme.
-- **GitHub Topics**: `csharp`, `dotnet`, `zeroplatform`, `tier-5`, `winforms`, `wpf`, `scada`, `industrial-ui`, `virtual-grid`, `d3d-canvas`
+- **GitHub Description**: ISA-101 Industrial HMI Design System Handbook (`STD-HMI-001`), `ZAiChatBox` AI copilot streaming chat (WPF & WinForms), `ZOcrViewer` & `ZDocumentDeskew` inspection, 10M+ rows virtual grid, single-HWND D3DCanvas, 40+ industrial SCADA controls, Media & Creative Editors Suite.
+- **GitHub Topics**: `csharp`, `dotnet`, `zeroplatform`, `tier-5`, `winforms`, `wpf`, `scada`, `industrial-ui`, `virtual-grid`, `d3d-canvas`, `ai-copilot`, `ocr-viewer`
 - **Permitted Dependencies**: All underlying tiers ($L_0 \dots L_4$)
 - **Downstream Consumers**: Enterprise Desktop HMI Applications
 
-#### 29. [`kzxl/ZeroUI.React`](https://github.com/kzxl/ZeroUI.React)
+#### 35. [`kzxl/ZeroUI.React`](https://github.com/kzxl/ZeroUI.React)
 - **Tier**: Tier 5 (Presentation & Orchestration)
-- **GitHub Description**: Enterprise & industrial React component suite for SCADA, connected button clusters, and universal theme token synchronization.
+- **GitHub Description**: Enterprise & industrial React component suite for SCADA, connected button clusters, and universal theme token synchronization with Desktop.
 - **GitHub Topics**: `typescript`, `react`, `zeroplatform`, `tier-5`, `scada-web`, `industrial-hmi`, `vite`, `theme-tokens`
 - **Permitted Dependencies**: Web standard / ZeroPlatform Theme Tokens
 - **Downstream Consumers**: Enterprise Web HMI Applications
 
+#### 36. [`kzxl/ZeroAgent`](https://github.com/kzxl/ZeroAgent)
+- **Tier**: Tier 5 (Presentation & Orchestration)
+- **GitHub Description**: Pure C# Autonomous AI Agent framework, deterministic ReAct reasoning loop, zero-reflection tool execution, semantic episodic memory via ZeroVector, DynamicDatabaseQueryTool NL-to-SQL engine, and CSP multi-agent swarm.
+- **GitHub Topics**: `csharp`, `dotnet`, `zeroplatform`, `tier-5`, `ai-agent`, `react-loop`, `semantic-memory`, `nl-to-sql`, `swarm`, `agentic-ai`
+- **Permitted Dependencies**: All underlying tiers ($L_0 \dots L_4$)
+- **Downstream Consumers**: `ZeroUI`, Enterprise Automation
+
+#### 37. [`kzxl/ZeroPrompt`](https://github.com/kzxl/ZeroPrompt)
+- **Tier**: Tier 5 (Presentation & Orchestration)
+- **GitHub Description**: Pure C# prompt templating, Pushdown Automaton (PDA) JSON Grammar state machine, grammar-constrained logit masking, and dynamic few-shot exemplar selector.
+- **GitHub Topics**: `csharp`, `dotnet`, `zeroplatform`, `tier-5`, `prompt-engineering`, `json-grammar`, `pda`, `constrained-generation`, `logit-masking`
+- **Permitted Dependencies**: `ZeroPrimitives`, `ZeroConcurrency`, `ZeroText`, `ZeroTokenizer`
+- **Downstream Consumers**: `ZeroAgent`, `ZeroUI`, Enterprise Applications
+
 ---
 
 ### Root Orchestrator
-#### 30. [`kzxl/ZeroPlatform`](https://github.com/kzxl/ZeroPlatform)
+#### 38. [`kzxl/ZeroPlatform`](https://github.com/kzxl/ZeroPlatform)
 - **Role**: Sovereign Central Ecosystem Orchestrator & Multi-Repo Workspace
-- **GitHub Description**: Sovereign pure C# industrial software ecosystem: 29 autonomous subsystems + 1 web UI suite spanning foundational lock-free primitives, DSP, GPU vision, TSDB, OCR, AI, and SCADA UI.
-- **GitHub Topics**: `csharp`, `dotnet`, `zeroplatform`, `monorepo-orchestrator`, `industrial-automation`, `scada`, `edge-computing`, `computer-vision`, `deep-learning`, `lock-free`, `ocr`
+- **GitHub Description**: Sovereign pure C# industrial software ecosystem: 37 autonomous subsystems + 1 web UI suite spanning foundational lock-free primitives, DSP, GPU vision, TSDB, OCR, SLM, Vector DB, AI Agents, and SCADA UI.
+- **GitHub Topics**: `csharp`, `dotnet`, `zeroplatform`, `monorepo-orchestrator`, `industrial-automation`, `scada`, `edge-computing`, `computer-vision`, `deep-learning`, `lock-free`, `ocr`, `ai-agent`

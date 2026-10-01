@@ -8,7 +8,7 @@
 
 ZeroPlatform employs a decentralized **Satellite Architecture** where each subsystem is an autonomous repository with independent release cycles, decoupled CI/CD, and zero external runtime dependencies.
 
-All 27 subsystems adhere to the **6-Tier Strict Directed Acyclic Graph (DAG) Taxonomy** (defined in [Tier Taxonomy Specification](tier-taxonomy-specification.md)):
+All 37 subsystems adhere to the **6-Tier Strict Directed Acyclic Graph (DAG) Taxonomy** (defined in [Tier Taxonomy Specification](tier-taxonomy-specification.md)):
 
 ```mermaid
 graph TD
@@ -20,7 +20,7 @@ graph TD
     classDef l5 fill:#831843,stroke:#f43f5e,stroke-width:2px,color:#fff;
 
     subgraph L5 ["Tier 5: Presentation & Orchestration (User Layer)"]
-        UI["ZeroUI, ZeroUI.React & ZeroAgent"]:::l5
+        UI["ZeroUI, ZeroUI.React, ZeroAgent & ZeroPrompt"]:::l5
         Pipe["ZeroPipeline"]:::l5
         Docs["ZeroDocuments & ZeroReports"]:::l5
     end
@@ -31,9 +31,10 @@ graph TD
         Twin["ZeroTwin3D & Zero3D"]:::l4
     end
 
-    subgraph L3 ["Tier 3: Perception & Intelligence (Vision & AI)"]
+    subgraph L3 ["Tier 3: Perception & Intelligence (Vision, OCR, Audio & AI)"]
         Video["ZeroVideo"]:::l3
         Infer["ZeroInference, ZeroNeural, ZeroTokenizer & ZeroLlm"]:::l3
+        Ocr["ZeroOcr"]:::l3
         Sig["ZeroSignal, ZeroAudio & ZeroAudioVisual"]:::l3
         Geom["ZeroGeometry"]:::l3
     end
@@ -49,12 +50,14 @@ graph TD
         Comp["ZeroCompute"]:::l1
         Compres["ZeroCompression"]:::l1
         Sys["ZeroSystem"]:::l1
+        Asset["ZeroAsset"]:::l1
     end
 
     subgraph L0 ["Tier 0: Core Foundation (The Bedrock)"]
         Prim["ZeroPrimitives"]:::l0
         Conc["ZeroConcurrency"]:::l0
         Sec["ZeroSecurity"]:::l0
+        Txt["ZeroText"]:::l0
     end
 
     L5 --> L4 & L3 & L2 & L1 & L0
@@ -73,23 +76,27 @@ graph TD
 | **Tier 0: Core Foundation** | **`ZeroPrimitives`** | [`kzxl/ZeroPrimitives`](https://github.com/kzxl/ZeroPrimitives) | Allocation-free byte manipulation, integer/float span parsers, hardware CRC32C, compiled fast object mappers. |
 | *(The Bedrock)* | **`ZeroConcurrency`** | [`kzxl/ZeroConcurrency`](https://github.com/kzxl/ZeroConcurrency) | Pure C# lock-free SPSC/MPMC ring buffers, pooled 0-alloc `ValueTask` sources (`ZeroPromise`), CSP channels, execution-context bypass. |
 | *(0 Dependencies)* | **`ZeroSecurity`** | [`kzxl/ZeroSecurity`](https://github.com/kzxl/ZeroSecurity) | Pure C# cryptographic suite: BLAKE3, FastSha256, HMAC, HKDF, PBKDF2, ChaCha20/Poly1305, X25519 ECDH. |
+| | **`ZeroText`** | [`kzxl/ZeroText`](https://github.com/kzxl/ZeroText) | Pure C# zero-allocation text algorithms, fast regex, KMP search, and Vietnamese diacritics removal normalizer. |
 | **Tier 1: Compute & System** | **`ZeroSystem`** | [`kzxl/ZeroSystem`](https://github.com/kzxl/ZeroSystem) | Sovereign Windows native subsystem, CPU/GPU/RAM hardware telemetry, and OS diagnostics. |
 | *(Hardware & Numerics)* | **`ZeroCompression`** | [`kzxl/ZeroCompression`](https://github.com/kzxl/ZeroCompression) | Streaming multi-codec compression (Zstandard, LZMA, Brotli, Gorilla float TSDB codec), sub-ms heuristic classifier, AES-256-GCM. |
-| | **`ZeroTensor`** | [`kzxl/ZeroTensor`](https://github.com/kzxl/ZeroTensor) | Multi-dimensional memory strides, zero-copy slicing, Level-3 BLAS (GEMM), SVD/QR/Cholesky matrix decompositions. |
-| | **`ZeroCompute`** | [`kzxl/ZeroCompute`](https://github.com/kzxl/ZeroCompute) | Direct3D 11 GPGPU compute dispatcher via COM VTable interop, CPU SIMD Vector256 fallback kernels. |
+| | **`ZeroTensor`** | [`kzxl/ZeroTensor`](https://github.com/kzxl/ZeroTensor) | Multi-dimensional memory strides, zero-copy slicing, Level-3 BLAS (GEMM), BFloat16/INT4, SVD/QR/Cholesky matrix decompositions. |
+| | **`ZeroCompute`** | [`kzxl/ZeroCompute`](https://github.com/kzxl/ZeroCompute) | Direct3D 11 GPGPU compute dispatcher via COM VTable interop, 5-level CPU parallel compute runtime with NUMA/cache-aware tiling. |
+| | **`ZeroAsset`** | [`kzxl/ZeroAsset`](https://github.com/kzxl/ZeroAsset) | Digital asset management (DAM), zero-byte variant branching (`#vc<n>`), hierarchical contiguous sorting, curation & cache keys. |
 | **Tier 2: Transport & Storage** | **`ZeroNetwork`** | [`kzxl/ZeroNetwork`](https://github.com/kzxl/ZeroNetwork) | High-performance network infrastructure, IP/CIDR math, IEEE OUI filtering, ARP table, embedded micro-HTTP server. |
 | *(Data & Comm Pipelines)* | **`ZeroComm`** | [`kzxl/ZeroComm`](https://github.com/kzxl/ZeroComm) | Asynchronous industrial master drivers (Modbus TCP/RTU, Siemens S7, Mitsubishi MC 3E, Omron FINS). |
-| | **`ZeroIoT`** | [`kzxl/ZeroIoT`](https://github.com/kzxl/ZeroIoT) | Industrial IoT edge connectors, MQTT client, OPC UA client and sensor telemetry bridge. |
+| | **`ZeroIoT`** | [`kzxl/ZeroIoT`](https://github.com/kzxl/ZeroIoT) | Industrial IoT edge connectors, MQTT 5.0 client with Exactly-Once QoS 2, OPC UA client and sensor telemetry bridge. |
 | | **`ZeroRfid`** | [`kzxl/ZeroRfid`](https://github.com/kzxl/ZeroRfid) | EPC Gen2 / ISO 18000-6C RFID reader suite, sliding-window anti-collision deduplication & hardware simulator. |
 | | **`ZeroStorage`** | [`kzxl/ZeroStorage`](https://github.com/kzxl/ZeroStorage) | Gorilla Delta-of-Delta + XOR floating-point time-series engine, write-ahead logging (WAL), memory-mapped files. |
-| | **`ZeroData`** | [`kzxl/ZeroData`](https://github.com/kzxl/ZeroData) | Columnar data tables, zero-copy Arrow memory serialization, relational hash joins (Inner/Left/Right/Outer). |
+| | **`ZeroData`** | [`kzxl/ZeroData`](https://github.com/kzxl/ZeroData) | Columnar data tables, Dynamic NL-to-SQL builder & schema metadata, zero-copy Arrow memory serialization, relational hash joins. |
 | | **`ZeroVector`** | [`kzxl/ZeroVector`](https://github.com/kzxl/ZeroVector) | High-throughput embedded Vector Database & SIMD similarity engine, AVX2/FMA metrics, Flat contiguous index & HNSW graph index. |
 | **Tier 3: Perception & AI** | **`ZeroSignal`** | [`kzxl/ZeroSignal`](https://github.com/kzxl/ZeroSignal) | In-place radix-2 FFT, STFT spectrograms, zero-phase Butterworth filter, Extended Kalman Filter (EKF), VAD. |
-| *(Perception & Intelligence)* | **`ZeroGeometry`** | [`kzxl/ZeroGeometry`](https://github.com/kzxl/ZeroGeometry) | 3D Iterative Closest Point (ICP), KdTree3D/RTree2D, polygon Boolean clipping, Delaunay triangulation. |
+| *(Perception & Intelligence)* | **`ZeroAudio`** | [`kzxl/ZeroAudio`](https://github.com/kzxl/ZeroAudio) | High-performance audio capture/playback, WAV/PCM codecs, channel mixing, and circular DMA audio buffers. |
+| | **`ZeroGeometry`** | [`kzxl/ZeroGeometry`](https://github.com/kzxl/ZeroGeometry) | 3D Iterative Closest Point (ICP), KdTree3D/RTree2D, polygon Boolean clipping, Delaunay triangulation. |
 | | **`ZeroVideo`** | [`kzxl/ZeroVideo`](https://github.com/kzxl/ZeroVideo) | Industrial Motion JPEG client, RTSP 1.0 transport, RFC 3550 RTP, H.264 NALU/SPS Exp-Golomb, zero-LOH `VideoFramePool`. |
 | | **`ZeroAudioVisual`** | [`kzxl/ZeroAudioVisual`](https://github.com/kzxl/ZeroAudioVisual) | Acoustic predictive maintenance, multi-channel microphone array beamforming & defect localization. |
 | | **`ZeroInference`** | [`kzxl/ZeroInference`](https://github.com/kzxl/ZeroInference) | Polymorphic `IInferenceSession`, ONNX parser, CPU & OnnxRuntime GPU providers, YOLOv8/v11 anchor-free decoders. |
 | | **`ZeroNeural`** | [`kzxl/ZeroNeural`](https://github.com/kzxl/ZeroNeural) | Reverse-mode automatic differentiation (Autograd), deep learning layers, AdamW/SGD optimizer. |
+| | **`ZeroOcr`** | [`kzxl/ZeroOcr`](https://github.com/kzxl/ZeroOcr) | Pure C# zero-allocation OCR abstractions, AVX2 SIMD preprocessor, HPP projection deskewing, and native Windows WinRT OCR engine. |
 | | **`ZeroTokenizer`** | [`kzxl/ZeroTokenizer`](https://github.com/kzxl/ZeroTokenizer) | High-throughput Pure C# BPE & Tiktoken tokenizer, Byte-level fallback, and Priority-Knapsack Token Budgeter. |
 | | **`ZeroLlm`** | [`kzxl/ZeroLlm`](https://github.com/kzxl/ZeroLlm) | Pure C# Small Language Model runtime, GGUF v2/v3 binary parser, Paged KV-Cache allocator, Transformer decoder (RMSNorm, RoPE, SwiGLU, GQA), and token sampling engine. |
 | **Tier 4: Graphics & Spatial 3D** | **`ZeroGraphics`** | [`kzxl/ZeroGraphics`](https://github.com/kzxl/ZeroGraphics) | Render Hardware Interface (RHI - Null & D3D11) with explicit barriers & timeline fences, COM VTable D3D11/D2D, COM VTable graphics interception (`ComVTableHook`), Zero-LOH NCC & Gaussian blur, AVX2 SIMD filters, Async Staging Ring Buffer, Barcode HRI suite. |
@@ -99,9 +106,10 @@ graph TD
 | **Tier 5: Presentation & Apps** | **`ZeroDocuments`** | [`kzxl/ZeroDocuments`](https://github.com/kzxl/ZeroDocuments) | Pure C# zero-dependency OpenXML Excel (.xlsx) reader/writer and RFC 4180 CSV engine. |
 | *(User Layer & Reporting)* | **`ZeroReports`** | [`kzxl/ZeroReports`](https://github.com/kzxl/ZeroReports) | Pure C# high-speed PDF & industrial thermal barcode label rendering without GDI+ (ZPL/TSPL). |
 | | **`ZeroPipeline`** | [`kzxl/ZeroPipeline`](https://github.com/kzxl/ZeroPipeline) | Kahn-sorted DAG inspection pipeline, JSON recipes, interactive graphical node graph canvas. |
-| | **`ZeroUI`** | [`kzxl/ZeroUI`](https://github.com/kzxl/ZeroUI) | 10M+ rows virtual grid, single-HWND D3DCanvas, 40+ SCADA controls, Media & Creative Suite, dark theme. |
+| | **`ZeroUI`** | [`kzxl/ZeroUI`](https://github.com/kzxl/ZeroUI) | ISA-101 Industrial HMI Design System, `ZAiChatBox` AI copilot (WPF & WinForms), `ZOcrViewer` & `ZDocumentDeskew`, 10M+ rows virtual grid, 40+ SCADA controls. |
 | | **`ZeroUI.React`** | [`kzxl/ZeroUI.React`](https://github.com/kzxl/ZeroUI.React) | Enterprise & Industrial React component suite for SCADA, connected button clusters, universal theme token synchronization with Desktop. |
-| | **`ZeroAgent`** | [`kzxl/ZeroAgent`](https://github.com/kzxl/ZeroAgent) | Pure C# Cognitive ReAct execution loop, Zero-reflection tool calling registry, episodic memory recall, and CSP multi-agent swarm. |
+| | **`ZeroAgent`** | [`kzxl/ZeroAgent`](https://github.com/kzxl/ZeroAgent) | Pure C# Cognitive ReAct execution loop, DynamicDatabaseQueryTool NL-to-SQL engine, Zero-reflection tool calling, episodic memory recall, and CSP multi-agent swarm. |
+| | **`ZeroPrompt`** | [`kzxl/ZeroPrompt`](https://github.com/kzxl/ZeroPrompt) | Pure C# prompt templating, Pushdown Automaton (PDA) JSON Grammar state machine, grammar-constrained logit masking, and dynamic few-shot exemplar selector. |
 
 ---
 

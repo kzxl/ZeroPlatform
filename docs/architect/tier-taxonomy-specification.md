@@ -8,11 +8,11 @@
 
 ## 1. Executive Summary & Architectural Motivation
 
-ZeroPlatform is engineered as a sovereign, pure C# industrial software ecosystem operating across 27 autonomous satellite repositories. 
+ZeroPlatform is engineered as a sovereign, pure C# industrial software ecosystem operating across 37 autonomous satellite repositories. 
 
 Historically, each satellite maintained a strictly isolated "Zero Runtime Dependencies" philosophy. While this preserved autonomy, it resulted in **accidental duplication of foundation primitives** (e.g., custom ring buffers in `ZeroComm`, custom CRCs in `ZeroStorage`, custom unmanaged queues in `ZeroGraphics`).
 
-This specification establishes the **ZeroPlatform 6-Tier Strict Directed Acyclic Graph (DAG) Taxonomy**. It establishes formal boundaries, dependency invariants, metadata tagging conventions, and integration rules governing all 27 subsystems.
+This specification establishes the **ZeroPlatform 6-Tier Strict Directed Acyclic Graph (DAG) Taxonomy**. It establishes formal boundaries, dependency invariants, metadata tagging conventions, and integration rules governing all 37 subsystems.
 
 ---
 
@@ -28,7 +28,7 @@ graph TD
     classDef l5 fill:#831843,stroke:#f43f5e,stroke-width:2px,color:#fff;
 
     subgraph L5 ["Tier 5: Presentation & Orchestration (User Layer)"]
-        UI["ZeroUI & ZeroUI.React"]:::l5
+        UI["ZeroUI, ZeroUI.React, ZeroAgent & ZeroPrompt"]:::l5
         Pipe["ZeroPipeline"]:::l5
         Docs["ZeroDocuments & ZeroReports"]:::l5
     end
@@ -39,18 +39,18 @@ graph TD
         Twin["ZeroTwin3D & Zero3D"]:::l4
     end
 
-    subgraph L3 ["Tier 3: Perception & Intelligence (Vision, OCR & AI)"]
+    subgraph L3 ["Tier 3: Perception & Intelligence (Vision, OCR, Audio & AI)"]
         Video["ZeroVideo"]:::l3
-        Infer["ZeroInference & ZeroNeural"]:::l3
+        Infer["ZeroInference, ZeroNeural, ZeroTokenizer & ZeroLlm"]:::l3
         Ocr["ZeroOcr"]:::l3
-        Sig["ZeroSignal & ZeroAudioVisual"]:::l3
+        Sig["ZeroSignal, ZeroAudio & ZeroAudioVisual"]:::l3
         Geom["ZeroGeometry"]:::l3
     end
 
     subgraph L2 ["Tier 2: Transport & Storage (Data & Comm Pipelines)"]
         Comm["ZeroComm, ZeroIoT & ZeroRfid"]:::l2
         Net["ZeroNetwork"]:::l2
-        Store["ZeroStorage & ZeroData"]:::l2
+        Store["ZeroStorage, ZeroData & ZeroVector"]:::l2
     end
 
     subgraph L1 ["Tier 1: Compute & System (Hardware & Numerics)"]
@@ -58,12 +58,14 @@ graph TD
         Comp["ZeroCompute"]:::l1
         Compres["ZeroCompression"]:::l1
         Sys["ZeroSystem"]:::l1
+        Asset["ZeroAsset"]:::l1
     end
 
     subgraph L0 ["Tier 0: Core Foundation (The Bedrock)"]
         Prim["ZeroPrimitives"]:::l0
         Conc["ZeroConcurrency"]:::l0
         Sec["ZeroSecurity"]:::l0
+        Txt["ZeroText"]:::l0
     end
 
     L5 --> L4 & L3 & L2 & L1 & L0
@@ -79,58 +81,63 @@ graph TD
 
 ### Tier 0: Core Foundation (The Bedrock)
 * **Architectural Invariant**: **Zero Platform Dependencies ($L_0 \rightarrow \emptyset$)**. Tier 0 libraries MUST NEVER reference any other ZeroPlatform project or package.
-* **Responsibilities**: Microsecond/nanosecond primitive data structures, lock-free concurrency, memory management, cryptographic algorithms.
+* **Responsibilities**: Microsecond/nanosecond primitive data structures, lock-free concurrency, memory management, cryptographic algorithms, text algorithms.
 
 | Subsystem | Primary Capabilities |
 | :--- | :--- |
 | **`ZeroPrimitives`** | Zero-allocation span parsers, pointer arithmetic, `FastBinary`, `FastConvert`, `ByteRingBuffer`, compiled object mapping. |
 | **`ZeroConcurrency`** | Lock-free SPSC (`ZeroRingBuffer`) & MPMC (`ZeroMpmcRingBuffer`), CSP channels (`ZeroChannel`), pooled `ValueTask` sources (`ZeroPromise`), dedicated pinned threads (`ZeroDedicatedWorker`), ExecutionContext bypass. |
 | **`ZeroSecurity`** | Cryptographic primitives: BLAKE3, FastSha256, HMAC, HKDF, PBKDF2, ChaCha20/Poly1305, X25519 ECDH, Cuckoo/Bloom Filters. |
+| **`ZeroText`** | Pure C# zero-allocation text algorithms, fast regex, KMP substring search, and Vietnamese diacritics removal normalizer. |
 
 ---
 
 ### Tier 1: Compute & System (Hardware & Numerics)
 * **Architectural Invariant**: Can only depend on **Tier 0 ($L_1 \rightarrow L_0$)**.
-* **Responsibilities**: OS telemetry, hardware diagnostics, multi-codec stream compression, N-dimensional matrix mathematics, and GPU compute dispatching.
+* **Responsibilities**: OS telemetry, hardware diagnostics, multi-codec stream compression, N-dimensional matrix mathematics, digital asset management, and GPU compute dispatching.
 
 | Subsystem | Primary Capabilities |
 | :--- | :--- |
 | **`ZeroSystem`** | Sovereign Windows native OS subsystem, CPU/GPU/RAM/Disk hardware telemetry, process diagnostics. |
 | **`ZeroCompression`** | Streaming multi-codec compression (Zstandard, LZMA, Brotli, Gorilla float TSDB codec), heuristic data classifier, AES-256-GCM AEAD, TAR/ZIP containers. |
-| **`ZeroTensor`** | N-D strided memory layout, zero-copy tensor slicing, Level-3 BLAS (GEMM), SVD/QR/Cholesky matrix decompositions. |
-| **`ZeroCompute`** | Direct3D 11 Compute Shader dispatcher via COM VTable, UAV buffer/texture binding, AVX2 SIMD fallback kernels. |
+| **`ZeroTensor`** | N-D strided memory layout, zero-copy tensor slicing, Level-3 BLAS (GEMM), BFloat16/INT4 quantization, SVD/QR/Cholesky matrix decompositions. |
+| **`ZeroCompute`** | Direct3D 11 Compute Shader dispatcher via COM VTable, UAV buffer/texture binding, 5-level CPU parallel compute runtime with NUMA/cache-aware tiling. |
+| **`ZeroAsset`** | Digital asset management (DAM), zero-byte variant branching (`#vc<n>`), hierarchical contiguous sorting, curation & cache keys. |
 
 ---
 
 ### Tier 2: Transport & Storage (Data Pipelines & Industrial Protocols)
 * **Architectural Invariant**: Can only depend on **Tier 0 and Tier 1 ($L_2 \rightarrow L_0, L_1$)**.
-* **Responsibilities**: In-memory columnar data representations, embedded time-series storage, network infrastructure, and fieldbus communications.
+* **Responsibilities**: In-memory columnar data representations, embedded time-series storage, network infrastructure, vector similarity storage, and fieldbus communications.
 
 | Subsystem | Primary Capabilities |
 | :--- | :--- |
 | **`ZeroNetwork`** | High-speed network infrastructure, CIDR IP math, ARP table scanning, IEEE OUI identification, embedded micro-HTTP server. |
 | **`ZeroComm`** | Asynchronous industrial master drivers (Modbus TCP/RTU, Siemens S7, Mitsubishi MC 3E, Omron FINS), circular DMA ingestion. |
-| **`ZeroIoT`** | Industrial IoT edge connectors, MQTT v3.1.1/v5.0 client, OPC UA client and telemetry sensor bridge. |
+| **`ZeroIoT`** | Industrial IoT edge connectors, MQTT v3.1.1/v5.0 client with Exactly-Once QoS 2, OPC UA client with X.509 mTLS encryption and telemetry sensor bridge. |
 | **`ZeroRfid`** | EPC Gen2 / ISO 18000-6C RFID reader adapters, sliding-window anti-collision deduplication pipeline, physical hardware simulator. |
 | **`ZeroStorage`** | Embedded TSDB, Facebook Gorilla Delta-of-Delta + XOR compression, MMF zero-copy persistence, Write-Ahead Log (WAL). |
-| **`ZeroData`** | Columnar DataFrame, SIMD relational hash joins (Inner/Left/Right/Outer), compiled expression tree SQL materializers, Arrow IPC. |
+| **`ZeroData`** | Columnar DataFrame, SIMD relational hash joins, Dynamic NL-to-SQL builder & schema metadata, compiled SQL expressions, Arrow IPC, Roslyn-less CodeGen. |
+| **`ZeroVector`** | High-throughput embedded Vector Database & SIMD similarity metric engine, AVX2/FMA metrics, Flat contiguous index & HNSW graph index. |
 
 ---
 
-### Tier 3: Perception & Intelligence (Signal, Vision & AI)
+### Tier 3: Perception & Intelligence (Signal, Vision, OCR, Audio & AI)
 * **Architectural Invariant**: Can depend on **Tier 0, Tier 1, and Tier 2 ($L_3 \rightarrow L_0, L_1, L_2$)**.
-* **Responsibilities**: Signal processing, point clouds, live video ingestion/streaming, acoustic analytics, neural execution graphs, and deep learning inference.
+* **Responsibilities**: Signal processing, point clouds, live video ingestion/streaming, acoustic analytics, neural execution graphs, OCR inspection, tokenizers, SLMs, and deep learning inference.
 
 | Subsystem | Primary Capabilities |
 | :--- | :--- |
 | **`ZeroSignal`** | In-place radix-2 Cooley-Tukey FFT, zero-phase Butterworth `FiltFilt`, Extended Kalman Filter (EKF), DWT wavelets, and Levenberg-Marquardt non-linear least squares optimization. |
-| **`ZeroAudio`** | Pure C# audio DSP & streaming engine, WAV/RIFF codec, lock-free SPSC `AudioRingBuffer`, ArrayPool-backed `AudioBuffer`, cubic Hermite resampling, brickwall peak limiter, dynamic compressor, biquad equalizer, STFT spectrograms, Voice Activity Detection (VAD), acoustic vibration metrics & bearing defect diagnostic. |
+| **`ZeroAudio`** | Pure C# audio DSP & streaming engine, WAV/RIFF codec, lock-free SPSC `AudioRingBuffer`, ArrayPool-backed `AudioBuffer`, cubic Hermite resampling, STFT spectrograms, Voice Activity Detection (VAD). |
 | **`ZeroGeometry`** | 3D ICP rigid cloud alignment, KdTree3D/RTree2D spatial queries, surface normal estimation, Sutherland-Hodgman clipping, Delaunay triangulation. |
 | **`ZeroVideo`** | Industrial Motion JPEG client, RTSP 1.0 session transport, RFC 3550 RTP demuxing, H.264 NALU scanner & Exp-Golomb SPS parser, zero-LOH `VideoFramePool`, PTS playback. |
-| **`ZeroAudioVisual`** | Acoustic predictive maintenance & video transport satellite (delegating acoustic DSP/spectrogram to `ZeroAudio`, video to `ZeroVideo`). |
+| **`ZeroAudioVisual`** | Acoustic predictive maintenance & multi-channel microphone array beamforming defect localization. |
 | **`ZeroInference`** | Polymorphic `IInferenceSession`, pure C# ONNX binary model parser, CPU execution graph & OnnxRuntime GPU providers, YOLOv8/v11 anchor-free decoders (detect, pose, seg). |
 | **`ZeroNeural`** | PyTorch-like reverse-mode automatic differentiation (Autograd) DAG tape, neural layers (`Linear`, `Sequential`, `Conv2D`, `Dropout`), AdamW/SGD. |
 | **`ZeroOcr`** | Pure C# zero-allocation OCR abstractions, AVX2 SIMD preprocessor (ITU-R BT.601, binarization), dot-matrix morphology, HPP projection deskewing, parallel multi-ROI inspection, and native Windows WinRT OCR engine. |
+| **`ZeroTokenizer`** | High-throughput Pure C# BPE & Tiktoken tokenizer (`cl100k_base`, `o200k_base`, LLaMA-3), UTF-8 byte-level fallback, and Priority-Knapsack Token Budgeter. |
+| **`ZeroLlm`** | Pure C# Small Language Model runtime, GGUF v2/v3 binary parser, Paged KV-Cache allocator, Transformer decoder (RMSNorm, RoPE, SwiGLU, GQA), and token sampling engine. |
 
 ---
 
@@ -140,7 +147,7 @@ graph TD
 
 | Subsystem | Primary Capabilities |
 | :--- | :--- |
-| **`ZeroGraphics`** | Render Hardware Interface (RHI - Null & D3D11) with explicit barriers & timeline fences, COM VTable D3D11/D2D, COM VTable graphics interception (`ComVTableHook`), Zero-LOH NCC & Gaussian blur, AVX2 SIMD filters, Async Staging Ring Buffer, Barcode HRI suite. |
+| **`ZeroGraphics`** | Render Hardware Interface (RHI - Null, D3D11, and cross-platform Vulkan 1.0+ `VulkanRhiDevice`) with explicit barriers & timeline fences, COM VTable D3D11/D2D, COM VTable graphics interception (`ComVTableHook`), Zero-LOH NCC & Gaussian blur, AVX2 SIMD filters, Async Staging Ring Buffer, Barcode HRI suite. |
 | **`ZeroCharts`** | Direct2D GPU high-density telemetry strip charts, dynamic multi-axis graphs, 60–144Hz waveform visualizers. |
 | **`ZeroTwin3D`** | Pure C# 3D digital twin spatial scene graph, Wavefront OBJ & glTF 2.0 / GLB 3D loaders, Direct3D 11 rendering pipeline, orbit/fly camera navigation. |
 | **`Zero3D`** | General-purpose 3D mathematics, camera matrices, lighting models, and geometry mesh rendering. |
@@ -149,15 +156,17 @@ graph TD
 
 ### Tier 5: Presentation, Documents & Orchestration (User Layer)
 * **Architectural Invariant**: Highest layer. Can consume all underlying layers ($L_5 \rightarrow L_{0..4}$).
-* **Responsibilities**: High-density desktop & web HMI/SCADA controls, interactive node graphs, industrial reporting, and document generation.
+* **Responsibilities**: High-density desktop & web HMI/SCADA controls, interactive node graphs, industrial reporting, autonomous AI agents, grammar prompt engines, and document generation.
 
 | Subsystem | Primary Capabilities |
 | :--- | :--- |
 | **`ZeroDocuments`** | Pure C# zero-dependency OpenXML Excel (.xlsx) reader/writer and RFC 4180 CSV engine. |
 | **`ZeroReports`** | Pure C# high-speed PDF & industrial thermal barcode label rendering without GDI+ (ZPL/TSPL/ESC-POS emulation). |
 | **`ZeroPipeline`** | Kahn-sorted Directed Acyclic Graph (DAG) inspection pipeline, Sub-DAG macro nodes, declarative JSON recipes, and interactive visual node canvas. |
-| **`ZeroUI`** | 10M+ rows virtual grid, single-HWND D3DCanvas, 40+ industrial SCADA controls (PlantMimicCanvas P&ID, Gauges), Media & Creative Suite, dark theme. |
+| **`ZeroUI`** | ISA-101 Industrial HMI Design System, `ZAiChatBox` AI copilot streaming chat (WPF & WinForms), `ZOcrViewer` & `ZDocumentDeskew` inspection, 10M+ rows virtual grid, single-HWND D3DCanvas, 40+ industrial SCADA controls, Media & Creative Editors Suite. |
 | **`ZeroUI.React`** | Enterprise & Industrial React component suite for SCADA, connected button clusters, universal theme token synchronization with Desktop. |
+| **`ZeroAgent`** | Pure C# Cognitive ReAct execution loop (Thought-Action-Observation), Zero-reflection tool calling registry, episodic memory recall backed by ZeroVector, DynamicDatabaseQueryTool NL-to-SQL engine, and CSP multi-agent swarm. |
+| **`ZeroPrompt`** | Pure C# prompt templating, Pushdown Automaton (PDA) JSON Grammar state machine, grammar-constrained logit masking, and dynamic few-shot exemplar selector. |
 
 ---
 
