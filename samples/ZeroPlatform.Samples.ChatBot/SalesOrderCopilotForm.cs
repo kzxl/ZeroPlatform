@@ -88,7 +88,9 @@ namespace ZeroPlatform.Samples.ChatBot
             {
                 Dock = DockStyle.Fill,
                 Orientation = Orientation.Vertical,
-                SplitterDistance = 880,
+                FixedPanel = FixedPanel.Panel2,
+                Panel1MinSize = 520,
+                Panel2MinSize = 390,
                 SplitterWidth = 6,
                 BackColor = Color.FromArgb(30, 41, 59)
             };
@@ -99,6 +101,23 @@ namespace ZeroPlatform.Samples.ChatBot
             BuildChatDrawerPanel(splitMain.Panel2);
 
             Controls.Add(splitMain);
+
+            // Responsive initial width: allocate 460px to AI Copilot
+            int initialChatWidth = 460;
+            splitMain.SplitterDistance = Math.Max(520, Width - initialChatWidth);
+
+            Resize += (s, e) =>
+            {
+                if (WindowState != FormWindowState.Minimized && !splitMain.IsDisposed)
+                {
+                    int chatW = 460;
+                    int targetDist = splitMain.Width - chatW;
+                    if (targetDist >= splitMain.Panel1MinSize && targetDist <= splitMain.Width - splitMain.Panel2MinSize)
+                    {
+                        splitMain.SplitterDistance = targetDist;
+                    }
+                }
+            };
         }
 
         private void BuildOrderFormPanel(Panel parent)
