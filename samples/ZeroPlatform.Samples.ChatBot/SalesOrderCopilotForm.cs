@@ -89,8 +89,6 @@ namespace ZeroPlatform.Samples.ChatBot
                 Dock = DockStyle.Fill,
                 Orientation = Orientation.Vertical,
                 FixedPanel = FixedPanel.Panel2,
-                Panel1MinSize = 520,
-                Panel2MinSize = 390,
                 SplitterWidth = 6,
                 BackColor = Color.FromArgb(30, 41, 59)
             };
@@ -102,22 +100,35 @@ namespace ZeroPlatform.Samples.ChatBot
 
             Controls.Add(splitMain);
 
-            // Responsive initial width: allocate 460px to AI Copilot
-            int initialChatWidth = 460;
-            splitMain.SplitterDistance = Math.Max(520, Width - initialChatWidth);
-
-            Resize += (s, e) =>
+            // Configure boundaries and initial responsive distance once form is sized
+            void UpdateSplitter()
             {
-                if (WindowState != FormWindowState.Minimized && !splitMain.IsDisposed)
+                if (WindowState != FormWindowState.Minimized && !splitMain.IsDisposed && splitMain.Width > 600)
                 {
-                    int chatW = 460;
-                    int targetDist = splitMain.Width - chatW;
-                    if (targetDist >= splitMain.Panel1MinSize && targetDist <= splitMain.Width - splitMain.Panel2MinSize)
+                    try
                     {
-                        splitMain.SplitterDistance = targetDist;
+                        int minP1 = Math.Min(400, splitMain.Width / 2);
+                        int minP2 = Math.Min(360, splitMain.Width / 3);
+                        splitMain.Panel1MinSize = minP1;
+                        splitMain.Panel2MinSize = minP2;
+
+                        int chatW = 460;
+                        int targetDist = Math.Max(minP1, splitMain.Width - chatW);
+                        targetDist = Math.Min(targetDist, splitMain.Width - minP2);
+                        if (targetDist > minP1 && targetDist < splitMain.Width - minP2)
+                        {
+                            splitMain.SplitterDistance = targetDist;
+                        }
+                    }
+                    catch
+                    {
+                        // Ignore boundary transient exceptions during resizing
                     }
                 }
-            };
+            }
+
+            Load += (s, e) => UpdateSplitter();
+            Resize += (s, e) => UpdateSplitter();
         }
 
         private void BuildOrderFormPanel(Panel parent)
@@ -210,11 +221,6 @@ namespace ZeroPlatform.Samples.ChatBot
             pnlHeaderCard.Controls.Add(lblNote);
             pnlHeaderCard.Controls.Add(_txtNotes);
 
-            pnlContainer.Controls.Add(pnlHeaderCard);
-
-            var spacerTop = new Panel { Dock = DockStyle.Top, Height = 10, BackColor = Color.Transparent };
-            pnlContainer.Controls.Add(spacerTop);
-
             // Center DataGridView (ZeroGrid Style)
             _gridItems = new DataGridView
             {
@@ -242,15 +248,13 @@ namespace ZeroPlatform.Samples.ChatBot
 
             _gridItems.Columns.Add(new DataGridViewTextBoxColumn { Name = "ColIndex", HeaderText = "#", Width = 40, ReadOnly = true });
             _gridItems.Columns.Add(new DataGridViewTextBoxColumn { Name = "ColSku", HeaderText = "Mã hàng", Width = 110 });
-            _gridItems.Columns.Add(new DataGridViewTextBoxColumn { Name = "ColName", HeaderText = "Tên hàng hóa / Quy cách", Width = 260 });
+            _gridItems.Columns.Add(new DataGridViewTextBoxColumn { Name = "ColName", HeaderText = "Tên hàng hóa / Quy cách", AutoSizeMode = DataGridViewAutoSizeColumnMode.Fill, MinimumWidth = 200 });
             _gridItems.Columns.Add(new DataGridViewTextBoxColumn { Name = "ColWarehouse", HeaderText = "Kho xuất", Width = 90 });
             _gridItems.Columns.Add(new DataGridViewTextBoxColumn { Name = "ColQty", HeaderText = "Số lượng", Width = 80 });
             _gridItems.Columns.Add(new DataGridViewTextBoxColumn { Name = "ColUnit", HeaderText = "ĐVT", Width = 60 });
             _gridItems.Columns.Add(new DataGridViewTextBoxColumn { Name = "ColPrice", HeaderText = "Đơn giá", Width = 100 });
             _gridItems.Columns.Add(new DataGridViewTextBoxColumn { Name = "ColTotal", HeaderText = "Thành tiền", Width = 110, ReadOnly = true });
             _gridItems.Columns.Add(new DataGridViewTextBoxColumn { Name = "ColConf", HeaderText = "Độ tin cậy AI", Width = 110, ReadOnly = true });
-
-            pnlContainer.Controls.Add(_gridItems);
 
             // Bottom Summary & Actions Panel
             var pnlBottom = new Panel
@@ -310,7 +314,13 @@ namespace ZeroPlatform.Samples.ChatBot
             pnlBottom.Controls.Add(new Panel { Dock = DockStyle.Left, Width = 10 });
             pnlBottom.Controls.Add(btnSave);
 
+            var spacerTop = new Panel { Dock = DockStyle.Top, Height = 10, BackColor = Color.Transparent };
+
             pnlContainer.Controls.Add(pnlBottom);
+            pnlContainer.Controls.Add(spacerTop);
+            pnlContainer.Controls.Add(pnlHeaderCard);
+            pnlContainer.Controls.Add(_gridItems);
+            _gridItems.BringToFront();
             parent.Controls.Add(pnlContainer);
         }
 
@@ -395,14 +405,22 @@ namespace ZeroPlatform.Samples.ChatBot
             _lblTotalAmount.Text = $"TỔNG TIỀN: {_currentOrder.TotalAmount:#,##0} đ";
 
             // Sync Customer
-            for (int i = 0; i < _cboCustomer.Items.Count; i++)
+            if (!string.IsNullOrEmpty(_currentOrder.CustomerCode))
             {
-                if (_cboCustomer.Items[i] is MasterCustomer c && c.Code == _currentOrder.CustomerCode)
+                for (int i = 0; i < _cboCustomer.Items.Count; i++)
                 {
-                    _cboCustomer.SelectedIndex = i;
-                    break;
+                    if (_cboCustomer.Items[i] is MasterCustomer c && c.Code == _currentOrder.CustomerCode)
+                    {
+                        if (_cboCustomer.SelectedIndex != i)
+                        {
+                            _cboCustomer.SelectedIndex = i;
+                        }
+                        break;
+                    }
                 }
             }
+
+            _gridItems.Refresh();
         }
 
         private void CaptureUndoSnapshot(string description)
@@ -436,6 +454,11 @@ namespace ZeroPlatform.Samples.ChatBot
         {
             CaptureUndoSnapshot("Trước khi làm mới");
             _currentOrder = new OrderDraft();
+            if (_cboCustomer.Items.Count > 0 && _cboCustomer.SelectedItem is MasterCustomer c)
+            {
+                _currentOrder.CustomerCode = c.Code;
+                _currentOrder.CustomerName = c.Name;
+            }
             RefreshGridFromOrder();
         }
 
@@ -446,6 +469,44 @@ namespace ZeroPlatform.Samples.ChatBot
         private async Task ProcessChatCommandAsync(string text)
         {
             string clean = text.Trim();
+
+            // 0. Command: Quick Reset
+            if (clean.Equals("làm mới", StringComparison.OrdinalIgnoreCase) ||
+                clean.Equals("làm mới đơn", StringComparison.OrdinalIgnoreCase) ||
+                clean.Equals("xóa đơn", StringComparison.OrdinalIgnoreCase) ||
+                clean.Equals("hủy đơn", StringComparison.OrdinalIgnoreCase))
+            {
+                ResetOrderDraft();
+                _chatBox.ShowThinkingIndicator("Đang làm mới chứng từ...");
+                await Task.Delay(200);
+                await _chatBox.AppendAssistantActionMessageAnimatedAsync(
+                    $"🗑 Đã làm mới chứng từ đơn hàng thành công!\n\n" +
+                    $"• Mã chứng từ mới: **{_currentOrder.OrderCode}**\n" +
+                    $"• Khách hàng hiện tại: **{_currentOrder.CustomerName}**\n\n" +
+                    "Bạn có thể bắt đầu đọc hoặc gõ câu lệnh để thêm mặt hàng vào đơn.",
+                    canUndo: true);
+                return;
+            }
+
+            // 0.1 Command: Save & Post order
+            if (clean.IndexOf("lưu và ghi sổ", StringComparison.OrdinalIgnoreCase) >= 0 ||
+                clean.IndexOf("lưu đơn", StringComparison.OrdinalIgnoreCase) >= 0 ||
+                clean.IndexOf("ghi sổ", StringComparison.OrdinalIgnoreCase) >= 0)
+            {
+                _lblStatusBadge.Text = "● APPROVED (ĐÃ LƯU & GHI SỔ)";
+                _lblStatusBadge.ForeColor = Color.FromArgb(16, 185, 129);
+                _chatBox.ShowThinkingIndicator("Đang kiểm tra và ghi sổ chứng từ vào CSDL...");
+                await Task.Delay(300);
+                await _chatBox.AppendAssistantActionMessageAnimatedAsync(
+                    $"✅ **ĐÃ LƯU & GHI SỔ CHỨNG TỪ THÀNH CÔNG!**\n\n" +
+                    $"• Mã chứng từ: **{_currentOrder.OrderCode}**\n" +
+                    $"• Khách hàng: **{_currentOrder.CustomerName}**\n" +
+                    $"• Tổng số lượng: **{_currentOrder.Items.Sum(i => i.Quantity)}** sản phẩm ({_currentOrder.Items.Count} dòng)\n" +
+                    $"• Tổng tiền thanh toán: **{_currentOrder.TotalAmount:#,##0} đ**\n\n" +
+                    "Chứng từ đã được chuyển sang trạng thái phê duyệt và khóa sổ.",
+                    canUndo: false);
+                return;
+            }
 
             // 1. Command: Batch update warehouse
             if (clean.IndexOf("cập nhật kho", StringComparison.OrdinalIgnoreCase) >= 0 ||
@@ -524,23 +585,51 @@ namespace ZeroPlatform.Samples.ChatBot
                 return;
             }
 
-            // 5. Command: Add order / items from text (e.g. "Thêm đơn hàng cho Công ty...")
+            // 5. Command: Add order / items from text (e.g. "Thêm đơn hàng cho Công ty...", "Tạo đơn mới cho Phú Hưng 1 máy chiếu")
             _chatBox.ShowThinkingIndicator("Sales Copilot đang nhận diện khách hàng & bóc tách mặt hàng...");
-            await Task.Delay(350);
+            await Task.Delay(300);
 
-            CaptureUndoSnapshot("Trước khi thêm mặt hàng bằng giọng nói/text");
-            var addedItems = ParseAndApplyOrderFromText(clean);
+            CaptureUndoSnapshot("Trước khi xử lý câu lệnh");
+
+            bool isNewOrder = clean.IndexOf("tạo đơn mới", StringComparison.OrdinalIgnoreCase) >= 0 ||
+                              clean.IndexOf("lập đơn mới", StringComparison.OrdinalIgnoreCase) >= 0 ||
+                              clean.IndexOf("tạo đơn hàng mới", StringComparison.OrdinalIgnoreCase) >= 0 ||
+                              clean.IndexOf("đơn mới", StringComparison.OrdinalIgnoreCase) >= 0;
+
+            if (isNewOrder)
+            {
+                _currentOrder = new OrderDraft();
+            }
+
+            var (matchedCus, addedItems) = ParseAndApplyOrderFromText(clean);
+
+            if (matchedCus != null && addedItems.Count == 0)
+            {
+                RefreshGridFromOrder();
+                await _chatBox.AppendAssistantActionMessageAnimatedAsync(
+                    $"Xong rồi nhé! Mình đã khởi tạo chứng từ đơn hàng **{_currentOrder.OrderCode}** cho khách hàng:\n\n" +
+                    $"• Khách hàng: **{_currentOrder.CustomerName}** ({_currentOrder.CustomerCode})\n" +
+                    $"• Kho mặc định: **{_currentOrder.DefaultWarehouse}**\n\n" +
+                    "Bạn muốn thêm những mặt hàng nào vào đơn? (Ví dụ: *'Thêm 20 Ghế xoay và 20 Chuột'* hoặc *'2 Nồi chiên và 3 Máy chiếu'*).",
+                    canUndo: true);
+                return;
+            }
 
             if (addedItems.Count > 0)
             {
                 RefreshGridFromOrder();
 
-                string itemsList = string.Join("\n", addedItems.Select(i => $"• **{i.ItemName}** (Số lượng: {i.Quantity} {i.Unit} - Kho: {i.Warehouse})"));
+                string itemsList = string.Join("\n", addedItems.Select(i => $"• **{i.ItemName}** (Số lượng: {i.Quantity} {i.Unit} - Đơn giá: {i.UnitPrice:#,##0} đ - Kho: {i.Warehouse})"));
+                string cusDesc = !string.IsNullOrEmpty(_currentOrder.CustomerName)
+                    ? $"• Đã chọn Khách hàng: **{_currentOrder.CustomerName}**\n"
+                    : "";
+
                 await _chatBox.AppendAssistantActionMessageAnimatedAsync(
-                    $"Xong rồi nhé! Mình đã hoàn tất các thao tác cho đơn hàng của bạn:\n\n" +
-                    $"• Đã chọn Khách hàng: **{_currentOrder.CustomerName}**\n" +
+                    $"Xong rồi nhé! Mình đã hoàn tất các thao tác cho đơn hàng **{_currentOrder.OrderCode}**:\n\n" +
+                    cusDesc +
                     $"• Đã thêm các mặt hàng sau vào đơn:\n{itemsList}\n\n" +
-                    "Bạn có muốn mình hỗ trợ thêm việc nào khác như cập nhật thông tin khác hay thêm hàng hóa mới không?",
+                    $"👉 **Tổng giá trị đơn: {_currentOrder.TotalAmount:#,##0} đ** ({_currentOrder.Items.Count} dòng mặt hàng)\n\n" +
+                    "Bạn có muốn mình hỗ trợ thêm việc nào khác như cập nhật thông tin kho hay thêm hàng hóa mới không?",
                     canUndo: true);
             }
             else
@@ -549,12 +638,13 @@ namespace ZeroPlatform.Samples.ChatBot
                     "Tôi chưa nhận diện được tên khách hàng hoặc sản phẩm trong câu nói.\n\n" +
                     "Bạn có thể nói theo mẫu:\n" +
                     "• *'Thêm cho Cty Bình Minh, 20 Ghế xoay và 20 Chuột máy tính'*\n" +
-                    "• *'Thêm cho Không Gian Mới 2 Nồi chiên và 3 Máy chiếu'*",
+                    "• *'Thêm cho Không Gian Mới 2 Nồi chiên và 3 Máy chiếu'*\n" +
+                    "• *'Tạo đơn mới cho Phú Hưng 1 máy chiếu'*",
                     canUndo: false);
             }
         }
 
-        private List<OrderItemDraft> ParseAndApplyOrderFromText(string text)
+        private (MasterCustomer? Customer, List<OrderItemDraft> AddedItems) ParseAndApplyOrderFromText(string text)
         {
             var added = new List<OrderItemDraft>();
 
@@ -564,43 +654,78 @@ namespace ZeroPlatform.Samples.ChatBot
             {
                 _currentOrder.CustomerCode = matchedCus.Code;
                 _currentOrder.CustomerName = matchedCus.Name;
+                _currentOrder.DefaultWarehouse = matchedCus.DefaultWarehouse;
             }
 
-            // Pattern for matching: "<qty> <product_name>" or "<product_name> <qty>"
-            // Examples: "20 Ghế xoay và 20 Chuột máy tính", "2 Nồi chiên không dầu và 3 Máy chiếu"
-            var parts = text.Split(new string[] { ",", ";", " và ", " voi " }, StringSplitOptions.RemoveEmptyEntries);
+            // Split into clauses: comma, semicolon, " và ", " voi ", " với ", "+", newlines
+            var parts = text.Split(new[] { ",", ";", " và ", " voi ", " với ", "+", "\n" }, StringSplitOptions.RemoveEmptyEntries);
 
             foreach (var part in parts)
             {
-                var match = Regex.Match(part, @"(\d+)\s+([^\d,]+)");
-                if (match.Success)
-                {
-                    if (decimal.TryParse(match.Groups[1].Value, out decimal qty))
-                    {
-                        string prodText = match.Groups[2].Value.Trim();
-                        var (prod, conf) = _matcher.MatchProduct(prodText);
+                string rawPart = part.Trim();
+                if (string.IsNullOrWhiteSpace(rawPart)) continue;
 
-                        if (prod != null)
+                decimal qty = 0;
+                string prodText = string.Empty;
+
+                // Pattern A: "<qty> [unit] <product_name>" (e.g. "20 Ghế xoay", "2 cái Nồi chiên", "1 máy chiếu")
+                var matchA = Regex.Match(rawPart, @"(\d+)\s*(cái|bộ|máy|chiếc|thùng|hộp|cuộn|con)?\s+([^\d,;]+)", RegexOptions.IgnoreCase);
+                if (matchA.Success && decimal.TryParse(matchA.Groups[1].Value, out decimal qA))
+                {
+                    qty = qA;
+                    prodText = matchA.Groups[3].Value.Trim();
+                }
+                else
+                {
+                    // Pattern B: "<product_name> <qty> [unit]" (e.g. "Ghế xoay 20 cái", "Máy chiếu 3 bộ")
+                    var matchB = Regex.Match(rawPart, @"([^\d,;]+?)\s+(\d+)\s*(cái|bộ|máy|chiếc|thùng|hộp|cuộn|con)?$", RegexOptions.IgnoreCase);
+                    if (matchB.Success && decimal.TryParse(matchB.Groups[2].Value, out decimal qB))
+                    {
+                        qty = qB;
+                        prodText = matchB.Groups[1].Value.Trim();
+                    }
+                }
+
+                if (qty > 0 && !string.IsNullOrWhiteSpace(prodText))
+                {
+                    // Strip customer or preposition tails if present (e.g. "ghế xoay cho Bình Minh" -> "ghế xoay")
+                    int choIdx = prodText.IndexOf(" cho ", StringComparison.OrdinalIgnoreCase);
+                    if (choIdx > 0) prodText = prodText.Substring(0, choIdx).Trim();
+                    int cuaIdx = prodText.IndexOf(" của ", StringComparison.OrdinalIgnoreCase);
+                    if (cuaIdx > 0) prodText = prodText.Substring(0, cuaIdx).Trim();
+                    int taiIdx = prodText.IndexOf(" tại ", StringComparison.OrdinalIgnoreCase);
+                    if (taiIdx > 0) prodText = prodText.Substring(0, taiIdx).Trim();
+
+                    // Strip leading filler words ("thêm ", "bổ sung ", "lấy ", "mua ")
+                    foreach (var filler in new[] { "thêm ", "bổ sung ", "lấy ", "mua ", "bán ", "cần " })
+                    {
+                        if (prodText.StartsWith(filler, StringComparison.OrdinalIgnoreCase))
                         {
-                            var item = new OrderItemDraft
-                            {
-                                RawDescription = prodText,
-                                Sku = prod.Sku,
-                                ItemName = prod.Name,
-                                Quantity = qty,
-                                Unit = prod.Unit,
-                                UnitPrice = prod.Price,
-                                Warehouse = prod.PreferredWarehouse,
-                                Confidence = conf
-                            };
-                            _currentOrder.Items.Add(item);
-                            added.Add(item);
+                            prodText = prodText.Substring(filler.Length).Trim();
                         }
+                    }
+
+                    var (prod, conf) = _matcher.MatchProduct(prodText);
+                    if (prod != null)
+                    {
+                        var item = new OrderItemDraft
+                        {
+                            RawDescription = prodText,
+                            Sku = prod.Sku,
+                            ItemName = prod.Name,
+                            Quantity = qty,
+                            Unit = prod.Unit,
+                            UnitPrice = prod.Price,
+                            Warehouse = prod.PreferredWarehouse,
+                            Confidence = conf
+                        };
+                        _currentOrder.Items.Add(item);
+                        added.Add(item);
                     }
                 }
             }
 
-            return added;
+            return (matchedCus, added);
         }
 
         private async Task ProcessFileAttachmentAsync(string filePath, string fileType)
