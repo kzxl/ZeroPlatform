@@ -421,6 +421,7 @@ namespace ZeroPlatform.Samples.ChatBot
             _chatBox.PromptSuggestions.Add("Thêm 5 cái vào đơn cho họ");
             _chatBox.PromptSuggestions.Add("Đổi kho của nó thành Kho 02");
             _chatBox.PromptSuggestions.Add("Đổi số lượng của máy chiếu thành 5");
+            _chatBox.PromptSuggestions.Add("Đổi giá của máy chiếu thành 3.5tr");
             _chatBox.PromptSuggestions.Add("Xóa dòng thứ 2");
             _chatBox.PromptSuggestions.Add("Hạn mức công nợ của họ là bao nhiêu?");
             _chatBox.PromptSuggestions.Add("Lưu và ghi sổ đơn hàng");
@@ -755,15 +756,18 @@ namespace ZeroPlatform.Samples.ChatBot
             if (cus != null)
             {
                 SetActiveCustomerSubject(cus);
-                decimal currentDebt = 125_400_000;
+                decimal currentDebt = cus.CurrentDebt;
                 decimal available = Math.Max(0, cus.CreditLimit - currentDebt);
+                string creditStatus = available > 0 
+                    ? "TỐT (Đủ điều kiện ghi nhận đơn hàng mới)" 
+                    : "CẢNH BÁO (Dư nợ vượt quá hạn mức tín dụng)";
 
                 responseMessage = $"💳 **[TRA CỨU CÔNG NỢ & HẠN MỨC TÍN DỤNG]**\n\n" +
                                   $"• Khách hàng: **{cus.Name}** ({cus.Code})\n" +
                                   $"• Hạn mức tín dụng: **{cus.CreditLimit:#,##0} đ**\n" +
                                   $"• Dư nợ hiện tại: **{currentDebt:#,##0} đ**\n" +
                                   $"• Hạn mức còn khả dụng: **{available:#,##0} đ**\n\n" +
-                                  $"👉 Trạng thái tín dụng: **TỐT (Đủ điều kiện ghi nhận đơn hàng mới)**";
+                                  $"👉 Trạng thái tín dụng: **{creditStatus}**";
                 return true;
             }
 
@@ -891,6 +895,198 @@ namespace ZeroPlatform.Samples.ChatBot
             }
 
             return false;
+        }
+
+        private bool TryHandleItemPriceMutation(string text, out string responseMessage)
+        {
+            responseMessage = string.Empty;
+
+            // Pattern 1: Line number: "đổi/sửa/chỉnh giá dòng (thứ) X thành/là/sang <price>"
+            var matchLine = Regex.Match(text, 
+                @"^(?:đổi|sửa|chỉnh|cập\s*nhật)\s+(?:đơn\s+)?giá\s+dòng\s*(?:thứ\s*)?(\d+)\s+(?:thành|là|=|sang|lên|xuống)?\s*(.+)$", 
+                RegexOptions.IgnoreCase);
+
+            if (matchLine.Success && 
+                int.TryParse(matchLine.Groups[1].Value, out int lineNum) && 
+                ParseVietnameseCurrency(matchLine.Groups[2].Value) is decimal newPriceLine)
+            {
+                if (lineNum >= 1 && lineNum <= _currentOrder.Items.Count)
+                {
+                    var item = _currentOrder.Items[lineNum - 1];
+                    decimal oldPrice = item.UnitPrice;
+                    CaptureUndoSnapshot($"Trước khi đổi đơn giá dòng {lineNum} từ {oldPrice:#,##0} đ sang {newPriceLine:#,##0} đ");
+                    item.UnitPrice = newPriceLine;
+                    RefreshGridFromOrder();
+
+                    var prod = _matcher.Products.FirstOrDefault(p => p.Sku.Equals(item.Sku, StringComparison.OrdinalIgnoreCase))
+                               ?? new MasterProduct(item.Sku, item.ItemName, item.UnitPrice, item.Unit, item.Warehouse);
+                    prod.Price = newPriceLine;
+                    SetActiveProductSubject(prod, lineNum);
+
+                    responseMessage = $"Xong rồi nhé! Mình đã cập nhật đơn giá dòng **#{lineNum}** ({item.ItemName}):\n\n" +
+                                      $"• Đơn giá cũ: **{oldPrice:#,##0} đ** ➔ Mới: **{item.UnitPrice:#,##0} đ**\n" +
+                                      $"• Số lượng: **{item.Quantity} {item.Unit}**\n" +
+                                      $"• Thành tiền mới: **{item.TotalAmount:#,##0} đ**\n\n" +
+                                      $"👉 **Tổng giá trị đơn hàng: {_currentOrder.TotalAmount:#,##0} đ**";
+                    return true;
+                }
+            }
+
+            // Pattern 2: Target product: "đổi/sửa/chỉnh giá [của] <target> thành/là/= <price>"
+            var matchTarget = Regex.Match(text, 
+                @"^(?:đổi|sửa|chỉnh|cập\s*nhật)\s+(?:đơn\s+)?giá\s+(?:của\s+)?(.+?)\s+(?:thành|là|=|sang)\s+(.+)$", 
+                RegexOptions.IgnoreCase);
+
+            if (matchTarget.Success && ParseVietnameseCurrency(matchTarget.Groups[2].Value) is decimal newPriceTarget)
+            {
+                string targetText = matchTarget.Groups[1].Value.Trim();
+                var item = FindOrderItem(targetText);
+                if (item != null)
+                {
+                    decimal oldPrice = item.UnitPrice;
+                    CaptureUndoSnapshot($"Trước khi đổi đơn giá {item.ItemName} từ {oldPrice:#,##0} đ sang {newPriceTarget:#,##0} đ");
+                    item.UnitPrice = newPriceTarget;
+                    RefreshGridFromOrder();
+
+                    var prod = _matcher.Products.FirstOrDefault(p => p.Sku.Equals(item.Sku, StringComparison.OrdinalIgnoreCase))
+                               ?? new MasterProduct(item.Sku, item.ItemName, item.UnitPrice, item.Unit, item.Warehouse);
+                    prod.Price = newPriceTarget;
+                    SetActiveProductSubject(prod, item.LineIndex);
+
+                    responseMessage = $"Xong rồi nhé! Mình đã cập nhật đơn giá mặt hàng **{item.ItemName}** (dòng #{item.LineIndex}):\n\n" +
+                                      $"• Đơn giá cũ: **{oldPrice:#,##0} đ** ➔ Mới: **{item.UnitPrice:#,##0} đ**\n" +
+                                      $"• Số lượng: **{item.Quantity} {item.Unit}**\n" +
+                                      $"• Thành tiền mới: **{item.TotalAmount:#,##0} đ**\n\n" +
+                                      $"👉 **Tổng giá trị đơn hàng: {_currentOrder.TotalAmount:#,##0} đ**";
+                    return true;
+                }
+            }
+
+            // Pattern 3: Elliptical price change with active product: "đổi giá thành 3tr", "sửa giá là 850k"
+            if (_lastActiveProduct != null && _currentOrder.Items.Count > 0)
+            {
+                var matchEllip = Regex.Match(text, 
+                    @"^(?:đổi|sửa|chỉnh)?\s*(?:đơn\s+)?giá\s+(?:thành|là|=|sang)\s+(.+)$", 
+                    RegexOptions.IgnoreCase);
+
+                if (matchEllip.Success && ParseVietnameseCurrency(matchEllip.Groups[1].Value) is decimal newPriceEllip)
+                {
+                    var item = FindOrderItem(_lastActiveProduct.Name);
+                    if (item != null)
+                    {
+                        decimal oldPrice = item.UnitPrice;
+                        CaptureUndoSnapshot($"Trước khi đổi đơn giá {item.ItemName} sang {newPriceEllip:#,##0} đ");
+                        item.UnitPrice = newPriceEllip;
+                        RefreshGridFromOrder();
+
+                        _lastActiveProduct.Price = newPriceEllip;
+                        SetActiveProductSubject(_lastActiveProduct, item.LineIndex);
+
+                        responseMessage = $"Đã cập nhật đơn giá cho chủ thể đang chọn **{item.ItemName}** (dòng #{item.LineIndex}):\n\n" +
+                                          $"• Đơn giá cũ: **{oldPrice:#,##0} đ** ➔ Mới: **{item.UnitPrice:#,##0} đ**\n" +
+                                          $"• Thành tiền mới: **{item.TotalAmount:#,##0} đ**\n\n" +
+                                          $"👉 **Tổng giá trị đơn hàng: {_currentOrder.TotalAmount:#,##0} đ**";
+                        return true;
+                    }
+                }
+            }
+
+            return false;
+        }
+
+        private static decimal? ParseVietnameseCurrency(string raw)
+        {
+            if (string.IsNullOrWhiteSpace(raw)) return null;
+            string text = raw.Trim().ToLowerInvariant().Replace(" ", "");
+
+            // Check for "k": e.g. "850k", "250.5k"
+            var mK = Regex.Match(text, @"^([\d.,]+)k$");
+            if (mK.Success && TryParseFlexibleDecimal(mK.Groups[1].Value, out decimal valK))
+            {
+                return valK * 1000m;
+            }
+
+            // Check for compound "tr": e.g. "1tr5" -> 1,500,000
+            var mTrCompound = Regex.Match(text, @"^(\d+)tr(\d+)$");
+            if (mTrCompound.Success && decimal.TryParse(mTrCompound.Groups[1].Value, out decimal trPart) && decimal.TryParse(mTrCompound.Groups[2].Value, out decimal subPart))
+            {
+                decimal frac = subPart;
+                while (frac >= 10) frac /= 10m;
+                frac /= 10m;
+                return (trPart + frac) * 1_000_000m;
+            }
+
+            // Check for "tr", "triệu": e.g. "3.5tr", "2triệu"
+            var mTr = Regex.Match(text, @"^([\d.,]+)(?:tr|triệu)$");
+            if (mTr.Success && TryParseFlexibleDecimal(mTr.Groups[1].Value, out decimal valTr))
+            {
+                return valTr * 1_000_000m;
+            }
+
+            // Check for "nghìn", "ngàn": e.g. "500nghìn"
+            var mNgan = Regex.Match(text, @"^([\d.,]+)(?:nghìn|ngàn)$");
+            if (mNgan.Success && TryParseFlexibleDecimal(mNgan.Groups[1].Value, out decimal valNgan))
+            {
+                return valNgan * 1000m;
+            }
+
+            // Plain numbers with optional đ / vnd
+            string cleanNum = Regex.Replace(text, @"[^\d.,]", "");
+            if (TryParseFlexibleDecimal(cleanNum, out decimal plainVal))
+            {
+                return plainVal;
+            }
+
+            return null;
+        }
+
+        private static bool TryParseFlexibleDecimal(string input, out decimal result)
+        {
+            result = 0;
+            if (string.IsNullOrWhiteSpace(input)) return false;
+
+            string s = input.Trim();
+            if (s.Contains('.') && s.Contains(','))
+            {
+                if (s.LastIndexOf(',') > s.LastIndexOf('.'))
+                {
+                    s = s.Replace(".", "").Replace(',', '.');
+                }
+                else
+                {
+                    s = s.Replace(",", "");
+                }
+            }
+            else if (s.Contains('.'))
+            {
+                int lastDot = s.LastIndexOf('.');
+                if (s.Length - 1 - lastDot == 3 && s.Count(c => c == '.') > 1)
+                {
+                    s = s.Replace(".", "");
+                }
+                else if (s.Length - 1 - lastDot == 3 && s.Length > 6)
+                {
+                    s = s.Replace(".", "");
+                }
+            }
+            else if (s.Contains(','))
+            {
+                int lastComma = s.LastIndexOf(',');
+                if (s.Length - 1 - lastComma == 3 && s.Count(c => c == ',') > 1)
+                {
+                    s = s.Replace(",", "");
+                }
+                else if (s.Length - 1 - lastComma <= 2)
+                {
+                    s = s.Replace(',', '.');
+                }
+                else
+                {
+                    s = s.Replace(",", "");
+                }
+            }
+
+            return decimal.TryParse(s, System.Globalization.NumberStyles.Any, System.Globalization.CultureInfo.InvariantCulture, out result);
         }
 
         private bool TryHandleItemWarehouseMutation(string text, out string responseMessage)
@@ -1158,6 +1354,15 @@ namespace ZeroPlatform.Samples.ChatBot
                 return;
             }
 
+            // 1.1 Single-Item Mutation: Price update ("Đổi giá của máy chiếu thành 3.5tr", "Sửa giá dòng 1 thành 850k")
+            if (TryHandleItemPriceMutation(resolved, out string priceMsg))
+            {
+                _chatBox.ShowThinkingIndicator("Đang cập nhật đơn giá mặt hàng...");
+                await Task.Delay(250);
+                await _chatBox.AppendAssistantActionMessageAnimatedAsync(priceMsg, canUndo: true);
+                return;
+            }
+
             // 2. Single-Item Mutation: Warehouse update ("Đổi kho của nó thành Kho 02", "Chuyển máy chiếu sang Kho 02", "Đổi kho dòng 2 thành Kho 02")
             if (TryHandleItemWarehouseMutation(resolved, out string whMsg))
             {
@@ -1236,12 +1441,17 @@ namespace ZeroPlatform.Samples.ChatBot
                     _chatBox.ShowThinkingIndicator("Đang truy vấn số dư tồn kho thời gian thực...");
                     await Task.Delay(300);
 
+                    var (wh1, wh2, whTong, available) = _matcher.GetProductStock(p.Sku);
+                    int total = wh1 + wh2 + whTong;
+                    int reserved = Math.Max(0, total - available);
+
                     await _chatBox.AppendAssistantActionMessageAnimatedAsync(
                         $"📊 **[TRA CỨU TỒN KHO THỜI GIAN THỰC]**\n\n" +
                         $"• Mặt hàng: **{p.Name}** ({p.Sku})\n" +
-                        $"• Kho 01: **42 {p.Unit}** (Khả dụng: 38 {p.Unit})\n" +
-                        $"• Kho 02: **15 {p.Unit}**\n\n" +
-                        $"👉 Tổng tồn kho hệ thống: **57 {p.Unit}** (Đủ đáp ứng cho đơn hàng mới).\n\n" +
+                        $"• Kho 01: **{wh1} {p.Unit}**\n" +
+                        $"• Kho 02: **{wh2} {p.Unit}**\n" +
+                        $"• Kho Tổng: **{whTong} {p.Unit}**\n\n" +
+                        $"👉 Tổng tồn kho hệ thống: **{total} {p.Unit}** (Khả dụng: **{available} {p.Unit}**, Tạm giữ: **{reserved} {p.Unit}**).\n\n" +
                         $"*(💡 Gợi ý: Bạn có thể gõ 'Thêm 5 cái vào đơn' để đặt ngay mặt hàng này)*",
                         canUndo: false);
                     return;
@@ -1343,10 +1553,50 @@ namespace ZeroPlatform.Samples.ChatBot
         {
             var added = new List<OrderItemDraft>();
 
-            // Match Customer
+            // 1. Match Customer: first try fuzzy matcher
             var (matchedCus, _) = _matcher.MatchCustomer(text);
+
+            // If not found in catalog, detect ad-hoc customer introduction pattern: "cho <Customer Name>"
+            if (matchedCus == null)
+            {
+                var matchNewCus = Regex.Match(text, 
+                    @"(?:thêm|tạo\s*đơn|lập\s*đơn|đơn|bán|xuất)\s+cho\s+((?:công\s*ty|cty|doanh\s*nghiệp|khách\s*hàng|khách|anh|chị|đại\s*lý)\s+[^,;\d\n]+?)(?:,|\s+(?:với|\d|gồm|đặt|mua|lấy)|\n|$)", 
+                    RegexOptions.IgnoreCase);
+
+                if (!matchNewCus.Success)
+                {
+                    matchNewCus = Regex.Match(text, 
+                        @"(?:cho\s+)([A-ZÀ-Ỹ][\w\s]{2,35}?)(?:,|\s+\d|\s+gồm|\s+đặt|\s+mua|\s+lấy|\n|$)", 
+                        RegexOptions.IgnoreCase);
+                }
+
+                if (matchNewCus.Success)
+                {
+                    string candidateName = matchNewCus.Groups[1].Value.Trim();
+                    if (!string.IsNullOrWhiteSpace(candidateName) && candidateName.Length >= 3)
+                    {
+                        matchedCus = _matcher.RegisterOrGetCustomer(candidateName);
+                    }
+                }
+            }
+
             if (matchedCus != null)
             {
+                // Sync with Combo Box
+                bool exists = false;
+                for (int i = 0; i < _cboCustomer.Items.Count; i++)
+                {
+                    if (_cboCustomer.Items[i] is MasterCustomer mc && mc.Code.Equals(matchedCus.Code, StringComparison.OrdinalIgnoreCase))
+                    {
+                        exists = true;
+                        break;
+                    }
+                }
+                if (!exists)
+                {
+                    _cboCustomer.Items.Add(matchedCus);
+                }
+
                 _currentOrder.CustomerCode = matchedCus.Code;
                 _currentOrder.CustomerName = matchedCus.Name;
                 _currentOrder.DefaultWarehouse = matchedCus.DefaultWarehouse;
@@ -1365,23 +1615,36 @@ namespace ZeroPlatform.Samples.ChatBot
                 string rawPart = part.Trim();
                 if (string.IsNullOrWhiteSpace(rawPart)) continue;
 
+                // Extract custom price if present: e.g. "giá 3.5tr", "giá: 850k", "đơn giá 1.200.000 đ"
+                decimal? customPrice = null;
+                var matchPrice = Regex.Match(rawPart, @"(?:đơn\s*)?giá\s*[:=]?\s*([0-9.,]+\s*(?:triệu|tr|nghìn|ngàn|k|đ|vnd)?)", RegexOptions.IgnoreCase);
+                if (matchPrice.Success)
+                {
+                    string priceRaw = matchPrice.Groups[1].Value.Trim();
+                    customPrice = ParseVietnameseCurrency(priceRaw);
+                    rawPart = rawPart.Remove(matchPrice.Index, matchPrice.Length).Trim();
+                }
+
                 decimal qty = 0;
                 string prodText = string.Empty;
+                string? detectedUnit = null;
 
                 // Pattern A: "<qty> [unit] <product_name>" (e.g. "20 Ghế xoay", "2 cái Nồi chiên", "1 máy chiếu")
-                var matchA = Regex.Match(rawPart, @"(\d+)\s*(cái|bộ|máy|chiếc|thùng|hộp|cuộn|con)?\s+([^\d,;]+)", RegexOptions.IgnoreCase);
+                var matchA = Regex.Match(rawPart, @"(\d+)\s*(cái|bộ|máy|chiếc|thùng|hộp|cuộn|con|bình|bao|tấn|kg)?\s+([^\d,;]+)", RegexOptions.IgnoreCase);
                 if (matchA.Success && decimal.TryParse(matchA.Groups[1].Value, out decimal qA))
                 {
                     qty = qA;
+                    detectedUnit = matchA.Groups[2].Success && !string.IsNullOrWhiteSpace(matchA.Groups[2].Value) ? matchA.Groups[2].Value : null;
                     prodText = matchA.Groups[3].Value.Trim();
                 }
                 else
                 {
                     // Pattern B: "<product_name> <qty> [unit]" (e.g. "Ghế xoay 20 cái", "Máy chiếu 3 bộ")
-                    var matchB = Regex.Match(rawPart, @"([^\d,;]+?)\s+(\d+)\s*(cái|bộ|máy|chiếc|thùng|hộp|cuộn|con)?$", RegexOptions.IgnoreCase);
+                    var matchB = Regex.Match(rawPart, @"([^\d,;]+?)\s+(\d+)\s*(cái|bộ|máy|chiếc|thùng|hộp|cuộn|con|bình|bao|tấn|kg)?$", RegexOptions.IgnoreCase);
                     if (matchB.Success && decimal.TryParse(matchB.Groups[2].Value, out decimal qB))
                     {
                         qty = qB;
+                        detectedUnit = matchB.Groups[3].Success && !string.IsNullOrWhiteSpace(matchB.Groups[3].Value) ? matchB.Groups[3].Value : null;
                         prodText = matchB.Groups[1].Value.Trim();
                     }
                 }
@@ -1396,8 +1659,14 @@ namespace ZeroPlatform.Samples.ChatBot
                     int taiIdx = prodText.IndexOf(" tại ", StringComparison.OrdinalIgnoreCase);
                     if (taiIdx > 0) prodText = prodText.Substring(0, taiIdx).Trim();
 
-                    // Strip leading filler words ("thêm ", "bổ sung ", "lấy ", "mua ")
-                    foreach (var filler in new[] { "thêm ", "bổ sung ", "lấy ", "mua ", "bán ", "cần " })
+                    // Strip customer name if it leaked into prodText
+                    if (matchedCus != null && prodText.IndexOf(matchedCus.Name, StringComparison.OrdinalIgnoreCase) >= 0)
+                    {
+                        prodText = Regex.Replace(prodText, Regex.Escape(matchedCus.Name), "", RegexOptions.IgnoreCase).Trim();
+                    }
+
+                    // Strip leading filler words ("thêm ", "bổ sung ", "lấy ", "mua ", "bán ", "cần ", "đặt ")
+                    foreach (var filler in new[] { "thêm ", "bổ sung ", "lấy ", "mua ", "bán ", "cần ", "đặt " })
                     {
                         if (prodText.StartsWith(filler, StringComparison.OrdinalIgnoreCase))
                         {
@@ -1414,16 +1683,29 @@ namespace ZeroPlatform.Samples.ChatBot
                         conf = 0.98f;
                     }
 
+                    // Ad-hoc on-the-fly registration if not in catalog:
+                    if (prod == null && !string.IsNullOrWhiteSpace(prodText) && !genericPronouns.Contains(prodText) && prodText.Length >= 2)
+                    {
+                        string cleanTitle = System.Globalization.CultureInfo.CurrentCulture.TextInfo.ToTitleCase(prodText.ToLowerInvariant());
+                        decimal defPrice = customPrice ?? 500_000m;
+                        string unit = detectedUnit ?? "Cái";
+                        prod = _matcher.RegisterOrGetProduct(cleanTitle, defPrice, unit, _currentOrder.DefaultWarehouse);
+                        conf = 0.80f; // low confidence (< 0.85f) -> highlighted amber in UI
+                    }
+
                     if (prod != null)
                     {
+                        decimal finalPrice = customPrice ?? prod.Price;
+                        string finalUnit = detectedUnit ?? prod.Unit;
+
                         var item = new OrderItemDraft
                         {
                             RawDescription = prodText,
                             Sku = prod.Sku,
                             ItemName = prod.Name,
                             Quantity = qty,
-                            Unit = prod.Unit,
-                            UnitPrice = prod.Price,
+                            Unit = finalUnit,
+                            UnitPrice = finalPrice,
                             Warehouse = prod.PreferredWarehouse,
                             Confidence = conf
                         };
