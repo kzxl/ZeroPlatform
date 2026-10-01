@@ -1,0 +1,43 @@
+<Project Sdk="Microsoft.NET.Sdk">
+  <PropertyGroup>
+    <OutputType>WinExe</OutputType>
+    <TargetFrameworks>net8.0-windows;net462</TargetFrameworks>
+    <UseWindowsForms>true</UseWindowsForms>
+    <LangVersion>latest</LangVersion>
+    <AllowUnsafeBlocks>true</AllowUnsafeBlocks>
+    <Nullable>enable</Nullable>
+    <ApplicationHighDpiMode>PerMonitorV2</ApplicationHighDpiMode>
+    <IsPackable>false</IsPackable>
+    <RootNamespace>ZeroPlatform.Samples.ChatBot</RootNamespace>
+    <AssemblyName>ZeroPlatform.Samples.ChatBot</AssemblyName>
+    <Description>Enterprise-Grade Industrial AI Chatbot &amp; Autonomous Copilot Demo powered by ZeroAgent, ZeroUI, and ZeroData.</Description>
+  </PropertyGroup>
+
+  <ItemGroup Condition="'$(TargetFramework)' == 'net462'">
+    <PackageReference Include="System.Memory" Version="4.5.5" />
+    <PackageReference Include="System.Buffers" Version="4.5.1" />
+    <PackageReference Include="System.Threading.Tasks.Extensions" Version="4.5.4" />
+    <PackageReference Include="System.Text.Json" Version="8.0.5" />
+  </ItemGroup>
+
+  <ItemGroup>
+    <!-- Layer 5: UI & Presentation -->
+    <ProjectReference Include="..\..\ZeroUI\src\ZeroUI.Core\ZeroUI.Core.csproj" />
+    <ProjectReference Include="..\..\ZeroUI\src\WinForms\ZeroUI.WinForms\ZeroUI.WinForms.csproj" />
+    
+    <!-- Layer 5: AI Agent & Dialogue -->
+    <ProjectReference Include="..\..\ZeroAgent\src\ZeroAgent.Core\ZeroAgent.Core.csproj" />
+    <ProjectReference Include="..\..\ZeroAgent\src\ZeroAgent.Tools\ZeroAgent.Tools.csproj" />
+    <ProjectReference Include="..\..\ZeroAgent\src\ZeroAgent.Dialog\ZeroAgent.Dialog.csproj" />
+    <ProjectReference Include="..\..\ZeroPrompt\src\ZeroPrompt.Core\ZeroPrompt.Core.csproj" />
+
+    <!-- Layer 4 & Layer 2: Persistence & Vectors -->
+    <ProjectReference Include="..\..\ZeroData\src\ZeroData.Core\ZeroData.Core.csproj" />
+    <ProjectReference Include="..\..\ZeroData\src\ZeroData.Sql\ZeroData.Sql.csproj" />
+    <ProjectReference Include="..\..\ZeroVector\src\ZeroVector.Core\ZeroVector.Core.csproj" />
+
+    <!-- Layer 0: Bedrock Foundation -->
+    <ProjectReference Include="..\..\ZeroPrimitives\src\ZeroPrimitives.Core\ZeroPrimitives.Core.csproj" />
+    <ProjectReference Include="..\..\ZeroConcurrency\src\ZeroConcurrency\ZeroConcurrency.csproj" />
+  </ItemGroup>
+</Project>

@@ -255,6 +255,25 @@ namespace ZeroPlatform.Samples.Showcase
             };
             btnSatellites.FlatAppearance.BorderColor = Color.FromArgb(50, 60, 80);
 
+            var btnChatBot = new Button
+            {
+                Text = "🤖 Launch AI ChatBot",
+                FlatStyle = FlatStyle.Flat,
+                ForeColor = Color.FromArgb(52, 211, 153),
+                BackColor = Color.FromArgb(20, 35, 30),
+                Font = new Font("Segoe UI", 8.25f, FontStyle.Bold),
+                Dock = DockStyle.Right,
+                Width = 180,
+                Cursor = Cursors.Hand
+            };
+            btnChatBot.FlatAppearance.BorderColor = Color.FromArgb(52, 211, 153);
+            btnChatBot.Click += (s, e) =>
+            {
+                var botForm = new ZeroPlatform.Samples.ChatBot.ChatBotForm();
+                botForm.Show();
+            };
+
+            viewSwitcher.Controls.Add(btnChatBot);
             viewSwitcher.Controls.Add(btnSatellites);
             viewSwitcher.Controls.Add(btnStudio);
             viewSwitcher.Controls.Add(btnGpu);

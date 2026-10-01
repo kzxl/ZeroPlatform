@@ -27,5 +27,6 @@
     <ProjectReference Include="..\..\ZeroAudio\src\ZeroAudio.Core\ZeroAudio.Core.csproj" />
     <ProjectReference Include="..\..\ZeroAudioVisual\src\ZeroAudioVisual\ZeroAudioVisual.csproj" />
     <ProjectReference Include="..\..\ZeroTwin3D\src\ZeroTwin3D\ZeroTwin3D.csproj" />
+    <ProjectReference Include="..\ZeroPlatform.Samples.ChatBot\ZeroPlatform.Samples.ChatBot.csproj" />
   </ItemGroup>
 </Project>
