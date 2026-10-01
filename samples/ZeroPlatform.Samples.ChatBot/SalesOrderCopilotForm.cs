@@ -19,6 +19,14 @@ namespace ZeroPlatform.Samples.ChatBot
         private OrderDraft _currentOrder = new();
         private readonly Stack<OrderDraftSnapshot> _undoStack = new();
 
+        // Conversational Subject & Dialogue State Tracking (Anaphora & Coreference Resolution)
+        private MasterCustomer? _lastActiveCustomer;
+        private MasterProduct? _lastActiveProduct;
+        private int? _lastActiveLineIndex;
+
+        private Label _lblContextCustomer = null!;
+        private Label _lblContextProduct = null!;
+
         // Left Form Controls
         private TextBox _txtOrderCode = null!;
         private ComboBox _cboCustomer = null!;
@@ -192,6 +200,8 @@ namespace ZeroPlatform.Samples.ChatBot
                 {
                     _currentOrder.CustomerCode = c.Code;
                     _currentOrder.CustomerName = c.Name;
+                    _currentOrder.DefaultWarehouse = c.DefaultWarehouse;
+                    SetActiveCustomerSubject(c);
                 }
             };
             pnlHeaderCard.Controls.Add(lblCus);
@@ -256,6 +266,21 @@ namespace ZeroPlatform.Samples.ChatBot
             _gridItems.Columns.Add(new DataGridViewTextBoxColumn { Name = "ColTotal", HeaderText = "Thành tiền", Width = 110, ReadOnly = true });
             _gridItems.Columns.Add(new DataGridViewTextBoxColumn { Name = "ColConf", HeaderText = "Độ tin cậy AI", Width = 110, ReadOnly = true });
 
+            _gridItems.SelectionChanged += (s, e) =>
+            {
+                if (_gridItems.SelectedRows.Count > 0)
+                {
+                    int rowIdx = _gridItems.SelectedRows[0].Index;
+                    if (rowIdx >= 0 && rowIdx < _currentOrder.Items.Count)
+                    {
+                        var item = _currentOrder.Items[rowIdx];
+                        var prod = _matcher.Products.FirstOrDefault(p => p.Sku.Equals(item.Sku, StringComparison.OrdinalIgnoreCase))
+                                   ?? new MasterProduct(item.Sku, item.ItemName, item.UnitPrice, item.Unit, item.Warehouse);
+                        SetActiveProductSubject(prod, rowIdx + 1);
+                    }
+                }
+            };
+
             // Bottom Summary & Actions Panel
             var pnlBottom = new Panel
             {
@@ -314,9 +339,66 @@ namespace ZeroPlatform.Samples.ChatBot
             pnlBottom.Controls.Add(new Panel { Dock = DockStyle.Left, Width = 10 });
             pnlBottom.Controls.Add(btnSave);
 
+            // Context Subject Tracker Bar (Visual Discourse Entity Status)
+            var pnlContextBar = new Panel
+            {
+                Dock = DockStyle.Top,
+                Height = 32,
+                BackColor = Color.FromArgb(20, 30, 48),
+                Padding = new Padding(12, 6, 12, 6)
+            };
+            pnlContextBar.Paint += (s, e) =>
+            {
+                using var p = new Pen(Color.FromArgb(40, 56, 80));
+                e.Graphics.DrawRectangle(p, 0, 0, pnlContextBar.Width - 1, pnlContextBar.Height - 1);
+            };
+
+            var lblCtxIcon = new Label
+            {
+                Text = "🎯 CHỦ THỂ NGỮ CẢNH:",
+                Font = new Font("Segoe UI", 8.5f, FontStyle.Bold),
+                ForeColor = Color.FromArgb(226, 232, 240),
+                AutoSize = true,
+                Location = new Point(14, 7)
+            };
+            pnlContextBar.Controls.Add(lblCtxIcon);
+
+            _lblContextCustomer = new Label
+            {
+                Text = "🏢 Khách: (Chưa chọn)",
+                Font = new Font("Segoe UI", 8.5f, FontStyle.Bold),
+                ForeColor = Color.FromArgb(148, 163, 184),
+                AutoSize = true,
+                Location = new Point(175, 7),
+                AutoEllipsis = true,
+                MaximumSize = new Size(320, 20)
+            };
+            pnlContextBar.Controls.Add(_lblContextCustomer);
+
+            _lblContextProduct = new Label
+            {
+                Text = "📦 Hàng hóa: (Chưa chọn)",
+                Font = new Font("Segoe UI", 8.5f, FontStyle.Bold),
+                ForeColor = Color.FromArgb(148, 163, 184),
+                AutoSize = true,
+                Location = new Point(510, 7),
+                AutoEllipsis = true,
+                MaximumSize = new Size(380, 20)
+            };
+            pnlContextBar.Controls.Add(_lblContextProduct);
+
+            pnlContextBar.Resize += (s, e) =>
+            {
+                int mid = Math.Max(260, pnlContextBar.Width / 2);
+                _lblContextProduct.Location = new Point(mid, 7);
+                _lblContextCustomer.MaximumSize = new Size(mid - 185, 20);
+                _lblContextProduct.MaximumSize = new Size(pnlContextBar.Width - mid - 20, 20);
+            };
+
             var spacerTop = new Panel { Dock = DockStyle.Top, Height = 10, BackColor = Color.Transparent };
 
             pnlContainer.Controls.Add(pnlBottom);
+            pnlContainer.Controls.Add(pnlContextBar);
             pnlContainer.Controls.Add(spacerTop);
             pnlContainer.Controls.Add(pnlHeaderCard);
             pnlContainer.Controls.Add(_gridItems);
@@ -333,13 +415,15 @@ namespace ZeroPlatform.Samples.ChatBot
                 ModelName = "Sales Copilot (Reflex + Vision)"
             };
 
-            // Setup Prompt Chips from user requirements
+            // Setup Prompt Chips with Anaphora & Coreference demonstrations
             _chatBox.PromptSuggestions.Add("Thêm cho Không Gian Mới 2 Nồi chiên và 3 Máy chiếu");
-            _chatBox.PromptSuggestions.Add("Thêm đơn cho Bình Minh 20 Ghế xoay và 20 Chuột");
-            _chatBox.PromptSuggestions.Add("Cập nhật kho của tất cả hàng hóa thành Kho 01");
-            _chatBox.PromptSuggestions.Add("Sắp xếp thứ tự hàng hóa theo mã");
             _chatBox.PromptSuggestions.Add("Hàng IPRO001 còn bao nhiêu trong kho?");
-            _chatBox.PromptSuggestions.Add("Đơn hàng hiện tại đang ở trạng thái gì?");
+            _chatBox.PromptSuggestions.Add("Thêm 5 cái vào đơn cho họ");
+            _chatBox.PromptSuggestions.Add("Đổi kho của nó thành Kho 02");
+            _chatBox.PromptSuggestions.Add("Đổi số lượng của máy chiếu thành 5");
+            _chatBox.PromptSuggestions.Add("Xóa dòng thứ 2");
+            _chatBox.PromptSuggestions.Add("Hạn mức công nợ của họ là bao nhiêu?");
+            _chatBox.PromptSuggestions.Add("Lưu và ghi sổ đơn hàng");
 
             _chatBox.AppendAssistantMessage(
                 "Xin chào! Tôi là **Trợ lý AI Đơn hàng**.\n\n" +
@@ -357,6 +441,36 @@ namespace ZeroPlatform.Samples.ChatBot
             parent.Controls.Add(_chatBox);
         }
 
+        private void SetActiveCustomerSubject(MasterCustomer? customer)
+        {
+            _lastActiveCustomer = customer;
+            if (_lblContextCustomer != null && !IsDisposed)
+            {
+                _lblContextCustomer.Text = customer != null
+                    ? $"🏢 Khách: {customer.Name}"
+                    : "🏢 Khách: (Chưa chọn)";
+                _lblContextCustomer.ForeColor = customer != null
+                    ? Color.FromArgb(56, 189, 248)
+                    : Color.FromArgb(148, 163, 184);
+            }
+        }
+
+        private void SetActiveProductSubject(MasterProduct? product, int? lineIndex = null)
+        {
+            _lastActiveProduct = product;
+            _lastActiveLineIndex = lineIndex;
+            if (_lblContextProduct != null && !IsDisposed)
+            {
+                string linePrefix = lineIndex.HasValue ? $"[Dòng {lineIndex.Value}] " : "";
+                _lblContextProduct.Text = product != null
+                    ? $"📦 Hàng hóa: {linePrefix}{product.Name}"
+                    : "📦 Hàng hóa: (Chưa chọn)";
+                _lblContextProduct.ForeColor = product != null
+                    ? Color.FromArgb(52, 211, 153)
+                    : Color.FromArgb(148, 163, 184);
+            }
+        }
+
         private void BindCustomerCatalog()
         {
             _cboCustomer.Items.Clear();
@@ -366,7 +480,17 @@ namespace ZeroPlatform.Samples.ChatBot
             }
             _cboCustomer.DisplayMember = "Name";
             _cboCustomer.ValueMember = "Code";
-            if (_cboCustomer.Items.Count > 0) _cboCustomer.SelectedIndex = 0;
+            if (_cboCustomer.Items.Count > 0)
+            {
+                _cboCustomer.SelectedIndex = 0;
+                if (_cboCustomer.SelectedItem is MasterCustomer first)
+                {
+                    _currentOrder.CustomerCode = first.Code;
+                    _currentOrder.CustomerName = first.Name;
+                    _currentOrder.DefaultWarehouse = first.DefaultWarehouse;
+                    SetActiveCustomerSubject(first);
+                }
+            }
         }
 
         #region Order Form Synchronization & Refresh
@@ -437,6 +561,28 @@ namespace ZeroPlatform.Samples.ChatBot
                 _currentOrder = previous.State.Clone();
                 RefreshGridFromOrder();
 
+                // Restore active subjects from restored order
+                if (!string.IsNullOrEmpty(_currentOrder.CustomerCode))
+                {
+                    var c = _matcher.Customers.FirstOrDefault(x => x.Code == _currentOrder.CustomerCode);
+                    SetActiveCustomerSubject(c);
+                }
+                else
+                {
+                    SetActiveCustomerSubject(null);
+                }
+
+                if (_currentOrder.Items.Count > 0)
+                {
+                    var lastItem = _currentOrder.Items.Last();
+                    var p = _matcher.Products.FirstOrDefault(x => x.Sku == lastItem.Sku);
+                    SetActiveProductSubject(p, _currentOrder.Items.Count);
+                }
+                else
+                {
+                    SetActiveProductSubject(null, null);
+                }
+
                 _chatBox.ShowThinkingIndicator("Đang hoàn tác trạng thái chứng từ...");
                 await Task.Delay(250);
                 await _chatBox.AppendAssistantActionMessageAnimatedAsync(
@@ -458,23 +604,509 @@ namespace ZeroPlatform.Samples.ChatBot
             {
                 _currentOrder.CustomerCode = c.Code;
                 _currentOrder.CustomerName = c.Name;
+                _currentOrder.DefaultWarehouse = c.DefaultWarehouse;
+                SetActiveCustomerSubject(c);
             }
+            else
+            {
+                SetActiveCustomerSubject(null);
+            }
+            SetActiveProductSubject(null, null);
             RefreshGridFromOrder();
         }
 
         #endregion
 
-        #region Copilot Command Processing
+        #region Copilot Command Processing & Anaphora Resolution
+
+        private string ResolveCopilotAnaphora(string rawInput)
+        {
+            if (string.IsNullOrWhiteSpace(rawInput)) return string.Empty;
+            string text = rawInput.Trim();
+
+            // 1. Customer Anaphora Resolution: "họ", "khách này", "khách hàng này", "bên này", "bên đó", "ông này", "bà này", "công ty này", "cty này", "đơn vị này"
+            var activeCus = _lastActiveCustomer;
+            if (activeCus == null && !string.IsNullOrEmpty(_currentOrder.CustomerName))
+            {
+                activeCus = _matcher.Customers.FirstOrDefault(c => c.Name.Equals(_currentOrder.CustomerName, StringComparison.OrdinalIgnoreCase) || c.Code.Equals(_currentOrder.CustomerCode, StringComparison.OrdinalIgnoreCase));
+            }
+
+            if (activeCus != null)
+            {
+                text = Regex.Replace(text, 
+                    @"\b(họ|khách này|khách hàng này|bên này|bên đó|ông này|bà này|công ty này|cty này|đơn vị này)\b", 
+                    activeCus.Name, 
+                    RegexOptions.IgnoreCase);
+            }
+
+            // 2. Product Anaphora Resolution: "nó", "mặt hàng này", "sản phẩm này", "mặt hàng đó", "sản phẩm đó", "món này", "món đó", "cái đó", "con đó", "con này", "cái này", "cái vừa thêm", "mặt hàng vừa thêm", "sản phẩm vừa thêm"
+            if (_lastActiveProduct != null)
+            {
+                text = Regex.Replace(text, 
+                    @"\b(nó|mặt hàng này|sản phẩm này|mặt hàng đó|sản phẩm đó|món này|món đó|cái đó|con đó|con này|cái này|cái vừa thêm|mặt hàng vừa thêm|sản phẩm vừa thêm)\b", 
+                    _lastActiveProduct.Name, 
+                    RegexOptions.IgnoreCase);
+            }
+
+            // 3. Elliptical Item Addition with Implicit Active Product
+            // E.g. "Thêm 5 cái vào đơn", "Thêm 5 cái", "Lấy 2 cái nữa", "Cho 3 cái vào đơn", "Đặt 10 cái cho họ", "Mua 5 con", "Thêm cho họ 5 cái"
+            if (_lastActiveProduct != null)
+            {
+                // Pattern 3A: action [cho <cus>] <qty> [unit] [tail]
+                var matchElliptical = Regex.Match(text, 
+                    @"^(?:thêm|lấy|cho|đặt|mua|bổ sung)(?:\s+cho\s+([^\d,;]+?))?\s+(\d+)\s*(?:cái|bộ|chiếc|máy|con|hộp|thùng)?(?:\s+(?:vào đơn|vào|nữa|nhé|cho\s+[^\d,;]+))*$", 
+                    RegexOptions.IgnoreCase);
+
+                if (matchElliptical.Success && int.TryParse(matchElliptical.Groups[2].Value, out int qElliptical))
+                {
+                    string leadingCus = matchElliptical.Groups[1].Value.Trim();
+                    int choIdx = text.IndexOf(" cho ", StringComparison.OrdinalIgnoreCase);
+                    string cusSuffix = (choIdx > 0 && string.IsNullOrEmpty(leadingCus)) ? text.Substring(choIdx) : "";
+
+                    if (!string.IsNullOrEmpty(leadingCus))
+                    {
+                        text = $"Thêm cho {leadingCus} {qElliptical} {_lastActiveProduct.Name}";
+                    }
+                    else
+                    {
+                        text = $"Thêm {qElliptical} {_lastActiveProduct.Name}{cusSuffix}";
+                    }
+                }
+                else
+                {
+                    // Pattern 3B: "<qty> [unit] [tail]" (e.g. "5 cái", "10 cái vào đơn", "2 bộ nữa")
+                    var matchShort = Regex.Match(text, 
+                        @"^(\d+)\s*(?:cái|bộ|chiếc|máy|con|hộp|thùng)(?:\s+(?:vào đơn|vào|nữa|nhé))*$", 
+                        RegexOptions.IgnoreCase);
+                    if (matchShort.Success && int.TryParse(matchShort.Groups[1].Value, out int qShort))
+                    {
+                        text = $"Thêm {qShort} {_lastActiveProduct.Name}";
+                    }
+                }
+            }
+
+            return text;
+        }
+
+        private OrderItemDraft? FindOrderItem(string targetText)
+        {
+            if (_currentOrder.Items.Count == 0) return null;
+            string clean = targetText.Trim();
+
+            // 1. Direct match on line number: "dòng 1", "dòng thứ 2"
+            var mLine = Regex.Match(clean, @"^dòng\s*(?:thứ\s*)?(\d+)$", RegexOptions.IgnoreCase);
+            if (mLine.Success && int.TryParse(mLine.Groups[1].Value, out int idx))
+            {
+                if (idx >= 1 && idx <= _currentOrder.Items.Count)
+                {
+                    return _currentOrder.Items[idx - 1];
+                }
+            }
+
+            // 2. Exact or substring SKU match
+            var bySku = _currentOrder.Items.FirstOrDefault(i => i.Sku.Equals(clean, StringComparison.OrdinalIgnoreCase) || clean.IndexOf(i.Sku, StringComparison.OrdinalIgnoreCase) >= 0);
+            if (bySku != null) return bySku;
+
+            // 3. Match via HybridEntityMatcher
+            var (matchedProd, _) = _matcher.MatchProduct(clean);
+            if (matchedProd != null)
+            {
+                var byMatched = _currentOrder.Items.FirstOrDefault(i => i.Sku.Equals(matchedProd.Sku, StringComparison.OrdinalIgnoreCase));
+                if (byMatched != null) return byMatched;
+            }
+
+            // 4. Match by ItemName substring
+            var byName = _currentOrder.Items.FirstOrDefault(i => i.ItemName.IndexOf(clean, StringComparison.OrdinalIgnoreCase) >= 0 || clean.IndexOf(i.ItemName, StringComparison.OrdinalIgnoreCase) >= 0);
+            if (byName != null) return byName;
+
+            // 5. Fallback: if user target is "nó" or empty and _lastActiveProduct is available
+            if ((clean.Equals("nó", StringComparison.OrdinalIgnoreCase) || string.IsNullOrWhiteSpace(clean)) && _lastActiveProduct != null)
+            {
+                var byActive = _currentOrder.Items.FirstOrDefault(i => i.Sku.Equals(_lastActiveProduct.Sku, StringComparison.OrdinalIgnoreCase));
+                if (byActive != null) return byActive;
+            }
+
+            // 6. Fallback: active line index
+            if (_lastActiveLineIndex.HasValue && _lastActiveLineIndex.Value >= 1 && _lastActiveLineIndex.Value <= _currentOrder.Items.Count)
+            {
+                return _currentOrder.Items[_lastActiveLineIndex.Value - 1];
+            }
+
+            return null;
+        }
+
+        private bool TryHandleCreditLimitInquiry(string text, out string responseMessage)
+        {
+            responseMessage = string.Empty;
+            if (text.IndexOf("công nợ", StringComparison.OrdinalIgnoreCase) < 0 &&
+                text.IndexOf("hạn mức", StringComparison.OrdinalIgnoreCase) < 0 &&
+                text.IndexOf("tín dụng", StringComparison.OrdinalIgnoreCase) < 0)
+            {
+                return false;
+            }
+
+            var (cus, _) = _matcher.MatchCustomer(text);
+            cus ??= _lastActiveCustomer;
+            if (cus == null && !string.IsNullOrEmpty(_currentOrder.CustomerCode))
+            {
+                cus = _matcher.Customers.FirstOrDefault(c => c.Code.Equals(_currentOrder.CustomerCode, StringComparison.OrdinalIgnoreCase));
+            }
+
+            if (cus != null)
+            {
+                SetActiveCustomerSubject(cus);
+                decimal currentDebt = 125_400_000;
+                decimal available = Math.Max(0, cus.CreditLimit - currentDebt);
+
+                responseMessage = $"💳 **[TRA CỨU CÔNG NỢ & HẠN MỨC TÍN DỤNG]**\n\n" +
+                                  $"• Khách hàng: **{cus.Name}** ({cus.Code})\n" +
+                                  $"• Hạn mức tín dụng: **{cus.CreditLimit:#,##0} đ**\n" +
+                                  $"• Dư nợ hiện tại: **{currentDebt:#,##0} đ**\n" +
+                                  $"• Hạn mức còn khả dụng: **{available:#,##0} đ**\n\n" +
+                                  $"👉 Trạng thái tín dụng: **TỐT (Đủ điều kiện ghi nhận đơn hàng mới)**";
+                return true;
+            }
+
+            return false;
+        }
+
+        private bool TryHandleItemQuantityMutation(string text, out string responseMessage)
+        {
+            responseMessage = string.Empty;
+
+            // Pattern 1: By Line Number: "đổi/sửa số lượng dòng (thứ) X thành/là Y"
+            var matchLine = Regex.Match(text, 
+                @"^(?:đổi|sửa|chỉnh|cập\s*nhật)\s+số\s+lượng\s+dòng\s*(?:thứ\s*)?(\d+)\s+(?:thành|là|=|lên|xuống)?\s*(\d+)", 
+                RegexOptions.IgnoreCase);
+
+            if (matchLine.Success && 
+                int.TryParse(matchLine.Groups[1].Value, out int lineNum) && 
+                decimal.TryParse(matchLine.Groups[2].Value, out decimal newQtyLine))
+            {
+                if (lineNum >= 1 && lineNum <= _currentOrder.Items.Count)
+                {
+                    var item = _currentOrder.Items[lineNum - 1];
+                    decimal oldQty = item.Quantity;
+                    CaptureUndoSnapshot($"Trước khi đổi số lượng dòng {lineNum} từ {oldQty} sang {newQtyLine}");
+                    item.Quantity = newQtyLine;
+                    RefreshGridFromOrder();
+
+                    var prod = _matcher.Products.FirstOrDefault(p => p.Sku.Equals(item.Sku, StringComparison.OrdinalIgnoreCase))
+                               ?? new MasterProduct(item.Sku, item.ItemName, item.UnitPrice, item.Unit, item.Warehouse);
+                    SetActiveProductSubject(prod, lineNum);
+
+                    responseMessage = $"Xong rồi nhé! Mình đã cập nhật số lượng dòng **#{lineNum}** ({item.ItemName}):\n\n" +
+                                      $"• Số lượng cũ: **{oldQty} {item.Unit}** ➔ Mới: **{item.Quantity} {item.Unit}**\n" +
+                                      $"• Thành tiền mới: **{item.TotalAmount:#,##0} đ**\n\n" +
+                                      $"👉 **Tổng giá trị đơn hàng: {_currentOrder.TotalAmount:#,##0} đ**";
+                    return true;
+                }
+            }
+
+            // Pattern 2: By Item Target: "đổi/sửa/chỉnh số lượng [của] <target> thành/là/= <qty>"
+            var matchTarget = Regex.Match(text, 
+                @"^(?:đổi|sửa|chỉnh|cập\s*nhật)\s+số\s+lượng\s+(?:của\s+)?(.+?)\s+(?:thành|thành\s+số\s+lượng|là|=|lên|xuống)\s*(\d+)", 
+                RegexOptions.IgnoreCase);
+
+            if (matchTarget.Success && decimal.TryParse(matchTarget.Groups[2].Value, out decimal newQtyTarget))
+            {
+                string targetText = matchTarget.Groups[1].Value.Trim();
+                var item = FindOrderItem(targetText);
+                if (item != null)
+                {
+                    decimal oldQty = item.Quantity;
+                    CaptureUndoSnapshot($"Trước khi đổi số lượng {item.ItemName} từ {oldQty} sang {newQtyTarget}");
+                    item.Quantity = newQtyTarget;
+                    RefreshGridFromOrder();
+
+                    var prod = _matcher.Products.FirstOrDefault(p => p.Sku.Equals(item.Sku, StringComparison.OrdinalIgnoreCase))
+                               ?? new MasterProduct(item.Sku, item.ItemName, item.UnitPrice, item.Unit, item.Warehouse);
+                    SetActiveProductSubject(prod, item.LineIndex);
+
+                    responseMessage = $"Xong rồi nhé! Mình đã cập nhật số lượng mặt hàng **{item.ItemName}** (dòng #{item.LineIndex}):\n\n" +
+                                      $"• Số lượng cũ: **{oldQty} {item.Unit}** ➔ Mới: **{item.Quantity} {item.Unit}**\n" +
+                                      $"• Đơn giá: **{item.UnitPrice:#,##0} đ**\n" +
+                                      $"• Thành tiền mới: **{item.TotalAmount:#,##0} đ**\n\n" +
+                                      $"👉 **Tổng giá trị đơn hàng: {_currentOrder.TotalAmount:#,##0} đ**";
+                    return true;
+                }
+            }
+
+            // Pattern 3: Relative Increase / Decrease: "tăng/giảm số lượng [của] <target> [lên/xuống] <qty>"
+            var matchIncDec = Regex.Match(text, 
+                @"^(tăng|giảm)\s+số\s+lượng\s+(?:của\s+)?(.+?)\s+(?:thành|lên|xuống)?\s*(\d+)$", 
+                RegexOptions.IgnoreCase);
+
+            if (matchIncDec.Success && decimal.TryParse(matchIncDec.Groups[3].Value, out decimal deltaQty))
+            {
+                string action = matchIncDec.Groups[1].Value.ToLowerInvariant();
+                string targetText = matchIncDec.Groups[2].Value.Trim();
+                var item = FindOrderItem(targetText);
+                if (item != null)
+                {
+                    decimal oldQty = item.Quantity;
+                    decimal newQty = action == "tăng" ? oldQty + deltaQty : Math.Max(1, oldQty - deltaQty);
+                    CaptureUndoSnapshot($"Trước khi {action} số lượng {item.ItemName} từ {oldQty} sang {newQty}");
+                    item.Quantity = newQty;
+                    RefreshGridFromOrder();
+
+                    var prod = _matcher.Products.FirstOrDefault(p => p.Sku.Equals(item.Sku, StringComparison.OrdinalIgnoreCase))
+                               ?? new MasterProduct(item.Sku, item.ItemName, item.UnitPrice, item.Unit, item.Warehouse);
+                    SetActiveProductSubject(prod, item.LineIndex);
+
+                    responseMessage = $"Đã {action} số lượng cho mặt hàng **{item.ItemName}** (dòng #{item.LineIndex}):\n\n" +
+                                      $"• Số lượng: **{oldQty} ➔ {newQty} {item.Unit}**\n" +
+                                      $"• Thành tiền mới: **{item.TotalAmount:#,##0} đ**\n\n" +
+                                      $"👉 **Tổng giá trị đơn hàng: {_currentOrder.TotalAmount:#,##0} đ**";
+                    return true;
+                }
+            }
+
+            // Pattern 4: Elliptical quantity change when an active product subject is set: "đổi số lượng thành 10", "số lượng 10"
+            if (_lastActiveProduct != null && _currentOrder.Items.Count > 0)
+            {
+                var matchEllip = Regex.Match(text, 
+                    @"^(?:đổi|sửa|chỉnh)?\s*số\s+lượng\s+(?:thành|là|=)?\s*(\d+)$", 
+                    RegexOptions.IgnoreCase);
+
+                if (matchEllip.Success && decimal.TryParse(matchEllip.Groups[1].Value, out decimal newQtyEllip))
+                {
+                    var item = FindOrderItem(_lastActiveProduct.Name);
+                    if (item != null)
+                    {
+                        decimal oldQty = item.Quantity;
+                        CaptureUndoSnapshot($"Trước khi đổi số lượng {item.ItemName} từ {oldQty} sang {newQtyEllip}");
+                        item.Quantity = newQtyEllip;
+                        RefreshGridFromOrder();
+
+                        SetActiveProductSubject(_lastActiveProduct, item.LineIndex);
+
+                        responseMessage = $"Đã cập nhật số lượng cho chủ thể đang chọn **{item.ItemName}** (dòng #{item.LineIndex}):\n\n" +
+                                          $"• Số lượng: **{oldQty} ➔ {newQtyEllip} {item.Unit}**\n" +
+                                          $"• Thành tiền mới: **{item.TotalAmount:#,##0} đ**\n\n" +
+                                          $"👉 **Tổng giá trị đơn hàng: {_currentOrder.TotalAmount:#,##0} đ**";
+                        return true;
+                    }
+                }
+            }
+
+            return false;
+        }
+
+        private bool TryHandleItemWarehouseMutation(string text, out string responseMessage)
+        {
+            responseMessage = string.Empty;
+
+            // Extract warehouse target: Kho 01 | Kho 02 | Kho Tổng
+            string targetWh = null!;
+            if (Regex.IsMatch(text, @"kho\s*02", RegexOptions.IgnoreCase)) targetWh = "Kho 02";
+            else if (Regex.IsMatch(text, @"kho\s*01", RegexOptions.IgnoreCase)) targetWh = "Kho 01";
+            else if (Regex.IsMatch(text, @"kho\s*tổng", RegexOptions.IgnoreCase)) targetWh = "Kho Tổng";
+
+            if (string.IsNullOrEmpty(targetWh)) return false;
+
+            // Pattern A: Line number: "đổi kho dòng (thứ) X sang Kho Y"
+            var matchLine = Regex.Match(text, 
+                @"^(?:đổi|chuyển|sửa|cập\s*nhật)\s+kho\s+(?:dòng\s*(?:thứ\s*)?)(\d+)", 
+                RegexOptions.IgnoreCase);
+
+            if (matchLine.Success && int.TryParse(matchLine.Groups[1].Value, out int lineNum))
+            {
+                if (lineNum >= 1 && lineNum <= _currentOrder.Items.Count)
+                {
+                    var item = _currentOrder.Items[lineNum - 1];
+                    string oldWh = item.Warehouse;
+                    CaptureUndoSnapshot($"Trước khi chuyển kho dòng {lineNum} từ {oldWh} sang {targetWh}");
+                    item.Warehouse = targetWh;
+                    RefreshGridFromOrder();
+
+                    var prod = _matcher.Products.FirstOrDefault(p => p.Sku.Equals(item.Sku, StringComparison.OrdinalIgnoreCase))
+                               ?? new MasterProduct(item.Sku, item.ItemName, item.UnitPrice, item.Unit, item.Warehouse);
+                    SetActiveProductSubject(prod, lineNum);
+
+                    responseMessage = $"Đã cập nhật kho xuất của dòng **#{lineNum}** ({item.ItemName}):\n\n" +
+                                      $"• Kho xuất cũ: **{oldWh}** ➔ Kho mới: **{targetWh}**\n" +
+                                      $"• Số lượng: **{item.Quantity} {item.Unit}**";
+                    return true;
+                }
+            }
+
+            // Pattern B: Target product: "đổi/chuyển kho [của] <target> thành/sang/về <kho>"
+            var matchProd = Regex.Match(text, 
+                @"^(?:đổi|chuyển|sửa|cập\s*nhật)\s+kho\s+(?:của\s+)?(.+?)\s+(?:thành|sang|qua|về)\s+kho", 
+                RegexOptions.IgnoreCase);
+
+            if (matchProd.Success)
+            {
+                string targetText = matchProd.Groups[1].Value.Trim();
+                var item = FindOrderItem(targetText);
+                if (item != null)
+                {
+                    string oldWh = item.Warehouse;
+                    CaptureUndoSnapshot($"Trước khi chuyển kho {item.ItemName} sang {targetWh}");
+                    item.Warehouse = targetWh;
+                    RefreshGridFromOrder();
+
+                    var prod = _matcher.Products.FirstOrDefault(p => p.Sku.Equals(item.Sku, StringComparison.OrdinalIgnoreCase))
+                               ?? new MasterProduct(item.Sku, item.ItemName, item.UnitPrice, item.Unit, item.Warehouse);
+                    SetActiveProductSubject(prod, item.LineIndex);
+
+                    responseMessage = $"Đã chuyển kho cho mặt hàng **{item.ItemName}** (dòng #{item.LineIndex}):\n\n" +
+                                      $"• Kho cũ: **{oldWh}** ➔ Kho xuất mới: **{targetWh}**\n" +
+                                      $"• Số lượng: **{item.Quantity} {item.Unit}**";
+                    return true;
+                }
+            }
+
+            // Pattern C: "chuyển <target> sang/qua kho..."
+            var matchDirect = Regex.Match(text, 
+                @"^chuyển\s+(.+?)\s+(?:sang|qua|về)\s+kho", 
+                RegexOptions.IgnoreCase);
+
+            if (matchDirect.Success)
+            {
+                string targetText = matchDirect.Groups[1].Value.Trim();
+                var item = FindOrderItem(targetText);
+                if (item != null)
+                {
+                    string oldWh = item.Warehouse;
+                    CaptureUndoSnapshot($"Trước khi chuyển kho {item.ItemName} sang {targetWh}");
+                    item.Warehouse = targetWh;
+                    RefreshGridFromOrder();
+
+                    var prod = _matcher.Products.FirstOrDefault(p => p.Sku.Equals(item.Sku, StringComparison.OrdinalIgnoreCase))
+                       ?? new MasterProduct(item.Sku, item.ItemName, item.UnitPrice, item.Unit, item.Warehouse);
+                    SetActiveProductSubject(prod, item.LineIndex);
+
+                    responseMessage = $"Đã chuyển mặt hàng **{item.ItemName}** sang **{targetWh}** thành công!";
+                    return true;
+                }
+            }
+
+            // Pattern D: Elliptical warehouse change with active subject: "đổi kho thành Kho 02", "chuyển sang Kho 02"
+            if (_lastActiveProduct != null && _currentOrder.Items.Count > 0)
+            {
+                if (Regex.IsMatch(text, @"^(?:đổi|chuyển|sửa)?\s*kho\s+(?:thành|sang|qua|về)?\s*kho", RegexOptions.IgnoreCase) ||
+                    Regex.IsMatch(text, @"^chuyển\s+sang\s+kho", RegexOptions.IgnoreCase))
+                {
+                    var item = FindOrderItem(_lastActiveProduct.Name);
+                    if (item != null)
+                    {
+                        string oldWh = item.Warehouse;
+                        CaptureUndoSnapshot($"Trước khi chuyển kho {item.ItemName} sang {targetWh}");
+                        item.Warehouse = targetWh;
+                        RefreshGridFromOrder();
+
+                        SetActiveProductSubject(_lastActiveProduct, item.LineIndex);
+
+                        responseMessage = $"Đã chuyển kho của chủ thể đang chọn **{item.ItemName}** (dòng #{item.LineIndex}):\n\n" +
+                                          $"• Kho cũ: **{oldWh}** ➔ Kho mới: **{targetWh}**";
+                        return true;
+                    }
+                }
+            }
+
+            return false;
+        }
+
+        private bool TryHandleItemDeletion(string text, out string responseMessage)
+        {
+            responseMessage = string.Empty;
+
+            // Pattern 1: Delete by line number: "xóa/bỏ/hủy dòng (thứ) X"
+            var matchLine = Regex.Match(text, 
+                @"^(?:xóa|bỏ|hủy)\s+dòng\s*(?:thứ\s*)?(\d+)", 
+                RegexOptions.IgnoreCase);
+
+            if (matchLine.Success && int.TryParse(matchLine.Groups[1].Value, out int lineNum))
+            {
+                if (lineNum >= 1 && lineNum <= _currentOrder.Items.Count)
+                {
+                    var item = _currentOrder.Items[lineNum - 1];
+                    CaptureUndoSnapshot($"Trước khi xóa dòng {lineNum} ({item.ItemName})");
+                    _currentOrder.Items.RemoveAt(lineNum - 1);
+                    RefreshGridFromOrder();
+
+                    SetActiveProductSubject(null, null);
+
+                    responseMessage = $"🗑 Đã xóa dòng **#{lineNum}** (**{item.ItemName}**) ra khỏi đơn hàng!\n\n" +
+                                      $"• Số mặt hàng còn lại: **{_currentOrder.Items.Count}** dòng\n" +
+                                      $"• Tổng giá trị đơn sau khi xóa: **{_currentOrder.TotalAmount:#,##0} đ**";
+                    return true;
+                }
+            }
+
+            // Pattern 2: Delete by item target: "xóa [mặt hàng/sản phẩm] <target>", "bỏ <target> ra"
+            var matchTarget = Regex.Match(text, 
+                @"^(?:xóa|hủy)\s+(?:mặt\s+hàng\s+|sản\s+phẩm\s+)?(.+?)(?:\s+đi|\s+khỏi\s+đơn)?$", 
+                RegexOptions.IgnoreCase);
+
+            if (matchTarget.Success)
+            {
+                string targetText = matchTarget.Groups[1].Value.Trim();
+                if (targetText.Equals("đơn", StringComparison.OrdinalIgnoreCase) ||
+                    targetText.Equals("đơn hàng", StringComparison.OrdinalIgnoreCase) ||
+                    targetText.Equals("tất cả", StringComparison.OrdinalIgnoreCase))
+                {
+                    return false;
+                }
+
+                var item = FindOrderItem(targetText);
+                if (item != null)
+                {
+                    CaptureUndoSnapshot($"Trước khi xóa mặt hàng {item.ItemName}");
+                    _currentOrder.Items.Remove(item);
+                    RefreshGridFromOrder();
+
+                    SetActiveProductSubject(null, null);
+
+                    responseMessage = $"🗑 Đã xóa mặt hàng **{item.ItemName}** ({item.Sku}) ra khỏi đơn hàng!\n\n" +
+                                      $"• Số mặt hàng còn lại: **{_currentOrder.Items.Count}** dòng\n" +
+                                      $"• Tổng giá trị đơn sau khi xóa: **{_currentOrder.TotalAmount:#,##0} đ**";
+                    return true;
+                }
+            }
+
+            // Pattern 3: "bỏ <target> ra [khỏi đơn]"
+            var matchBo = Regex.Match(text, 
+                @"^bỏ\s+(.+?)\s+ra(?:\s+khỏi\s+đơn)?$", 
+                RegexOptions.IgnoreCase);
+
+            if (matchBo.Success)
+            {
+                string targetText = matchBo.Groups[1].Value.Trim();
+                var item = FindOrderItem(targetText);
+                if (item != null)
+                {
+                    CaptureUndoSnapshot($"Trước khi bỏ mặt hàng {item.ItemName}");
+                    _currentOrder.Items.Remove(item);
+                    RefreshGridFromOrder();
+
+                    SetActiveProductSubject(null, null);
+
+                    responseMessage = $"🗑 Đã bỏ mặt hàng **{item.ItemName}** ({item.Sku}) ra khỏi đơn hàng!\n\n" +
+                                      $"• Số mặt hàng còn lại: **{_currentOrder.Items.Count}** dòng\n" +
+                                      $"• Tổng giá trị đơn sau khi xóa: **{_currentOrder.TotalAmount:#,##0} đ**";
+                    return true;
+                }
+            }
+
+            return false;
+        }
 
         private async Task ProcessChatCommandAsync(string text)
         {
             string clean = text.Trim();
+            if (string.IsNullOrWhiteSpace(clean)) return;
 
-            // 0. Command: Quick Reset
-            if (clean.Equals("làm mới", StringComparison.OrdinalIgnoreCase) ||
-                clean.Equals("làm mới đơn", StringComparison.OrdinalIgnoreCase) ||
-                clean.Equals("xóa đơn", StringComparison.OrdinalIgnoreCase) ||
-                clean.Equals("hủy đơn", StringComparison.OrdinalIgnoreCase))
+            // 0. Pre-Processing: Dialogue State & Anaphora / Coreference Resolution
+            string resolved = ResolveCopilotAnaphora(clean);
+
+            // 0.1 Command: Quick Reset
+            if (resolved.Equals("làm mới", StringComparison.OrdinalIgnoreCase) ||
+                resolved.Equals("làm mới đơn", StringComparison.OrdinalIgnoreCase) ||
+                resolved.Equals("xóa đơn", StringComparison.OrdinalIgnoreCase) ||
+                resolved.Equals("hủy đơn", StringComparison.OrdinalIgnoreCase))
             {
                 ResetOrderDraft();
                 _chatBox.ShowThinkingIndicator("Đang làm mới chứng từ...");
@@ -488,10 +1120,10 @@ namespace ZeroPlatform.Samples.ChatBot
                 return;
             }
 
-            // 0.1 Command: Save & Post order
-            if (clean.IndexOf("lưu và ghi sổ", StringComparison.OrdinalIgnoreCase) >= 0 ||
-                clean.IndexOf("lưu đơn", StringComparison.OrdinalIgnoreCase) >= 0 ||
-                clean.IndexOf("ghi sổ", StringComparison.OrdinalIgnoreCase) >= 0)
+            // 0.2 Command: Save & Post order
+            if (resolved.IndexOf("lưu và ghi sổ", StringComparison.OrdinalIgnoreCase) >= 0 ||
+                resolved.IndexOf("lưu đơn", StringComparison.OrdinalIgnoreCase) >= 0 ||
+                resolved.IndexOf("ghi sổ", StringComparison.OrdinalIgnoreCase) >= 0)
             {
                 _lblStatusBadge.Text = "● APPROVED (ĐÃ LƯU & GHI SỔ)";
                 _lblStatusBadge.ForeColor = Color.FromArgb(16, 185, 129);
@@ -508,14 +1140,54 @@ namespace ZeroPlatform.Samples.ChatBot
                 return;
             }
 
-            // 1. Command: Batch update warehouse
-            if (clean.IndexOf("cập nhật kho", StringComparison.OrdinalIgnoreCase) >= 0 ||
-                clean.IndexOf("chuyển kho", StringComparison.OrdinalIgnoreCase) >= 0)
+            // 0.3 Command: Customer Credit Limit Inquiry (e.g. "Hạn mức công nợ của họ là bao nhiêu?", "Công nợ khách này")
+            if (TryHandleCreditLimitInquiry(resolved, out string creditMsg))
+            {
+                _chatBox.ShowThinkingIndicator("Đang truy vấn sổ cái công nợ khách hàng...");
+                await Task.Delay(250);
+                await _chatBox.AppendAssistantActionMessageAnimatedAsync(creditMsg, canUndo: false);
+                return;
+            }
+
+            // 1. Single-Item Mutation: Quantity update ("Đổi số lượng của máy chiếu thành 5", "Đổi số lượng của nó thành 10", "Đổi số lượng dòng 1 thành 8")
+            if (TryHandleItemQuantityMutation(resolved, out string qtyMsg))
+            {
+                _chatBox.ShowThinkingIndicator("Đang cập nhật số lượng mặt hàng...");
+                await Task.Delay(250);
+                await _chatBox.AppendAssistantActionMessageAnimatedAsync(qtyMsg, canUndo: true);
+                return;
+            }
+
+            // 2. Single-Item Mutation: Warehouse update ("Đổi kho của nó thành Kho 02", "Chuyển máy chiếu sang Kho 02", "Đổi kho dòng 2 thành Kho 02")
+            if (TryHandleItemWarehouseMutation(resolved, out string whMsg))
+            {
+                _chatBox.ShowThinkingIndicator("Đang cập nhật kho xuất...");
+                await Task.Delay(250);
+                await _chatBox.AppendAssistantActionMessageAnimatedAsync(whMsg, canUndo: true);
+                return;
+            }
+
+            // 3. Single-Item Mutation: Delete item from order ("Xóa máy chiếu", "Xóa nó đi", "Xóa dòng thứ 2", "Bỏ chuột ra")
+            if (TryHandleItemDeletion(resolved, out string delMsg))
+            {
+                _chatBox.ShowThinkingIndicator("Đang xóa mặt hàng khỏi đơn...");
+                await Task.Delay(250);
+                await _chatBox.AppendAssistantActionMessageAnimatedAsync(delMsg, canUndo: true);
+                return;
+            }
+
+            // 4. Batch update warehouse (only when explicitly batch: "tất cả", "toàn bộ", "hàng loạt")
+            bool isBatchWh = (resolved.IndexOf("tất cả", StringComparison.OrdinalIgnoreCase) >= 0 ||
+                              resolved.IndexOf("toàn bộ", StringComparison.OrdinalIgnoreCase) >= 0 ||
+                              resolved.IndexOf("hàng loạt", StringComparison.OrdinalIgnoreCase) >= 0) &&
+                             (resolved.IndexOf("kho", StringComparison.OrdinalIgnoreCase) >= 0);
+
+            if (isBatchWh || (resolved.IndexOf("cập nhật kho", StringComparison.OrdinalIgnoreCase) >= 0 && resolved.IndexOf("của tất cả", StringComparison.OrdinalIgnoreCase) >= 0))
             {
                 CaptureUndoSnapshot("Trước khi cập nhật kho hàng loạt");
                 string targetWh = "Kho 01";
-                if (clean.IndexOf("Kho 02", StringComparison.OrdinalIgnoreCase) >= 0) targetWh = "Kho 02";
-                else if (clean.IndexOf("Kho Tổng", StringComparison.OrdinalIgnoreCase) >= 0) targetWh = "Kho Tổng";
+                if (resolved.IndexOf("Kho 02", StringComparison.OrdinalIgnoreCase) >= 0) targetWh = "Kho 02";
+                else if (resolved.IndexOf("Kho Tổng", StringComparison.OrdinalIgnoreCase) >= 0) targetWh = "Kho Tổng";
 
                 foreach (var item in _currentOrder.Items)
                 {
@@ -533,8 +1205,8 @@ namespace ZeroPlatform.Samples.ChatBot
                 return;
             }
 
-            // 2. Command: Sort items
-            if (clean.IndexOf("sắp xếp", StringComparison.OrdinalIgnoreCase) >= 0)
+            // 5. Command: Sort items
+            if (resolved.IndexOf("sắp xếp", StringComparison.OrdinalIgnoreCase) >= 0)
             {
                 CaptureUndoSnapshot("Trước khi sắp xếp");
                 _currentOrder.Items = _currentOrder.Items.OrderBy(i => i.Sku).ToList();
@@ -549,28 +1221,35 @@ namespace ZeroPlatform.Samples.ChatBot
                 return;
             }
 
-            // 3. Command: Inventory query
-            if (clean.IndexOf("còn bao nhiêu trong kho", StringComparison.OrdinalIgnoreCase) >= 0 ||
-                clean.IndexOf("tồn kho", StringComparison.OrdinalIgnoreCase) >= 0)
+            // 6. Command: Inventory query (e.g. "Hàng IPRO001 còn bao nhiêu trong kho?", "Kiểm tra tồn kho nó")
+            if (resolved.IndexOf("còn bao nhiêu trong kho", StringComparison.OrdinalIgnoreCase) >= 0 ||
+                resolved.IndexOf("tồn kho", StringComparison.OrdinalIgnoreCase) >= 0 ||
+                resolved.IndexOf("kiểm tra tồn", StringComparison.OrdinalIgnoreCase) >= 0)
             {
-                var (p, _) = _matcher.MatchProduct(clean);
-                string pName = p?.Name ?? "IPRO-001 (RYNAN i-PRO)";
+                var (p, _) = _matcher.MatchProduct(resolved);
+                p ??= _lastActiveProduct;
+                p ??= _matcher.Products.FirstOrDefault();
 
-                _chatBox.ShowThinkingIndicator("Đang truy vấn số dư tồn kho thời gian thực...");
-                await Task.Delay(300);
+                if (p != null)
+                {
+                    SetActiveProductSubject(p, null);
+                    _chatBox.ShowThinkingIndicator("Đang truy vấn số dư tồn kho thời gian thực...");
+                    await Task.Delay(300);
 
-                await _chatBox.AppendAssistantActionMessageAnimatedAsync(
-                    $"📊 **[TRA CỨU TỒN KHO THỜI GIAN THỰC]**\n\n" +
-                    $"• Mặt hàng: **{pName}**\n" +
-                    $"• Kho 01: **42 Cái** (Khả dụng: 38 Cái)\n" +
-                    $"• Kho 02: **15 Cái**\n\n" +
-                    $"👉 Tổng tồn kho hệ thống: **57 Cái** (Đủ đáp ứng cho đơn hàng mới).",
-                    canUndo: false);
-                return;
+                    await _chatBox.AppendAssistantActionMessageAnimatedAsync(
+                        $"📊 **[TRA CỨU TỒN KHO THỜI GIAN THỰC]**\n\n" +
+                        $"• Mặt hàng: **{p.Name}** ({p.Sku})\n" +
+                        $"• Kho 01: **42 {p.Unit}** (Khả dụng: 38 {p.Unit})\n" +
+                        $"• Kho 02: **15 {p.Unit}**\n\n" +
+                        $"👉 Tổng tồn kho hệ thống: **57 {p.Unit}** (Đủ đáp ứng cho đơn hàng mới).\n\n" +
+                        $"*(💡 Gợi ý: Bạn có thể gõ 'Thêm 5 cái vào đơn' để đặt ngay mặt hàng này)*",
+                        canUndo: false);
+                    return;
+                }
             }
 
-            // 4. Command: Order status inquiry
-            if (clean.IndexOf("trạng thái", StringComparison.OrdinalIgnoreCase) >= 0)
+            // 7. Command: Order status inquiry
+            if (resolved.IndexOf("trạng thái", StringComparison.OrdinalIgnoreCase) >= 0)
             {
                 _chatBox.ShowThinkingIndicator("Đang kiểm tra tiến trình chứng từ...");
                 await Task.Delay(250);
@@ -585,23 +1264,28 @@ namespace ZeroPlatform.Samples.ChatBot
                 return;
             }
 
-            // 5. Command: Add order / items from text (e.g. "Thêm đơn hàng cho Công ty...", "Tạo đơn mới cho Phú Hưng 1 máy chiếu")
+            // 8. Command: Add order / items from text (e.g. "Thêm đơn hàng cho Công ty...", "Tạo đơn mới cho Phú Hưng 1 máy chiếu", "Thêm 5 cái vào đơn cho họ")
             _chatBox.ShowThinkingIndicator("Sales Copilot đang nhận diện khách hàng & bóc tách mặt hàng...");
             await Task.Delay(300);
 
             CaptureUndoSnapshot("Trước khi xử lý câu lệnh");
 
-            bool isNewOrder = clean.IndexOf("tạo đơn mới", StringComparison.OrdinalIgnoreCase) >= 0 ||
-                              clean.IndexOf("lập đơn mới", StringComparison.OrdinalIgnoreCase) >= 0 ||
-                              clean.IndexOf("tạo đơn hàng mới", StringComparison.OrdinalIgnoreCase) >= 0 ||
-                              clean.IndexOf("đơn mới", StringComparison.OrdinalIgnoreCase) >= 0;
+            bool isNewOrder = resolved.IndexOf("tạo đơn mới", StringComparison.OrdinalIgnoreCase) >= 0 ||
+                              resolved.IndexOf("lập đơn mới", StringComparison.OrdinalIgnoreCase) >= 0 ||
+                              resolved.IndexOf("tạo đơn hàng mới", StringComparison.OrdinalIgnoreCase) >= 0 ||
+                              resolved.IndexOf("đơn mới", StringComparison.OrdinalIgnoreCase) >= 0;
 
             if (isNewOrder)
             {
                 _currentOrder = new OrderDraft();
             }
 
-            var (matchedCus, addedItems) = ParseAndApplyOrderFromText(clean);
+            var (matchedCus, addedItems) = ParseAndApplyOrderFromText(resolved);
+
+            if (matchedCus != null)
+            {
+                SetActiveCustomerSubject(matchedCus);
+            }
 
             if (matchedCus != null && addedItems.Count == 0)
             {
@@ -617,18 +1301,28 @@ namespace ZeroPlatform.Samples.ChatBot
 
             if (addedItems.Count > 0)
             {
+                var lastItem = addedItems.Last();
+                var lastProd = _matcher.Products.FirstOrDefault(p => p.Sku.Equals(lastItem.Sku, StringComparison.OrdinalIgnoreCase))
+                               ?? new MasterProduct(lastItem.Sku, lastItem.ItemName, lastItem.UnitPrice, lastItem.Unit, lastItem.Warehouse);
+                SetActiveProductSubject(lastProd, _currentOrder.Items.Count);
+
                 RefreshGridFromOrder();
 
                 string itemsList = string.Join("\n", addedItems.Select(i => $"• **{i.ItemName}** (Số lượng: {i.Quantity} {i.Unit} - Đơn giá: {i.UnitPrice:#,##0} đ - Kho: {i.Warehouse})"));
                 string cusDesc = !string.IsNullOrEmpty(_currentOrder.CustomerName)
-                    ? $"• Đã chọn Khách hàng: **{_currentOrder.CustomerName}**\n"
+                    ? $"• Khách hàng: **{_currentOrder.CustomerName}**\n"
+                    : "";
+
+                string anaphoraNote = (resolved != clean) 
+                    ? $"\n*(🎯 Đã nhận diện đại từ & liên kết chủ thể: \"{_lastActiveProduct?.Name ?? _lastActiveCustomer?.Name}\")*" 
                     : "";
 
                 await _chatBox.AppendAssistantActionMessageAnimatedAsync(
                     $"Xong rồi nhé! Mình đã hoàn tất các thao tác cho đơn hàng **{_currentOrder.OrderCode}**:\n\n" +
                     cusDesc +
                     $"• Đã thêm các mặt hàng sau vào đơn:\n{itemsList}\n\n" +
-                    $"👉 **Tổng giá trị đơn: {_currentOrder.TotalAmount:#,##0} đ** ({_currentOrder.Items.Count} dòng mặt hàng)\n\n" +
+                    $"👉 **Tổng giá trị đơn: {_currentOrder.TotalAmount:#,##0} đ** ({_currentOrder.Items.Count} dòng mặt hàng)" +
+                    anaphoraNote + "\n\n" +
                     "Bạn có muốn mình hỗ trợ thêm việc nào khác như cập nhật thông tin kho hay thêm hàng hóa mới không?",
                     canUndo: true);
             }
@@ -639,7 +1333,8 @@ namespace ZeroPlatform.Samples.ChatBot
                     "Bạn có thể nói theo mẫu:\n" +
                     "• *'Thêm cho Cty Bình Minh, 20 Ghế xoay và 20 Chuột máy tính'*\n" +
                     "• *'Thêm cho Không Gian Mới 2 Nồi chiên và 3 Máy chiếu'*\n" +
-                    "• *'Tạo đơn mới cho Phú Hưng 1 máy chiếu'*",
+                    "• *'Tạo đơn mới cho Phú Hưng 1 máy chiếu'*\n" +
+                    "• *'Đổi số lượng của nó thành 5'* hoặc *'Đổi kho của nó thành Kho 02'*",
                     canUndo: false);
             }
         }
@@ -659,6 +1354,11 @@ namespace ZeroPlatform.Samples.ChatBot
 
             // Split into clauses: comma, semicolon, " và ", " voi ", " với ", "+", newlines
             var parts = text.Split(new[] { ",", ";", " và ", " voi ", " với ", "+", "\n" }, StringSplitOptions.RemoveEmptyEntries);
+
+            var genericPronouns = new HashSet<string>(StringComparer.OrdinalIgnoreCase)
+            {
+                "cái", "bộ", "chiếc", "máy", "con", "hộp", "thùng", "vào đơn", "vào", "nó", "mặt hàng này", "sản phẩm này", "món này", "nữa", "nhé"
+            };
 
             foreach (var part in parts)
             {
@@ -686,7 +1386,7 @@ namespace ZeroPlatform.Samples.ChatBot
                     }
                 }
 
-                if (qty > 0 && !string.IsNullOrWhiteSpace(prodText))
+                if (qty > 0)
                 {
                     // Strip customer or preposition tails if present (e.g. "ghế xoay cho Bình Minh" -> "ghế xoay")
                     int choIdx = prodText.IndexOf(" cho ", StringComparison.OrdinalIgnoreCase);
@@ -706,6 +1406,14 @@ namespace ZeroPlatform.Samples.ChatBot
                     }
 
                     var (prod, conf) = _matcher.MatchProduct(prodText);
+
+                    // If prodText is generic or empty, but we have an active product, bind to active product!
+                    if (prod == null && _lastActiveProduct != null && (string.IsNullOrWhiteSpace(prodText) || genericPronouns.Contains(prodText)))
+                    {
+                        prod = _lastActiveProduct;
+                        conf = 0.98f;
+                    }
+
                     if (prod != null)
                     {
                         var item = new OrderItemDraft
@@ -747,12 +1455,21 @@ namespace ZeroPlatform.Samples.ChatBot
                 {
                     _currentOrder.CustomerCode = cus.Code;
                     _currentOrder.CustomerName = cus.Name;
+                    SetActiveCustomerSubject(cus);
                 }
 
                 // Add Items
                 foreach (var item in extraction.Items)
                 {
                     _currentOrder.Items.Add(item);
+                }
+
+                if (extraction.Items.Count > 0)
+                {
+                    var last = extraction.Items.Last();
+                    var p = _matcher.Products.FirstOrDefault(x => x.Sku.Equals(last.Sku, StringComparison.OrdinalIgnoreCase))
+                            ?? new MasterProduct(last.Sku, last.ItemName, last.UnitPrice, last.Unit, last.Warehouse);
+                    SetActiveProductSubject(p, _currentOrder.Items.Count);
                 }
 
                 RefreshGridFromOrder();
