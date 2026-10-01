@@ -305,25 +305,24 @@ namespace ZeroPlatform.Samples.ChatBot
             };
 
             // Setup Prompt Chips from user requirements
-            _chatBox.PromptSuggestions.Add("Thêm cho Công ty TNHH nội thất Không Gian Mới, 2 Nồi chiên không dầu và 3 Máy chiếu");
-            _chatBox.PromptSuggestions.Add("Thêm đơn hàng cho Công ty cổ phần Bình Minh, 20 Ghế xoay và 20 Chuột máy tính");
+            _chatBox.PromptSuggestions.Add("Thêm cho Không Gian Mới 2 Nồi chiên và 3 Máy chiếu");
+            _chatBox.PromptSuggestions.Add("Thêm đơn cho Bình Minh 20 Ghế xoay và 20 Chuột");
             _chatBox.PromptSuggestions.Add("Cập nhật kho của tất cả hàng hóa thành Kho 01");
             _chatBox.PromptSuggestions.Add("Sắp xếp thứ tự hàng hóa theo mã");
             _chatBox.PromptSuggestions.Add("Hàng IPRO001 còn bao nhiêu trong kho?");
             _chatBox.PromptSuggestions.Add("Đơn hàng hiện tại đang ở trạng thái gì?");
 
-            var welcome = _chatBox.AppendAssistantMessage(
+            _chatBox.AppendAssistantMessage(
                 "Xin chào! Tôi là **Trợ lý AI Đơn hàng**.\n\n" +
                 "Bạn có thể:\n" +
-                "• Nhấn **[🖼️ Tải hình ảnh]** hoặc **[📎 Tải tệp PDF]** để tự động đọc phiếu đặt hàng.\n" +
-                "• Gõ câu lệnh tự nhiên (ví dụ: *'Thêm đơn cho Cty Bình Minh, 20 Ghế xoay...'*).\n" +
+                "• Nhấn **[📷 Tải hình ảnh]** hoặc **[📄 Tải tệp PDF]** để tự động đọc phiếu đặt hàng.\n" +
+                "• Gõ câu lệnh tự nhiên (ví dụ: *'Thêm cho Cty Bình Minh, 20 Ghế xoay...'*).\n" +
                 "• Tương tác hàng loạt (ví dụ: *'Cập nhật kho của tất cả hàng hóa thành Kho 01'*).\n\n" +
                 "Mọi hành động đều có thể **[↺ Hoàn tác]** bất kỳ lúc nào!");
-            welcome.IsStreaming = false;
 
             _chatBox.SendMessageRequested += async (s, text) => await ProcessChatCommandAsync(text);
             _chatBox.FileAttached += async (s, fileInfo) => await ProcessFileAttachmentAsync(fileInfo.FilePath, fileInfo.FileType);
-            _chatBox.UndoRequested += (s, msgId) => RollbackUndo();
+            _chatBox.UndoRequested += async (s, msgId) => await RollbackUndoAsync();
             _chatBox.ClearChatRequested += (s, e) => ResetOrderDraft();
 
             parent.Controls.Add(_chatBox);
@@ -392,7 +391,7 @@ namespace ZeroPlatform.Samples.ChatBot
             _undoStack.Push(new OrderDraftSnapshot(description, _currentOrder));
         }
 
-        private void RollbackUndo()
+        private async Task RollbackUndoAsync()
         {
             if (_undoStack.Count > 1)
             {
@@ -401,7 +400,12 @@ namespace ZeroPlatform.Samples.ChatBot
                 _currentOrder = previous.State.Clone();
                 RefreshGridFromOrder();
 
-                _chatBox.AppendAssistantMessage($"↺ Đã hoàn tác: Khôi phục lại trạng thái '{previous.Description}'!");
+                _chatBox.ShowThinkingIndicator("Đang hoàn tác trạng thái chứng từ...");
+                await Task.Delay(250);
+                await _chatBox.AppendAssistantActionMessageAnimatedAsync(
+                    $"↺ **ĐÃ HOÀN TÁC THÀNH CÔNG**!\n\n" +
+                    $"Đã khôi phục lại trạng thái chứng từ: **{previous.Description}**.",
+                    canUndo: false);
             }
             else
             {
@@ -439,7 +443,10 @@ namespace ZeroPlatform.Samples.ChatBot
                 }
                 RefreshGridFromOrder();
 
-                var msg = _chatBox.AppendAssistantActionMessage(
+                _chatBox.ShowThinkingIndicator($"Đang đồng bộ kho hàng '{targetWh}'...");
+                await Task.Delay(250);
+
+                await _chatBox.AppendAssistantActionMessageAnimatedAsync(
                     $"Xong rồi nhé! Mình đã cập nhật kho của tất cả **{_currentOrder.Items.Count}** mặt hàng thành **{targetWh}**.\n\n" +
                     "Bạn có muốn mình hỗ trợ thêm việc nào khác như cập nhật thông tin khác hay thêm hàng hóa mới không?",
                     canUndo: true);
@@ -453,7 +460,10 @@ namespace ZeroPlatform.Samples.ChatBot
                 _currentOrder.Items = _currentOrder.Items.OrderBy(i => i.Sku).ToList();
                 RefreshGridFromOrder();
 
-                _chatBox.AppendAssistantActionMessage(
+                _chatBox.ShowThinkingIndicator("Đang sắp xếp danh mục mặt hàng...");
+                await Task.Delay(200);
+
+                await _chatBox.AppendAssistantActionMessageAnimatedAsync(
                     $"Đã sắp xếp lại thứ tự **{_currentOrder.Items.Count}** mặt hàng theo mã SKU tăng dần.",
                     canUndo: true);
                 return;
@@ -465,28 +475,40 @@ namespace ZeroPlatform.Samples.ChatBot
             {
                 var (p, _) = _matcher.MatchProduct(clean);
                 string pName = p?.Name ?? "IPRO-001 (RYNAN i-PRO)";
-                _chatBox.AppendAssistantMessage(
-                    $"📊 [Tra cứu Tồn kho]:\n" +
+
+                _chatBox.ShowThinkingIndicator("Đang truy vấn số dư tồn kho thời gian thực...");
+                await Task.Delay(300);
+
+                await _chatBox.AppendAssistantActionMessageAnimatedAsync(
+                    $"📊 **[TRA CỨU TỒN KHO THỜI GIAN THỰC]**\n\n" +
                     $"• Mặt hàng: **{pName}**\n" +
                     $"• Kho 01: **42 Cái** (Khả dụng: 38 Cái)\n" +
-                    $"• Kho 02: **15 Cái**\n" +
-                    $"👉 Tổng tồn kho hệ thống: **57 Cái** (Đủ đáp ứng đơn hàng mới).");
+                    $"• Kho 02: **15 Cái**\n\n" +
+                    $"👉 Tổng tồn kho hệ thống: **57 Cái** (Đủ đáp ứng cho đơn hàng mới).",
+                    canUndo: false);
                 return;
             }
 
             // 4. Command: Order status inquiry
             if (clean.IndexOf("trạng thái", StringComparison.OrdinalIgnoreCase) >= 0)
             {
-                _chatBox.AppendAssistantMessage(
-                    $"📋 [Thông tin Đơn hàng {_currentOrder.OrderCode}]:\n" +
+                _chatBox.ShowThinkingIndicator("Đang kiểm tra tiến trình chứng từ...");
+                await Task.Delay(250);
+
+                await _chatBox.AppendAssistantActionMessageAnimatedAsync(
+                    $"📋 **[THÔNG TIN CHỨNG TỪ {_currentOrder.OrderCode}]**\n\n" +
                     $"• Khách hàng: **{_currentOrder.CustomerName}**\n" +
-                    $"• Số lượng mặt hàng: **{_currentOrder.Items.Count}**\n" +
+                    $"• Số lượng mặt hàng: **{_currentOrder.Items.Count}** dòng\n" +
                     $"• Tổng tiền: **{_currentOrder.TotalAmount:#,##0} đ**\n" +
-                    $"• Trạng thái chứng từ: **Đơn tạm (Chờ phê duyệt)**");
+                    $"• Trạng thái chứng từ: **Đơn tạm (Chờ phê duyệt & Ghi sổ)**",
+                    canUndo: false);
                 return;
             }
 
             // 5. Command: Add order / items from text (e.g. "Thêm đơn hàng cho Công ty...")
+            _chatBox.ShowThinkingIndicator("Sales Copilot đang nhận diện khách hàng & bóc tách mặt hàng...");
+            await Task.Delay(350);
+
             CaptureUndoSnapshot("Trước khi thêm mặt hàng bằng giọng nói/text");
             var addedItems = ParseAndApplyOrderFromText(clean);
 
@@ -495,16 +517,21 @@ namespace ZeroPlatform.Samples.ChatBot
                 RefreshGridFromOrder();
 
                 string itemsList = string.Join("\n", addedItems.Select(i => $"• **{i.ItemName}** (Số lượng: {i.Quantity} {i.Unit} - Kho: {i.Warehouse})"));
-                var msg = _chatBox.AppendAssistantActionMessage(
-                    $"Xong rồi nhé! Mình đã hoàn tất các thao tác cho đơn hàng của bạn:\n" +
-                    $"Đã chọn Khách hàng **{_currentOrder.CustomerName}**.\n" +
-                    $"Đã thêm các mặt hàng sau vào đơn:\n{itemsList}\n\n" +
+                await _chatBox.AppendAssistantActionMessageAnimatedAsync(
+                    $"Xong rồi nhé! Mình đã hoàn tất các thao tác cho đơn hàng của bạn:\n\n" +
+                    $"• Đã chọn Khách hàng: **{_currentOrder.CustomerName}**\n" +
+                    $"• Đã thêm các mặt hàng sau vào đơn:\n{itemsList}\n\n" +
                     "Bạn có muốn mình hỗ trợ thêm việc nào khác như cập nhật thông tin khác hay thêm hàng hóa mới không?",
                     canUndo: true);
             }
             else
             {
-                _chatBox.AppendAssistantMessage("Tôi chưa nhận diện được tên khách hàng hoặc sản phẩm trong câu nói. Bạn có thể nói theo mẫu: *'Thêm cho Cty Bình Minh, 20 Ghế xoay và 20 Chuột máy tính'*.");
+                await _chatBox.AppendAssistantActionMessageAnimatedAsync(
+                    "Tôi chưa nhận diện được tên khách hàng hoặc sản phẩm trong câu nói.\n\n" +
+                    "Bạn có thể nói theo mẫu:\n" +
+                    "• *'Thêm cho Cty Bình Minh, 20 Ghế xoay và 20 Chuột máy tính'*\n" +
+                    "• *'Thêm cho Không Gian Mới 2 Nồi chiên và 3 Máy chiếu'*",
+                    canUndo: false);
             }
         }
 
@@ -559,14 +586,16 @@ namespace ZeroPlatform.Samples.ChatBot
 
         private async Task ProcessFileAttachmentAsync(string filePath, string fileType)
         {
-            _chatBox.IsGenerating = true;
-            _chatBox.StreamingState = ChatStreamingState.Thinking;
+            _chatBox.ShowThinkingIndicator($"Đang quét và bóc tách chứng từ {fileType.ToUpper()} ({System.IO.Path.GetFileName(filePath)})...");
 
             try
             {
                 CaptureUndoSnapshot($"Trước khi nhập tệp {System.IO.Path.GetFileName(filePath)}");
 
                 var extraction = await _extractor.ExtractOrderAsync(filePath, fileType);
+
+                _chatBox.ShowThinkingIndicator("Đang so khớp danh mục SKU & phân bổ kho mặc định...");
+                await Task.Delay(300);
 
                 // Apply Customer
                 var (cus, _) = _matcher.MatchCustomer(extraction.ExtractedCustomerName ?? "");
@@ -586,8 +615,8 @@ namespace ZeroPlatform.Samples.ChatBot
 
                 string itemsList = string.Join("\n", extraction.Items.Select(i => $"• **{i.ItemName}** (Số lượng: {i.Quantity} {i.Unit} - Đơn giá: {i.UnitPrice:#,##0} đ)"));
 
-                var msg = _chatBox.AppendAssistantActionMessage(
-                    $"📄 **ĐÃ TRÍCH XUẤT THÀNH CÔNG ĐƠN HÀNG TỪ {fileType.ToUpper()}**!\n\n" +
+                await _chatBox.AppendAssistantActionMessageAnimatedAsync(
+                    $"📄 **[ĐÃ TRÍCH XUẤT THÀNH CÔNG ĐƠN HÀNG TỪ {fileType.ToUpper()}]**\n\n" +
                     $"• Số PO trích xuất: **{extraction.ExtractedPoNumber}**\n" +
                     $"• Khách hàng nhận diện: **{_currentOrder.CustomerName}**\n" +
                     $"• {extraction.RawOcrSummary}\n\n" +
@@ -597,8 +626,7 @@ namespace ZeroPlatform.Samples.ChatBot
             }
             finally
             {
-                _chatBox.IsGenerating = false;
-                _chatBox.StreamingState = ChatStreamingState.Idle;
+                _chatBox.HideThinkingIndicator();
             }
         }
 
