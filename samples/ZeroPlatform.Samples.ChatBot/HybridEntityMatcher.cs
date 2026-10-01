@@ -2,6 +2,7 @@ using System;
 using System.Collections.Concurrent;
 using System.Collections.Generic;
 using System.Linq;
+using ZeroAgent.Dialog.Learning;
 
 namespace ZeroPlatform.Samples.ChatBot
 {
@@ -47,16 +48,20 @@ namespace ZeroPlatform.Samples.ChatBot
     /// 2. Normalized Token Similarity
     /// 3. Continuous Episodic Feedback Store
     /// </summary>
-    public sealed class HybridEntityMatcher
+    public sealed class HybridEntityMatcher : IKnowledgeValidator
     {
         private readonly List<MasterCustomer> _customers = new();
         private readonly List<MasterProduct> _products = new();
 
         private readonly ConcurrentDictionary<string, string> _customerAliases = new(StringComparer.OrdinalIgnoreCase);
         private readonly ConcurrentDictionary<string, string> _productAliases = new(StringComparer.OrdinalIgnoreCase);
+        private readonly VerifiedKnowledgeArbiter _arbiter;
+
+        public VerifiedKnowledgeArbiter Arbiter => _arbiter;
 
         public HybridEntityMatcher()
         {
+            _arbiter = new VerifiedKnowledgeArbiter(this);
             SeedMasterData();
             SeedInitialLearnedAliases();
         }
@@ -123,7 +128,12 @@ namespace ZeroPlatform.Samples.ChatBot
             if (string.IsNullOrWhiteSpace(query)) return (null, 0f);
             string clean = query.Trim();
 
-            // 1. Direct Alias Cache Hit (100% confidence)
+            // 1. Direct Verified Alias Resolution (Arbiter or local cache)
+            if (_arbiter.TryResolveAlias(clean, "Customer", out var arbCode) && !string.IsNullOrEmpty(arbCode))
+            {
+                var match = _customers.FirstOrDefault(c => c.Code.Equals(arbCode, StringComparison.OrdinalIgnoreCase));
+                if (match != null) return (match, 1.0f);
+            }
             if (_customerAliases.TryGetValue(clean, out var code))
             {
                 var match = _customers.FirstOrDefault(c => c.Code.Equals(code, StringComparison.OrdinalIgnoreCase));
@@ -171,7 +181,12 @@ namespace ZeroPlatform.Samples.ChatBot
             if (string.IsNullOrWhiteSpace(query)) return (null, 0f);
             string clean = query.Trim();
 
-            // 1. Direct Alias Cache Hit
+            // 1. Direct Verified Alias Resolution (Arbiter or local cache)
+            if (_arbiter.TryResolveAlias(clean, "Product", out var arbSku) && !string.IsNullOrEmpty(arbSku))
+            {
+                var match = _products.FirstOrDefault(p => p.Sku.Equals(arbSku, StringComparison.OrdinalIgnoreCase));
+                if (match != null) return (match, 1.0f);
+            }
             if (_productAliases.TryGetValue(clean, out var sku))
             {
                 var match = _products.FirstOrDefault(p => p.Sku.Equals(sku, StringComparison.OrdinalIgnoreCase));
@@ -217,20 +232,34 @@ namespace ZeroPlatform.Samples.ChatBot
 
         private readonly ConcurrentDictionary<string, Dictionary<string, int>> _stockBalances = new(StringComparer.OrdinalIgnoreCase);
 
-        public void LearnCustomerAlias(string rawInput, string customerCode)
+        public bool LearnCustomerAlias(string rawInput, string customerCode, string userId = "Operator", string role = "Operator")
         {
-            if (!string.IsNullOrWhiteSpace(rawInput) && !string.IsNullOrWhiteSpace(customerCode))
+            if (string.IsNullOrWhiteSpace(rawInput) || string.IsNullOrWhiteSpace(customerCode)) return false;
+
+            var candidate = _arbiter.ProposeAlias(rawInput, customerCode, "Customer", userId, role);
+            if (candidate.Status == VerificationStatus.Quarantined)
             {
-                _customerAliases[rawInput.Trim()] = customerCode.Trim();
+                // Defense activated: reject poisoned / non-existent / conflicting alias
+                return false;
             }
+
+            _customerAliases[rawInput.Trim()] = customerCode.Trim();
+            return true;
         }
 
-        public void LearnProductAlias(string rawInput, string masterSku)
+        public bool LearnProductAlias(string rawInput, string masterSku, string userId = "Operator", string role = "Operator")
         {
-            if (!string.IsNullOrWhiteSpace(rawInput) && !string.IsNullOrWhiteSpace(masterSku))
+            if (string.IsNullOrWhiteSpace(rawInput) || string.IsNullOrWhiteSpace(masterSku)) return false;
+
+            var candidate = _arbiter.ProposeAlias(rawInput, masterSku, "Product", userId, role);
+            if (candidate.Status == VerificationStatus.Quarantined)
             {
-                _productAliases[rawInput.Trim()] = masterSku.Trim();
+                // Defense activated: reject poisoned / non-existent / conflicting alias
+                return false;
             }
+
+            _productAliases[rawInput.Trim()] = masterSku.Trim();
+            return true;
         }
 
         public void AddCustomer(MasterCustomer customer)
@@ -342,5 +371,52 @@ namespace ZeroPlatform.Samples.ChatBot
 
         public IReadOnlyList<MasterCustomer> Customers => _customers;
         public IReadOnlyList<MasterProduct> Products => _products;
+
+        #region IKnowledgeValidator Implementation
+
+        public bool ValidateEntityExists(string entityCategory, string entityCode)
+        {
+            if (string.IsNullOrWhiteSpace(entityCode)) return false;
+
+            if (entityCategory.Equals("Product", StringComparison.OrdinalIgnoreCase))
+            {
+                return _products.Any(p => p.Sku.Equals(entityCode.Trim(), StringComparison.OrdinalIgnoreCase));
+            }
+            if (entityCategory.Equals("Customer", StringComparison.OrdinalIgnoreCase))
+            {
+                return _customers.Any(c => c.Code.Equals(entityCode.Trim(), StringComparison.OrdinalIgnoreCase));
+            }
+            return true;
+        }
+
+        public bool ValidateSafetyBounds(string category, string ruleKey, string proposedValue, out string? violationReason)
+        {
+            violationReason = null;
+            if (ruleKey.IndexOf("Discount", StringComparison.OrdinalIgnoreCase) >= 0)
+            {
+                if (decimal.TryParse(proposedValue, out decimal discount) && (discount < 0 || discount > 0.50m))
+                {
+                    violationReason = "Tỷ lệ chiết khấu không được vượt quá 50% hoặc nhỏ hơn 0%.";
+                    return false;
+                }
+            }
+            if (ruleKey.IndexOf("Price", StringComparison.OrdinalIgnoreCase) >= 0)
+            {
+                if (decimal.TryParse(proposedValue, out decimal price) && price <= 0)
+                {
+                    violationReason = "Đơn giá phải lớn hơn 0.";
+                    return false;
+                }
+            }
+            return true;
+        }
+
+        public bool CanCommitDirectly(string operatorRole)
+        {
+            return operatorRole.Equals("Supervisor", StringComparison.OrdinalIgnoreCase) ||
+                   operatorRole.Equals("Admin", StringComparison.OrdinalIgnoreCase);
+        }
+
+        #endregion
     }
 }
