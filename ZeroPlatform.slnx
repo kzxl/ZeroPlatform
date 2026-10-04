@@ -109,6 +109,7 @@
   </Folder>
   <Folder Name="/03_L3_PerceptionAndIntelligence/ZeroOcr/">
     <Project Path="ZeroOcr/src/ZeroOcr.Core/ZeroOcr.Core.csproj" />
+    <Project Path="ZeroOcr/src/ZeroOcr.Inference/ZeroOcr.Inference.csproj" />
     <Project Path="ZeroOcr/src/ZeroOcr.Windows/ZeroOcr.Windows.csproj" />
     <Project Path="ZeroOcr/tests/ZeroOcr.Tests/ZeroOcr.Tests.csproj" />
   </Folder>
