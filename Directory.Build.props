@@ -1,9 +1,9 @@
 <Project>
   <PropertyGroup>
-    <Version>2.6.0</Version>
-    <AssemblyVersion>2.6.0.0</AssemblyVersion>
-    <FileVersion>2.6.0.0</FileVersion>
-    <InformationalVersion>2.6.0</InformationalVersion>
+    <Version>2.7.0</Version>
+    <AssemblyVersion>2.7.0.0</AssemblyVersion>
+    <FileVersion>2.7.0.0</FileVersion>
+    <InformationalVersion>2.7.0</InformationalVersion>
     <Authors>Phong Võ (kzxl)</Authors>
     <Company>ZeroUniverse</Company>
     <Copyright>Copyright © 2026 Phong Võ (kzxl)</Copyright>

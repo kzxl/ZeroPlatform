@@ -367,6 +367,31 @@ namespace ZeroNetwork.Tests
             Assert.Equal(2, ZeroTelemetry.CreateHistogram(prefix + "_request_duration_ms").Count);
         }
 
+        [Fact]
+        public void BclHttpTransportOptions_DefaultValues_AreSensible()
+        {
+            var options = new BclHttpTransportOptions();
+            Assert.Equal(TimeSpan.FromMinutes(15), options.PooledConnectionLifetime);
+            Assert.Equal(TimeSpan.FromMinutes(2), options.PooledConnectionIdleTimeout);
+            Assert.Equal(50, options.MaxConnectionsPerServer);
+            Assert.True(options.EnableCompression);
+            Assert.Null(options.ConnectTimeout);
+            Assert.Null(options.Proxy);
+            Assert.Null(options.ConfigureHandler);
+        }
+
+        [Fact]
+        public void BclHttpTransport_CanBeInstantiatedWithOptions()
+        {
+            var options = new BclHttpTransportOptions
+            {
+                MaxConnectionsPerServer = 10,
+                EnableCompression = false
+            };
+            using var transport = new BclHttpTransport(options);
+            Assert.NotNull(transport.HttpClient);
+        }
+
         private static ZeroHttpResponseMessage ThrowNetworkFailure()
         {
             throw new HttpRequestException("Simulated connection reset.");

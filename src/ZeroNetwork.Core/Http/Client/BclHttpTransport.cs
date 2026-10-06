@@ -59,6 +59,7 @@ namespace ZeroNetwork.Http.Client
     {
         private readonly HttpClient _httpClient;
         private readonly bool _disposeClient;
+        private readonly BclHttpTransportOptions? _options;
         private int _disposed;
 
         /// <summary>
@@ -67,12 +68,30 @@ namespace ZeroNetwork.Http.Client
         /// </summary>
         public BclHttpTransport(BclHttpTransportOptions? options = null)
         {
-            HttpMessageHandler handler = CreateHandler(options ?? new BclHttpTransportOptions());
+            _options = options ?? new BclHttpTransportOptions();
+            HttpMessageHandler handler = CreateHandler(_options);
             _httpClient = new HttpClient(handler, disposeHandler: true)
             {
                 Timeout = System.Threading.Timeout.InfiniteTimeSpan
             };
             _disposeClient = true;
+
+#if !NET8_0_OR_GREATER
+            if (_options.MaxConnectionsPerServer > 0)
+            {
+                try
+                {
+                    if (ServicePointManager.DefaultConnectionLimit < _options.MaxConnectionsPerServer)
+                    {
+                        ServicePointManager.DefaultConnectionLimit = _options.MaxConnectionsPerServer;
+                    }
+                }
+                catch
+                {
+                    // Best effort on environments with restricted security policies
+                }
+            }
+#endif
         }
 
         /// <summary>
@@ -94,6 +113,17 @@ namespace ZeroNetwork.Http.Client
         {
             if (request == null) throw new ArgumentNullException(nameof(request));
             if (Volatile.Read(ref _disposed) != 0) throw new ObjectDisposedException(nameof(BclHttpTransport));
+
+#if !NET8_0_OR_GREATER
+            if (request.RequestUri.IsAbsoluteUri)
+            {
+                ConfigureLegacyServicePoint(request.RequestUri);
+            }
+            else if (_httpClient.BaseAddress != null && _httpClient.BaseAddress.IsAbsoluteUri)
+            {
+                ConfigureLegacyServicePoint(_httpClient.BaseAddress);
+            }
+#endif
 
             // A fresh HttpRequestMessage per attempt: BCL messages cannot be re-sent, and on .NET Framework
             // HttpClient disposes request content after sending. The adapter never disposes the Zero content.
@@ -227,6 +257,36 @@ namespace ZeroNetwork.Http.Client
             options.ConfigureHandler?.Invoke(handler);
             return handler;
         }
+
+#if !NET8_0_OR_GREATER
+        private void ConfigureLegacyServicePoint(Uri uri)
+        {
+            if (_options == null || !uri.IsAbsoluteUri) return;
+            try
+            {
+                var sp = ServicePointManager.FindServicePoint(uri);
+                if (sp != null)
+                {
+                    if (_options.MaxConnectionsPerServer > 0 && sp.ConnectionLimit < _options.MaxConnectionsPerServer)
+                    {
+                        sp.ConnectionLimit = _options.MaxConnectionsPerServer;
+                    }
+                    if (_options.PooledConnectionLifetime > TimeSpan.Zero)
+                    {
+                        sp.ConnectionLeaseTimeout = (int)Math.Min(_options.PooledConnectionLifetime.TotalMilliseconds, int.MaxValue);
+                    }
+                    if (_options.PooledConnectionIdleTimeout > TimeSpan.Zero)
+                    {
+                        sp.MaxIdleTime = (int)Math.Min(_options.PooledConnectionIdleTimeout.TotalMilliseconds, int.MaxValue);
+                    }
+                }
+            }
+            catch
+            {
+                // Best effort on environments where ServicePointManager is constrained
+            }
+        }
+#endif
 
         private sealed class ContentAdapter : HttpContent
         {

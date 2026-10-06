@@ -1,10 +1,10 @@
 # ZeroNetwork
 
 [![ZeroPlatform Tier](https://img.shields.io/badge/ZeroPlatform-Tier%202%20(Transport%20%26%20Storage)-059669.svg)](https://github.com/kzxl/ZeroPlatform)
-[![NuGet Version](https://img.shields.io/badge/nuget-v2.6.0-blue.svg)](https://www.nuget.org/packages/ZeroNetwork.Core/)
+[![NuGet Version](https://img.shields.io/badge/nuget-v2.7.0-blue.svg)](https://www.nuget.org/packages/ZeroNetwork.Core/)
 [![License: MIT](https://img.shields.io/badge/License-MIT-blue.svg)](LICENSE)
 [![Zero External Dependencies](https://img.shields.io/badge/Dependencies-0%20(Pure%20C%23)-brightgreen.svg)]()
-[![Tests: 123 Passed](https://img.shields.io/badge/Tests-123%20Passed%20(100%25)-brightgreen.svg)]()
+[![Tests: 162 Passed](https://img.shields.io/badge/Tests-162%20Passed%20(100%25)-brightgreen.svg)]()
 [![Multi-Targeting](https://img.shields.io/badge/.NET-8.0%20%7C%204.6.2%20%7C%20Standard%202.0-orange.svg)]()
 
 > **Architectural Standard**: 100% Pure C# BCL, Zero External Dependencies, Multi-Targeting across `.NET 8.0`, `.NET Framework 4.6.2`, and `.NET Standard 2.0`.
@@ -73,9 +73,10 @@
 - **`DnsProbe`**: Fast UDP port 53 DNS client with sub-second timeout and reverse PTR record resolution.
 - **`NetworkThroughputMeter`**: Real-time NIC bandwidth meter (Rx/Tx Mbps) with saturation alert thresholds.
 
-### 4. Layer 7: Micro HTTP Server & REST Client
+### 4. Layer 7: Micro HTTP Server & REST Client Pipeline
+- **`ZeroApiClient`**: High-performance HTTP client facade utilizing stream-based direct JSON serialization (`IZeroJsonSerializer`) to eliminate Large Object Heap (LOH) allocations, combined with connection pooling, exponential backoff with capped jitter, and idempotency-aware retries.
+- **`ZeroHttpClient` & Pipeline Architecture**: Extensible middleware pipeline (`IZeroHttpMiddleware`) and transport abstraction (`IZeroHttpTransport`), enabling custom retry policies, distributed tracing, circuit breakers, host-specific routing (`RouteHost`), and zero-copy body pooling.
 - **`ZeroHttpServer`**: Micro HTTP/1.1 server running in pure C# without administrator privileges, URL ACLs, or IIS. Features regex REST routing and built-in `/metrics` (Prometheus) and `/health` endpoints.
-- **`ZeroApiClient`**: High-performance HTTP client utilizing stream-based direct JSON serialization (`IZeroJsonSerializer`) to eliminate Large Object Heap (LOH) allocations, combined with connection pooling and exponential backoff retry.
 - **`ZeroHttpExtensions`**: Fluent string extensions (`url.GetJsonAsync<T>()`, `url.PostJsonAsync<T>()`) for clean, allocation-efficient HTTP consumption.
 
 ### 5. Layer 7: Real-Time Full-Duplex (WebSocket & SignalR Server/Client)
@@ -124,22 +125,55 @@ foreach (var device in devices)
 }
 ```
 
-### 2. High-Performance REST Client (Zero-LOH Stream Pipeline)
+### 2. High-Performance REST Client & Extensible HTTP Pipeline
+
+#### High-Level Facade (`ZeroApiClient`)
 ```csharp
 using ZeroNetwork.Http;
 
-// Fluent API with automatic connection pooling and retry
+// 1. Fluent extension methods
 var users = await "https://api.factory.local/users".GetJsonAsync<List<UserDto>>();
 
-// Or using ZeroApiClient directly
+// 2. Resilient API client with pooled streams & exponential backoff
 using var client = new ZeroApiClient(new ZeroApiClientOptions
 {
-    BaseAddress = new Uri("https://api.factory.local"),
-    MaxRetries = 3
+    BaseAddress = "https://api.factory.local",
+    MaxRetryAttempts = 3,
+    InitialRetryDelay = TimeSpan.FromMilliseconds(200),
+    Timeout = TimeSpan.FromSeconds(15)
 });
 
-var response = await client.PostJsonAsync<OrderRequest, OrderResult>("/orders", new OrderRequest { OrderId = 1001 });
+// Idempotent calls (GET, PUT, DELETE) auto-retry on transient failures; POST is protected by default
+var order = await client.PostAsync<OrderRequest, OrderResult>("/orders", new OrderRequest { OrderId = 1001 });
 ```
+
+#### Low-Level Extensible Pipeline (`ZeroHttpClientBuilder`)
+```csharp
+using ZeroNetwork.Http.Client;
+
+// Build a custom HTTP pipeline with middlewares and multi-host routing
+using var httpClient = ZeroHttpClient.CreateBuilder()
+    .WithBaseAddress("https://api.factory.local")
+    .UseRetry(new ZeroRetryPolicy { MaxRetries = 2 })
+    .UseTelemetry("factory_api")
+    .RouteHost("internal.secure.local", new BclHttpTransport(new BclHttpTransportOptions
+    {
+        MaxConnectionsPerServer = 20,
+        PooledConnectionLifetime = TimeSpan.FromMinutes(10)
+    }))
+    .Build();
+
+using var request = new ZeroHttpRequestMessage(HttpMethod.Get, "/telemetry/status");
+using var response = await httpClient.SendAsync(request);
+```
+
+#### Legacy Runtime Notes (.NET Framework 4.6.2 & netstandard2.0)
+- **JSON Serialization**: On .NET Framework 4.6.2 where `System.Text.Json` is not bundled in BCL, configure your JSON serializer at startup:
+  ```csharp
+  ZeroApiClient.DefaultSerializer = new MyJsonNetSerializer(); // implements IZeroJsonSerializer
+  ```
+- **ServicePoint Tuning**: `BclHttpTransport` automatically tunes legacy `ServicePointManager` (sets `DefaultConnectionLimit`, per-endpoint `ConnectionLimit`, `ConnectionLeaseTimeout` for DNS refreshes, and `MaxIdleTime`) eliminating the classic 2-connection bottleneck and stale DNS issues.
+
 
 ### 3. Self-Hosted SignalR Hub Server with RPC & Groups
 ```csharp
