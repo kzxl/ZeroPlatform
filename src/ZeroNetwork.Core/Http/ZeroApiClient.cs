@@ -1,27 +1,22 @@
 using System;
-using System.Collections;
-using System.Collections.Generic;
 using System.IO;
 using System.Net;
 using System.Net.Http;
-using System.Net.Http.Headers;
-using System.Net.Sockets;
-using System.Reflection;
-using System.Text;
 using System.Threading;
 using System.Threading.Tasks;
+using ZeroNetwork.Http.Client;
 
 namespace ZeroNetwork.Http
 {
     /// <summary>
-    /// Ultra-high performance, stream-based HTTP API Client.
-    /// Eliminates intermediate string allocations and Large Object Heap (LOH) fragmentation by reading
-    /// and writing payloads directly to and from network streams.
-    /// Features built-in enterprise resilience, connection pooling, and socket compression.
+    /// High-performance, stream-based JSON API client built on the <see cref="ZeroHttpClient"/> middleware pipeline.
+    /// Responses are deserialized directly from the network stream; request bodies are buffered in pooled chunks
+    /// (known Content-Length, retry-safe, no LOH copies). Includes idempotency-aware retry, an operation-wide timeout
+    /// and connection pooling through the default <see cref="BclHttpTransport"/>.
     /// </summary>
     public class ZeroApiClient : IDisposable
     {
-        private static IZeroJsonSerializer _defaultSerializer =
+        private static volatile IZeroJsonSerializer _defaultSerializer =
 #if NET8_0_OR_GREATER
             new SystemTextJsonStreamSerializer();
 #else
@@ -29,7 +24,9 @@ namespace ZeroNetwork.Http
 #endif
 
         /// <summary>
-        /// Gets or sets the global default JSON serializer used across all ZeroApiClient instances.
+        /// Gets or sets the global default JSON serializer used by every <see cref="ZeroApiClient"/> that has no
+        /// explicit serializer. Read at call time, so it can be configured after clients (including
+        /// <see cref="ZeroHttpExtensions.Shared"/>) were created.
         /// </summary>
         public static IZeroJsonSerializer DefaultSerializer
         {
@@ -37,29 +34,49 @@ namespace ZeroNetwork.Http
             set => _defaultSerializer = value ?? throw new ArgumentNullException(nameof(value));
         }
 
-        private readonly HttpClient _httpClient;
+        private readonly ZeroHttpClient _client;
         private readonly bool _ownsClient;
         private readonly ZeroApiClientOptions _options;
-        private readonly IZeroJsonSerializer _serializer;
-        private bool _disposed;
+        private readonly IZeroJsonSerializer? _explicitSerializer;
+        private readonly TimeSpan _timeout;
+        private int _disposed;
 
         public ZeroApiClientOptions Options => _options;
-        public IZeroJsonSerializer Serializer => _serializer;
+
+        /// <summary>
+        /// Gets the effective serializer (explicit serializer, otherwise the current <see cref="DefaultSerializer"/>).
+        /// </summary>
+        public IZeroJsonSerializer Serializer => _explicitSerializer ?? DefaultSerializer;
+
+        /// <summary>
+        /// Gets the underlying middleware pipeline (for raw <see cref="ZeroHttpRequestMessage"/> calls).
+        /// </summary>
+        public ZeroHttpClient Pipeline => _client;
 
         public ZeroApiClient(ZeroApiClientOptions? options = null)
         {
             _options = options ?? new ZeroApiClientOptions();
-            _serializer = _options.Serializer ?? DefaultSerializer;
+            ZeroTimeoutScope.Validate(_options.Timeout, nameof(options));
 
-            HttpMessageHandler handler = CreateOptimalHandler(_options);
-            _httpClient = new HttpClient(handler, disposeHandler: true);
+            _explicitSerializer = _options.Serializer;
+            _timeout = _options.Timeout;
 
-            if (!string.IsNullOrWhiteSpace(_options.BaseAddress))
+            Uri? baseAddress = string.IsNullOrWhiteSpace(_options.BaseAddress)
+                ? null
+                : new Uri(_options.BaseAddress!.TrimEnd('/') + "/");
+
+            var transport = new BclHttpTransport(new BclHttpTransportOptions
             {
-                _httpClient.BaseAddress = new Uri(_options.BaseAddress!.TrimEnd('/') + "/");
-            }
+                PooledConnectionLifetime = _options.PooledConnectionLifetime,
+                PooledConnectionIdleTimeout = _options.PooledConnectionIdleTimeout,
+                MaxConnectionsPerServer = _options.MaxConnectionsPerServer,
+                EnableCompression = _options.EnableCompression,
+                ConnectTimeout = _options.ConnectTimeout,
+                Proxy = _options.Proxy,
+                ConfigureHandler = _options.ConfigureHandler
+            });
 
-            _httpClient.Timeout = _options.Timeout;
+            _client = BuildDefaultPipeline(transport, baseAddress);
             _ownsClient = true;
         }
 
@@ -67,39 +84,67 @@ namespace ZeroNetwork.Http
         {
         }
 
+        /// <summary>
+        /// Wraps an existing <see cref="HttpClient"/> (not disposed by this instance). Retry uses default options;
+        /// the overall timeout follows <see cref="HttpClient.Timeout"/> and also bounds body deserialization.
+        /// </summary>
         public ZeroApiClient(HttpClient httpClient, IZeroJsonSerializer? serializer = null)
         {
-            _httpClient = httpClient ?? throw new ArgumentNullException(nameof(httpClient));
+            if (httpClient == null) throw new ArgumentNullException(nameof(httpClient));
+
             _options = new ZeroApiClientOptions();
-            _serializer = serializer ?? DefaultSerializer;
+            _explicitSerializer = serializer;
+            _timeout = httpClient.Timeout;
+
+            // No base address in the pipeline: HttpClient.BaseAddress keeps resolving relative URIs exactly as before
+            // (including later changes to it and RFC 3986 leading-slash semantics).
+            _client = BuildDefaultPipeline(new BclHttpTransport(httpClient, disposeClient: false), null);
+            _ownsClient = true; // owns the pipeline wrapper only; the HttpClient itself is never disposed here
+        }
+
+        /// <summary>
+        /// Uses a caller-built pipeline (custom middleware / transports). The pipeline is not disposed by this instance.
+        /// Retry, auth and transport behavior are entirely defined by <paramref name="client"/>.
+        /// </summary>
+        /// <param name="client">Pre-configured pipeline.</param>
+        /// <param name="serializer">Explicit serializer; <c>null</c> uses <see cref="DefaultSerializer"/>.</param>
+        /// <param name="timeout">Overall call timeout; <c>null</c> uses 30 seconds.</param>
+        public ZeroApiClient(ZeroHttpClient client, IZeroJsonSerializer? serializer = null, TimeSpan? timeout = null)
+        {
+            _client = client ?? throw new ArgumentNullException(nameof(client));
+            _options = new ZeroApiClientOptions { MaxRetryAttempts = 0 };
+            _explicitSerializer = serializer;
+            _timeout = timeout ?? _options.Timeout;
+            ZeroTimeoutScope.Validate(_timeout, nameof(timeout));
             _ownsClient = false;
         }
 
-        private static HttpMessageHandler CreateOptimalHandler(ZeroApiClientOptions options)
+        private ZeroHttpClient BuildDefaultPipeline(IZeroHttpTransport transport, Uri? baseAddress)
         {
-#if NET8_0_OR_GREATER
-            return new SocketsHttpHandler
+            return ZeroHttpClient.CreateBuilder()
+                .WithBaseAddress(baseAddress)
+                // Options are read per call so runtime changes to client.Options keep working as before.
+                .Use(new ZeroRetryMiddleware(CreateRetryOptions))
+                .UseTransport(transport, disposeWithClient: true)
+                .Build();
+        }
+
+        private ZeroRetryOptions CreateRetryOptions()
+        {
+            return new ZeroRetryOptions
             {
-                PooledConnectionLifetime = options.PooledConnectionLifetime,
-                PooledConnectionIdleTimeout = options.PooledConnectionIdleTimeout,
-                EnableMultipleHttp2Connections = true,
-                MaxConnectionsPerServer = options.MaxConnectionsPerServer,
-                AutomaticDecompression = options.EnableCompression
-                    ? DecompressionMethods.GZip | DecompressionMethods.Deflate | DecompressionMethods.Brotli
-                    : DecompressionMethods.None
+                MaxRetryAttempts = _options.MaxRetryAttempts,
+                InitialDelay = _options.InitialRetryDelay,
+                MaxDelay = _options.MaxRetryDelay,
+                RespectRetryAfter = _options.RespectRetryAfter,
+                RetryNonIdempotentRequests = _options.RetryNonIdempotentRequests,
+                OnRetry = _options.OnRetry
             };
-#else
-            var handler = new HttpClientHandler();
-            if (options.EnableCompression)
-            {
-                handler.AutomaticDecompression = DecompressionMethods.GZip | DecompressionMethods.Deflate;
-            }
-            return handler;
-#endif
         }
 
         /// <summary>
         /// Sends an HTTP GET request and streams response directly into <typeparamref name="T"/> without intermediate string allocations.
+        /// Returns <c>default</c> for responses without a body (204, 205, 304, Content-Length: 0).
         /// </summary>
         public Task<T?> GetAsync<T>(
             string uri,
@@ -109,13 +154,12 @@ namespace ZeroNetwork.Http
             CancellationToken cancellationToken = default)
         {
             string fullUri = AppendQueryParams(uri, queryParams);
-            return SendAndDeserializeAsync<T>(
-                () => CreateRequest(HttpMethod.Get, fullUri, null, bearerToken, apiKey),
-                cancellationToken);
+            return SendJsonAsync<T>(HttpMethod.Get, fullUri, null, bearerToken, apiKey, cancellationToken);
         }
 
         /// <summary>
         /// Sends an HTTP POST request with a JSON payload and streams response directly into <typeparamref name="TResult"/>.
+        /// POST is not retried unless <see cref="ZeroApiClientOptions.RetryNonIdempotentRequests"/> is enabled.
         /// </summary>
         public async Task<TResult?> PostAsync<TRequest, TResult>(
             string uri,
@@ -124,18 +168,8 @@ namespace ZeroNetwork.Http
             string? apiKey = null,
             CancellationToken cancellationToken = default)
         {
-            var contentStream = new MemoryStream();
-            await _serializer.SerializeAsync(contentStream, payload, cancellationToken).ConfigureAwait(false);
-            byte[] payloadBytes = contentStream.ToArray();
-
-            return await SendAndDeserializeAsync<TResult>(
-                () =>
-                {
-                    var content = new ByteArrayContent(payloadBytes);
-                    content.Headers.ContentType = new MediaTypeHeaderValue("application/json") { CharSet = "utf-8" };
-                    return CreateRequest(HttpMethod.Post, uri, content, bearerToken, apiKey);
-                },
-                cancellationToken).ConfigureAwait(false);
+            ZeroHttpContent content = await ZeroPooledContent.SerializeJsonAsync(Serializer, payload, cancellationToken).ConfigureAwait(false);
+            return await SendJsonAsync<TResult>(HttpMethod.Post, uri, content, bearerToken, apiKey, cancellationToken).ConfigureAwait(false);
         }
 
         /// <summary>
@@ -148,22 +182,13 @@ namespace ZeroNetwork.Http
             string? apiKey = null,
             CancellationToken cancellationToken = default)
         {
-            var contentStream = new MemoryStream();
-            await _serializer.SerializeAsync(contentStream, payload, cancellationToken).ConfigureAwait(false);
-            byte[] payloadBytes = contentStream.ToArray();
-
-            return await SendAndDeserializeAsync<TResult>(
-                () =>
-                {
-                    var content = new ByteArrayContent(payloadBytes);
-                    content.Headers.ContentType = new MediaTypeHeaderValue("application/json") { CharSet = "utf-8" };
-                    return CreateRequest(HttpMethod.Put, uri, content, bearerToken, apiKey);
-                },
-                cancellationToken).ConfigureAwait(false);
+            ZeroHttpContent content = await ZeroPooledContent.SerializeJsonAsync(Serializer, payload, cancellationToken).ConfigureAwait(false);
+            return await SendJsonAsync<TResult>(HttpMethod.Put, uri, content, bearerToken, apiKey, cancellationToken).ConfigureAwait(false);
         }
 
         /// <summary>
         /// Sends an HTTP DELETE request and streams response directly into <typeparamref name="TResult"/>.
+        /// Returns <c>default</c> for <c>204 No Content</c>.
         /// </summary>
         public Task<TResult?> DeleteAsync<TResult>(
             string uri,
@@ -171,14 +196,13 @@ namespace ZeroNetwork.Http
             string? apiKey = null,
             CancellationToken cancellationToken = default)
         {
-            return SendAndDeserializeAsync<TResult>(
-                () => CreateRequest(HttpMethod.Delete, uri, null, bearerToken, apiKey),
-                cancellationToken);
+            return SendJsonAsync<TResult>(HttpMethod.Delete, uri, null, bearerToken, apiKey, cancellationToken);
         }
 
         /// <summary>
         /// Sends an HTTP GET request and returns the raw response stream.
-        /// Caller is responsible for disposing the returned Stream.
+        /// Caller is responsible for disposing the returned Stream; disposing it releases the connection.
+        /// The configured timeout applies until response headers are received.
         /// </summary>
         public async Task<Stream> GetStreamAsync(
             string uri,
@@ -186,171 +210,205 @@ namespace ZeroNetwork.Http
             string? apiKey = null,
             CancellationToken cancellationToken = default)
         {
-            var response = await ExecuteWithRetryAsync(
-                () => CreateRequest(HttpMethod.Get, uri, null, bearerToken, apiKey),
-                cancellationToken).ConfigureAwait(false);
+            ThrowIfDisposed();
 
-            response.EnsureSuccessStatusCode();
-            return await response.Content.ReadAsStreamAsync().ConfigureAwait(false);
-        }
+            ZeroHttpRequestMessage request = CreateRequest(HttpMethod.Get, uri, null, bearerToken, apiKey);
+            ZeroHttpResponseMessage? response = null;
 
-        private async Task<T?> SendAndDeserializeAsync<T>(
-            Func<HttpRequestMessage> requestFactory,
-            CancellationToken cancellationToken)
-        {
-            using (var response = await ExecuteWithRetryAsync(requestFactory, cancellationToken).ConfigureAwait(false))
+            using (var scope = new ZeroTimeoutScope(_timeout, cancellationToken))
             {
-                response.EnsureSuccessStatusCode();
-
-                using (var stream = await response.Content.ReadAsStreamAsync().ConfigureAwait(false))
+                try
                 {
-                    return await _serializer.DeserializeAsync<T>(stream, cancellationToken).ConfigureAwait(false);
+                    response = await _client.SendAsync(request, scope.Token).ConfigureAwait(false);
+                    EnsureSuccessStatusCode(response);
+                    return response.DetachBody(request);
+                }
+                catch (Exception ex)
+                {
+                    response?.Dispose();
+                    request.Dispose();
+
+                    Exception? translated = scope.Translate(ex);
+                    if (translated != null) throw translated;
+                    throw;
                 }
             }
         }
 
-        private HttpRequestMessage CreateRequest(
+        private async Task<T?> SendJsonAsync<T>(
             HttpMethod method,
             string uri,
-            HttpContent? content,
+            ZeroHttpContent? content,
+            string? bearerToken,
+            string? apiKey,
+            CancellationToken cancellationToken)
+        {
+            ZeroHttpRequestMessage request;
+            try
+            {
+                ThrowIfDisposed();
+                request = CreateRequest(method, uri, content, bearerToken, apiKey);
+            }
+            catch
+            {
+                content?.Dispose();
+                throw;
+            }
+
+            using (request)
+            using (var scope = new ZeroTimeoutScope(_timeout, cancellationToken))
+            {
+                try
+                {
+                    using (ZeroHttpResponseMessage response = await _client.SendAsync(request, scope.Token).ConfigureAwait(false))
+                    {
+                        EnsureSuccessStatusCode(response);
+
+                        if (response.HasNoBody)
+                        {
+                            return EmptyResult<T>();
+                        }
+
+                        return await DeserializeBodyAsync<T>(response, scope.Token).ConfigureAwait(false);
+                    }
+                }
+                catch (Exception ex)
+                {
+                    Exception? translated = scope.Translate(ex);
+                    if (translated != null) throw translated;
+                    throw;
+                }
+            }
+        }
+
+        /// <summary>
+        /// Deserializes the body while guaranteeing that cancellation/timeout interrupts a stalled read.
+        /// </summary>
+        private async Task<T?> DeserializeBodyAsync<T>(ZeroHttpResponseMessage response, CancellationToken cancellationToken)
+        {
+#if NET5_0_OR_GREATER
+            // Modern response streams honor the token; disposing the response is a second line of defense.
+            using (cancellationToken.Register(state => ((IDisposable)state!).Dispose(), response))
+            {
+                return await DeserializeCoreAsync<T>(response.Body, cancellationToken).ConfigureAwait(false);
+            }
+#else
+            // Legacy stacks (HttpWebRequest) may ignore the token, and disposing an unread response can drain the
+            // connection synchronously. Abort on a pool thread and stop awaiting the read once cancelled.
+            using (cancellationToken.Register(
+                state => ThreadPool.QueueUserWorkItem(r => ((IDisposable)r!).Dispose(), state),
+                response))
+            {
+                Task<T?> work = DeserializeCoreAsync<T>(response.Body, cancellationToken);
+                if (!work.IsCompleted)
+                {
+                    var cancelled = new TaskCompletionSource<bool>(TaskCreationOptions.RunContinuationsAsynchronously);
+                    using (cancellationToken.Register(state => ((TaskCompletionSource<bool>)state!).TrySetResult(true), cancelled))
+                    {
+                        Task finished = await Task.WhenAny(work, cancelled.Task).ConfigureAwait(false);
+                        if (!ReferenceEquals(finished, work))
+                        {
+                            // Observe the orphaned read so its eventual fault is not reported as unobserved.
+                            _ = work.ContinueWith(
+                                t => _ = t.Exception,
+                                CancellationToken.None,
+                                TaskContinuationOptions.OnlyOnFaulted | TaskContinuationOptions.ExecuteSynchronously,
+                                TaskScheduler.Default);
+                            cancellationToken.ThrowIfCancellationRequested();
+                        }
+                    }
+                }
+                return await work.ConfigureAwait(false);
+            }
+#endif
+        }
+
+        private async Task<T?> DeserializeCoreAsync<T>(Stream body, CancellationToken cancellationToken)
+        {
+            // Peek one byte: empty chunked/close-delimited/decompressed bodies carry no Content-Length.
+            var first = new byte[1];
+            int read = await body.ReadAsync(first, 0, 1, cancellationToken).ConfigureAwait(false);
+            if (read == 0)
+            {
+                return EmptyResult<T>();
+            }
+
+            using (var prefixed = new PrefixedReadStream(first[0], body))
+            {
+                return await Serializer.DeserializeAsync<T>(prefixed, cancellationToken).ConfigureAwait(false);
+            }
+        }
+
+        /// <summary>
+        /// Result for a body-less success response: empty string/byte array (legacy fallback behavior), otherwise default.
+        /// </summary>
+        private static T? EmptyResult<T>()
+        {
+            if (typeof(T) == typeof(string)) return (T)(object)string.Empty;
+            if (typeof(T) == typeof(byte[])) return (T)(object)Array.Empty<byte>();
+            return default;
+        }
+
+        private ZeroHttpRequestMessage CreateRequest(
+            HttpMethod method,
+            string uri,
+            ZeroHttpContent? content,
             string? bearerToken,
             string? apiKey)
         {
-            var request = new HttpRequestMessage(method, uri);
-            if (content != null)
-            {
-                request.Content = content;
-            }
+            var request = new ZeroHttpRequestMessage(method, uri) { Content = content };
 
             string? token = !string.IsNullOrEmpty(bearerToken) ? bearerToken : _options.DefaultBearerToken;
             if (!string.IsNullOrEmpty(token))
             {
-                request.Headers.Authorization = new AuthenticationHeaderValue("Bearer", token);
+                request.Headers.Set("Authorization", "Bearer " + token);
             }
 
             string? key = !string.IsNullOrEmpty(apiKey) ? apiKey : _options.DefaultApiKey;
             if (!string.IsNullOrEmpty(key))
             {
-                request.Headers.Add("x-api-key", key);
+                request.Headers.Set("x-api-key", key!);
             }
 
             return request;
         }
 
-        private async Task<HttpResponseMessage> ExecuteWithRetryAsync(
-            Func<HttpRequestMessage> requestFactory,
-            CancellationToken cancellationToken)
+        private static void EnsureSuccessStatusCode(ZeroHttpResponseMessage response)
         {
-            int attempts = 0;
-            int maxAttempts = Math.Max(1, _options.MaxRetryAttempts + 1);
-            TimeSpan delay = _options.InitialRetryDelay;
+            if (response.IsSuccessStatusCode) return;
 
-            while (true)
-            {
-                attempts++;
-                cancellationToken.ThrowIfCancellationRequested();
-
-                HttpRequestMessage request = requestFactory();
-                HttpResponseMessage? response = null;
-                Exception? caughtException = null;
-
-                try
-                {
-                    response = await _httpClient.SendAsync(request, HttpCompletionOption.ResponseHeadersRead, cancellationToken).ConfigureAwait(false);
-                }
-                catch (Exception ex) when (IsTransientException(ex, cancellationToken))
-                {
-                    caughtException = ex;
-                }
-
-                if (response != null && !IsTransientStatusCode(response.StatusCode))
-                {
-                    return response;
-                }
-
-                if (attempts >= maxAttempts)
-                {
-                    if (response != null) return response;
-                    if (caughtException != null) throw caughtException;
-                }
-
-                response?.Dispose();
-
-                // Exponential backoff with jitter
-                int jitterMs = new Random().Next(10, 50);
-                await Task.Delay(delay + TimeSpan.FromMilliseconds(jitterMs), cancellationToken).ConfigureAwait(false);
-                delay = TimeSpan.FromMilliseconds(delay.TotalMilliseconds * 2);
-            }
-        }
-
-        private static bool IsTransientStatusCode(HttpStatusCode statusCode)
-        {
-            return statusCode == HttpStatusCode.RequestTimeout ||
-                   statusCode == (HttpStatusCode)429 || // TooManyRequests
-                   statusCode == HttpStatusCode.BadGateway ||
-                   statusCode == HttpStatusCode.ServiceUnavailable ||
-                   statusCode == HttpStatusCode.GatewayTimeout;
-        }
-
-        private static bool IsTransientException(Exception ex, CancellationToken cancellationToken)
-        {
-            if (cancellationToken.IsCancellationRequested) return false;
-            return ex is HttpRequestException || ex is SocketException || ex is IOException || ex is TimeoutException;
+            string message = $"Response status code does not indicate success: {response.StatusCode} ({response.ReasonPhrase}).";
+#if NET5_0_OR_GREATER
+            var exception = new HttpRequestException(message, null, (HttpStatusCode)response.StatusCode);
+#else
+            var exception = new HttpRequestException(message);
+#endif
+            exception.Data["StatusCode"] = response.StatusCode;
+            throw exception;
         }
 
         /// <summary>
         /// Appends an object's properties or dictionary key-values to a URL as a query string.
+        /// Values are formatted with the invariant culture (decimals use '.', dates use ISO 8601, booleans are lowercase);
+        /// collections become repeated keys (<c>ids=1&amp;ids=2</c>); an existing fragment is preserved at the end.
         /// </summary>
         public static string AppendQueryParams(string url, object? queryParams)
         {
-            if (queryParams == null) return url;
+            return ZeroQueryStringBuilder.Append(url, queryParams);
+        }
 
-            var sb = new StringBuilder(url);
-            bool hasQuery = url.IndexOf('?') >= 0;
-
-            if (queryParams is IDictionary dict)
-            {
-                foreach (var key in dict.Keys)
-                {
-                    var val = dict[key];
-                    if (val == null) continue;
-
-                    sb.Append(hasQuery ? '&' : '?');
-                    hasQuery = true;
-                    sb.Append(Uri.EscapeDataString(key.ToString()!));
-                    sb.Append('=');
-                    sb.Append(Uri.EscapeDataString(val.ToString()!));
-                }
-                return sb.ToString();
-            }
-
-            PropertyInfo[] props = queryParams.GetType().GetProperties(BindingFlags.Public | BindingFlags.Instance);
-            for (int i = 0; i < props.Length; i++)
-            {
-                var p = props[i];
-                if (p.GetIndexParameters().Length > 0) continue;
-
-                object? val = p.GetValue(queryParams, null);
-                if (val == null) continue;
-
-                sb.Append(hasQuery ? '&' : '?');
-                hasQuery = true;
-                sb.Append(Uri.EscapeDataString(p.Name));
-                sb.Append('=');
-                sb.Append(Uri.EscapeDataString(val.ToString()!));
-            }
-
-            return sb.ToString();
+        private void ThrowIfDisposed()
+        {
+            if (Volatile.Read(ref _disposed) != 0) throw new ObjectDisposedException(nameof(ZeroApiClient));
         }
 
         public void Dispose()
         {
-            if (_disposed) return;
-            _disposed = true;
+            if (Interlocked.Exchange(ref _disposed, 1) != 0) return;
 
             if (_ownsClient)
             {
-                _httpClient.Dispose();
+                _client.Dispose();
             }
         }
     }

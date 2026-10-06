@@ -10,6 +10,7 @@ using ZeroNetwork.Http;
 
 namespace ZeroNetwork.Tests
 {
+    [Collection("ZeroTelemetryRegistry")]
     public class ZeroAdvancedProposalsTests
     {
         #region ZeroClock Tests

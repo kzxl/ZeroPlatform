@@ -1,4 +1,7 @@
 using System;
+using System.Net;
+using System.Net.Http;
+using ZeroNetwork.Http.Client;
 
 namespace ZeroNetwork.Http
 {
@@ -9,17 +12,21 @@ namespace ZeroNetwork.Http
     {
         /// <summary>
         /// Base URI for all relative API requests (e.g. "https://api.erp.local/").
+        /// Relative request paths are resolved against the base path, with or without a leading '/'.
         /// </summary>
         public string? BaseAddress { get; set; }
 
         /// <summary>
-        /// Global request timeout (default: 30 seconds).
+        /// Overall timeout of one API call, covering all retry attempts, backoff delays and response body
+        /// deserialization (default: 30 seconds). Use <see cref="System.Threading.Timeout.InfiniteTimeSpan"/> to disable.
+        /// For <see cref="ZeroApiClient.GetStreamAsync"/> the timeout applies until response headers are received.
         /// </summary>
         public TimeSpan Timeout { get; set; } = TimeSpan.FromSeconds(30);
 
         /// <summary>
         /// Maximum retry attempts for transient network failures (default: 3).
-        /// Set to 0 to disable retry.
+        /// Set to 0 to disable retry. Only idempotent requests (GET, PUT, DELETE, ...) are retried unless
+        /// <see cref="RetryNonIdempotentRequests"/> is enabled.
         /// </summary>
         public int MaxRetryAttempts { get; set; } = 3;
 
@@ -27,6 +34,44 @@ namespace ZeroNetwork.Http
         /// Initial delay before first retry (default: 200ms, scales exponentially).
         /// </summary>
         public TimeSpan InitialRetryDelay { get; set; } = TimeSpan.FromMilliseconds(200);
+
+        /// <summary>
+        /// Upper bound for a single retry delay (default: 30 seconds). A server <c>Retry-After</c> above this value
+        /// stops retrying and surfaces the response.
+        /// </summary>
+        public TimeSpan MaxRetryDelay { get; set; } = TimeSpan.FromSeconds(30);
+
+        /// <summary>
+        /// Honors the server <c>Retry-After</c> header on 429/503 responses (default: true).
+        /// </summary>
+        public bool RespectRetryAfter { get; set; } = true;
+
+        /// <summary>
+        /// Retries POST requests on transient failures (default: false).
+        /// WARNING: may create duplicate business records when the server processed the request but the response was lost.
+        /// </summary>
+        public bool RetryNonIdempotentRequests { get; set; }
+
+        /// <summary>
+        /// Invoked before each retry delay (logging / metrics).
+        /// </summary>
+        public Action<ZeroRetryContext>? OnRetry { get; set; }
+
+        /// <summary>
+        /// TCP connect timeout (net8.0 only). <c>null</c> keeps the BCL default.
+        /// </summary>
+        public TimeSpan? ConnectTimeout { get; set; }
+
+        /// <summary>
+        /// Explicit proxy. <c>null</c> keeps the platform default proxy behavior.
+        /// </summary>
+        public IWebProxy? Proxy { get; set; }
+
+        /// <summary>
+        /// Escape hatch to customize the created handler (<c>SocketsHttpHandler</c> on net8.0,
+        /// <see cref="HttpClientHandler"/> on legacy targets): TLS validation, client certificates, credentials.
+        /// </summary>
+        public Action<HttpMessageHandler>? ConfigureHandler { get; set; }
 
         /// <summary>
         /// Default Bearer Token added to the Authorization header of every request.
