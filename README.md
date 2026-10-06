@@ -35,16 +35,18 @@ graph TD
         Twin["ZeroTwin3D & Zero3D"]:::l4
     end
 
-    subgraph L3 ["Tier 3: Perception & Intelligence (Vision, OCR, Audio & AI)"]
+    subgraph L3 ["Tier 3: Perception & Intelligence (Vision, OCR, Audio, Motion & AI)"]
         Video["ZeroVideo"]:::l3
         Infer["ZeroInference, ZeroNeural, ZeroTokenizer & ZeroLlm"]:::l3
         Ocr["ZeroOcr"]:::l3
         Sig["ZeroSignal, ZeroAudio & ZeroAudioVisual"]:::l3
         Geom["ZeroGeometry"]:::l3
+        Motion["ZeroMotion"]:::l3
     end
 
     subgraph L2 ["Tier 2: Transport & Storage (Data & Comm Pipelines)"]
         Comm["ZeroComm, ZeroIoT & ZeroRfid"]:::l2
+        Bus["ZeroBus"]:::l2
         Net["ZeroNetwork"]:::l2
         Store["ZeroStorage, ZeroData & ZeroVector"]:::l2
     end
@@ -102,13 +104,15 @@ graph TD
 | **`ZeroStorage`** | [`kzxl/ZeroStorage`](https://github.com/kzxl/ZeroStorage) | Embedded TSDB, Facebook Gorilla Delta-of-Delta + XOR float compression (1.37 B/sample), MMF zero-copy persistence, IoT out-of-order ingestion, CRC32 WAL. |
 | **`ZeroData`** | [`kzxl/ZeroData`](https://github.com/kzxl/ZeroData) | Columnar DataFrame, SIMD relational hash joins, dynamic NL-to-SQL builder & schema metadata, compiled SQL expressions, Arrow IPC, Roslyn-less CodeGen. |
 | **`ZeroVector`** | [`kzxl/ZeroVector`](https://github.com/kzxl/ZeroVector) | High-throughput embedded Vector Database & SIMD similarity engine, AVX2/FMA metrics (Cosine, DotProduct, Euclidean, Manhattan, Hamming), Flat contiguous index & HNSW graph index. |
+| **`ZeroBus`** | [`kzxl/ZeroBus`](https://github.com/kzxl/ZeroBus) | Real-Time Motion Fieldbus suite: CAN 2.0A/B & SocketCAN core, CANopen CiA 301 & CiA 402 Servo Drive Profile (PPM, PVM, CSP), EtherCAT Master (ESM, CoE mailbox, cyclic PDO exchange). |
 
-### Tier 3: Perception & Intelligence (Signal, Vision, OCR, Audio & AI)
+### Tier 3: Perception & Intelligence (Signal, Vision, OCR, Audio, Motion & AI)
 | Subsystem | Repository | Key Capabilities |
 | :--- | :--- | :--- |
 | **`ZeroSignal`** | [`kzxl/ZeroSignal`](https://github.com/kzxl/ZeroSignal) | In-place Cooley-Tukey FFT, real-time STFT spectrogram, zero-phase Butterworth `FiltFilt`, Extended Kalman Filter (EKF), VAD voice activity detector. |
 | **`ZeroAudio`** | [`kzxl/ZeroAudio`](https://github.com/kzxl/ZeroAudio) | High-performance audio capture/playback, WAV/PCM codecs, channel mixing, circular DMA audio buffer, and sub-ms acoustic streaming. |
 | **`ZeroGeometry`** | [`kzxl/ZeroGeometry`](https://github.com/kzxl/ZeroGeometry) | 3D ICP rigid cloud alignment, KdTree3D/RTree2D spatial queries, surface normal estimation, Sutherland-Hodgman clipping, 2D Delaunay triangulation, 2D Homography DLT & RANSAC. |
+| **`ZeroMotion`** | [`kzxl/ZeroMotion`](https://github.com/kzxl/ZeroMotion) | Industrial Robotics Kinematics & Motion Planning: Forward Kinematics (6-Axis, SCARA, Delta, Cartesian), Geometric Jacobians, CCD & Analytical Closed-Form Inverse Kinematics, 7-Phase Jerk-Limited S-Curve Trajectory, and ROS URDF model parser. |
 | **`ZeroVideo`** | [`kzxl/ZeroVideo`](https://github.com/kzxl/ZeroVideo) | Industrial Motion JPEG client, RTSP 1.0 session transport, RFC 3550 RTP demuxing, H.264 NALU scanner & Exp-Golomb SPS parser, zero-LOH `VideoFramePool`, PTS playback. |
 | **`ZeroAudioVisual`** | [`kzxl/ZeroAudioVisual`](https://github.com/kzxl/ZeroAudioVisual) | Acoustic predictive maintenance, multi-channel microphone array beamforming & audio-visual defect localization. |
 | **`ZeroInference`** | [`kzxl/ZeroInference`](https://github.com/kzxl/ZeroInference) | Polymorphic `IInferenceSession`, Pure C# ONNX binary model parser, Transformer operators (RoPE `RotaryEmbedding`, CPU cache-tiled `FlashAttentionKernel`), CPU execution graph & OnnxRuntime GPU providers, YOLOv8/v11 decoders. |
@@ -240,7 +244,7 @@ flowchart TB
 
 ## ⚡ Quick Start
 
-### 1. Synchronize All 37 Subsystems
+### 1. Synchronize All 39 Subsystems
 ```powershell
 .\clone-ecosystem.ps1
 ```

@@ -8,11 +8,11 @@
 
 ## 1. Executive Summary & Architectural Motivation
 
-ZeroPlatform is engineered as a sovereign, pure C# industrial software ecosystem operating across 37 autonomous satellite repositories. 
+ZeroPlatform is engineered as a sovereign, pure C# industrial software ecosystem operating across 39 autonomous satellite repositories. 
 
 Historically, each satellite maintained a strictly isolated "Zero Runtime Dependencies" philosophy. While this preserved autonomy, it resulted in **accidental duplication of foundation primitives** (e.g., custom ring buffers in `ZeroComm`, custom CRCs in `ZeroStorage`, custom unmanaged queues in `ZeroGraphics`).
 
-This specification establishes the **ZeroPlatform 6-Tier Strict Directed Acyclic Graph (DAG) Taxonomy**. It establishes formal boundaries, dependency invariants, metadata tagging conventions, and integration rules governing all 37 subsystems.
+This specification establishes the **ZeroPlatform 6-Tier Strict Directed Acyclic Graph (DAG) Taxonomy**. It establishes formal boundaries, dependency invariants, metadata tagging conventions, and integration rules governing all 39 subsystems.
 
 ---
 
@@ -39,16 +39,18 @@ graph TD
         Twin["ZeroTwin3D & Zero3D"]:::l4
     end
 
-    subgraph L3 ["Tier 3: Perception & Intelligence (Vision, OCR, Audio & AI)"]
+    subgraph L3 ["Tier 3: Perception & Intelligence (Vision, OCR, Audio, Motion & AI)"]
         Video["ZeroVideo"]:::l3
         Infer["ZeroInference, ZeroNeural, ZeroTokenizer & ZeroLlm"]:::l3
         Ocr["ZeroOcr"]:::l3
         Sig["ZeroSignal, ZeroAudio & ZeroAudioVisual"]:::l3
         Geom["ZeroGeometry"]:::l3
+        Mot["ZeroMotion"]:::l3
     end
 
-    subgraph L2 ["Tier 2: Transport & Storage (Data & Comm Pipelines)"]
+    subgraph L2 ["Tier 2: Transport & Storage (Data, Comm & Fieldbus Pipelines)"]
         Comm["ZeroComm, ZeroIoT & ZeroRfid"]:::l2
+        Bus["ZeroBus"]:::l2
         Net["ZeroNetwork"]:::l2
         Store["ZeroStorage, ZeroData & ZeroVector"]:::l2
     end
@@ -119,18 +121,20 @@ graph TD
 | **`ZeroStorage`** | Embedded TSDB, Facebook Gorilla Delta-of-Delta + XOR compression, MMF zero-copy persistence, Write-Ahead Log (WAL). |
 | **`ZeroData`** | Columnar DataFrame, SIMD relational hash joins, Dynamic NL-to-SQL builder & schema metadata, compiled SQL expressions, Arrow IPC, Roslyn-less CodeGen. |
 | **`ZeroVector`** | High-throughput embedded Vector Database & SIMD similarity metric engine, AVX2/FMA metrics, Flat contiguous index & HNSW graph index. |
+| **`ZeroBus`** | Real-time motion fieldbus suite: CAN 2.0A/B & CAN FD, CANopen CiA 301 (NMT, SDO, PDO) & CiA 402 Servo Drive Profile (PPM, PVM, CSP), EtherCAT Master (ESM state machine, CoE mailbox, cyclic LRW exchange). |
 
 ---
 
-### Tier 3: Perception & Intelligence (Signal, Vision, OCR, Audio & AI)
+### Tier 3: Perception & Intelligence (Signal, Vision, OCR, Audio, Motion & AI)
 * **Architectural Invariant**: Can depend on **Tier 0, Tier 1, and Tier 2 ($L_3 \rightarrow L_0, L_1, L_2$)**.
-* **Responsibilities**: Signal processing, point clouds, live video ingestion/streaming, acoustic analytics, neural execution graphs, OCR inspection, tokenizers, SLMs, and deep learning inference.
+* **Responsibilities**: Signal processing, point clouds, robotics kinematics, trajectory planning, URDF models, live video ingestion/streaming, acoustic analytics, neural execution graphs, OCR inspection, tokenizers, SLMs, and deep learning inference.
 
 | Subsystem | Primary Capabilities |
 | :--- | :--- |
 | **`ZeroSignal`** | In-place radix-2 Cooley-Tukey FFT, zero-phase Butterworth `FiltFilt`, Extended Kalman Filter (EKF), DWT wavelets, and Levenberg-Marquardt non-linear least squares optimization. |
 | **`ZeroAudio`** | Pure C# audio DSP & streaming engine, WAV/RIFF codec, lock-free SPSC `AudioRingBuffer`, ArrayPool-backed `AudioBuffer`, cubic Hermite resampling, STFT spectrograms, Voice Activity Detection (VAD). |
 | **`ZeroGeometry`** | 3D ICP rigid cloud alignment, KdTree3D/RTree2D spatial queries, surface normal estimation, Sutherland-Hodgman clipping, Delaunay triangulation. |
+| **`ZeroMotion`** | Robotics & motion control: Forward/Inverse Kinematics (6-Axis, SCARA, Cartesian), Geometric Jacobians, CCD & Analytical closed-form IK, 7-phase Jerk-limited S-curve trajectory generation, pure C# ROS URDF parser. |
 | **`ZeroVideo`** | Industrial Motion JPEG client, RTSP 1.0 session transport, RFC 3550 RTP demuxing, H.264 NALU scanner & Exp-Golomb SPS parser, zero-LOH `VideoFramePool`, PTS playback. |
 | **`ZeroAudioVisual`** | Acoustic predictive maintenance & multi-channel microphone array beamforming defect localization. |
 | **`ZeroInference`** | Polymorphic `IInferenceSession`, pure C# ONNX binary model parser, CPU execution graph & OnnxRuntime GPU providers, YOLOv8/v11 anchor-free decoders (detect, pose, seg). |

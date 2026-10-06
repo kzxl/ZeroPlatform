@@ -73,6 +73,10 @@
     <Project Path="ZeroVector/src/ZeroVector.Core/ZeroVector.Core.csproj" />
     <Project Path="ZeroVector/tests/ZeroVector.Tests/ZeroVector.Tests.csproj" />
   </Folder>
+  <Folder Name="/02_L2_TransportAndStorage/ZeroBus/">
+    <Project Path="ZeroBus/src/ZeroBus.Core/ZeroBus.Core.csproj" />
+    <Project Path="ZeroBus/tests/ZeroBus.Tests/ZeroBus.Tests.csproj" />
+  </Folder>
 
   <!-- ================================================================= -->
   <!-- LAYER 3: PERCEPTION & INTELLIGENCE (SIGNAL, VISION & AI)          -->
@@ -120,6 +124,10 @@
   <Folder Name="/03_L3_PerceptionAndIntelligence/ZeroLlm/">
     <Project Path="ZeroLlm/src/ZeroLlm.Core/ZeroLlm.Core.csproj" />
     <Project Path="ZeroLlm/tests/ZeroLlm.Tests/ZeroLlm.Tests.csproj" />
+  </Folder>
+  <Folder Name="/03_L3_PerceptionAndIntelligence/ZeroMotion/">
+    <Project Path="ZeroMotion/src/ZeroMotion.Core/ZeroMotion.Core.csproj" />
+    <Project Path="ZeroMotion/tests/ZeroMotion.Tests/ZeroMotion.Tests.csproj" />
   </Folder>
 
   <!-- ================================================================= -->

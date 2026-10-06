@@ -8,7 +8,7 @@
 
 ZeroPlatform employs a decentralized **Satellite Architecture** where each subsystem is an autonomous repository with independent release cycles, decoupled CI/CD, and zero external runtime dependencies.
 
-All 37 subsystems adhere to the **6-Tier Strict Directed Acyclic Graph (DAG) Taxonomy** (defined in [Tier Taxonomy Specification](tier-taxonomy-specification.md)):
+All 39 subsystems adhere to the **6-Tier Strict Directed Acyclic Graph (DAG) Taxonomy** (defined in [Tier Taxonomy Specification](tier-taxonomy-specification.md)):
 
 ```mermaid
 graph TD
@@ -31,16 +31,18 @@ graph TD
         Twin["ZeroTwin3D & Zero3D"]:::l4
     end
 
-    subgraph L3 ["Tier 3: Perception & Intelligence (Vision, OCR, Audio & AI)"]
+    subgraph L3 ["Tier 3: Perception & Intelligence (Vision, OCR, Audio, Motion & AI)"]
         Video["ZeroVideo"]:::l3
         Infer["ZeroInference, ZeroNeural, ZeroTokenizer & ZeroLlm"]:::l3
         Ocr["ZeroOcr"]:::l3
         Sig["ZeroSignal, ZeroAudio & ZeroAudioVisual"]:::l3
         Geom["ZeroGeometry"]:::l3
+        Mot["ZeroMotion"]:::l3
     end
 
-    subgraph L2 ["Tier 2: Transport & Storage (Data & Comm Pipelines)"]
+    subgraph L2 ["Tier 2: Transport & Storage (Data, Comm & Fieldbus Pipelines)"]
         Comm["ZeroComm, ZeroIoT & ZeroRfid"]:::l2
+        Bus["ZeroBus"]:::l2
         Net["ZeroNetwork"]:::l2
         Store["ZeroStorage, ZeroData & ZeroVector"]:::l2
     end
@@ -89,9 +91,11 @@ graph TD
 | | **`ZeroStorage`** | [`kzxl/ZeroStorage`](https://github.com/kzxl/ZeroStorage) | Gorilla Delta-of-Delta + XOR floating-point time-series engine, write-ahead logging (WAL), memory-mapped files. |
 | | **`ZeroData`** | [`kzxl/ZeroData`](https://github.com/kzxl/ZeroData) | Columnar data tables, Dynamic NL-to-SQL builder & schema metadata, zero-copy Arrow memory serialization, relational hash joins. |
 | | **`ZeroVector`** | [`kzxl/ZeroVector`](https://github.com/kzxl/ZeroVector) | High-throughput embedded Vector Database & SIMD similarity engine, AVX2/FMA metrics, Flat contiguous index & HNSW graph index. |
+| | **`ZeroBus`** | [`kzxl/ZeroBus`](https://github.com/kzxl/ZeroBus) | Real-time motion fieldbus suite: CAN 2.0A/B & CAN FD, CANopen CiA 301/402 servo drive profile (CSP/PVM/PPM), EtherCAT Master (ESM, CoE mailbox, cyclic LRW exchange). |
 | **Tier 3: Perception & AI** | **`ZeroSignal`** | [`kzxl/ZeroSignal`](https://github.com/kzxl/ZeroSignal) | In-place radix-2 FFT, STFT spectrograms, zero-phase Butterworth filter, Extended Kalman Filter (EKF), VAD. |
 | *(Perception & Intelligence)* | **`ZeroAudio`** | [`kzxl/ZeroAudio`](https://github.com/kzxl/ZeroAudio) | High-performance audio capture/playback, WAV/PCM codecs, channel mixing, and circular DMA audio buffers. |
 | | **`ZeroGeometry`** | [`kzxl/ZeroGeometry`](https://github.com/kzxl/ZeroGeometry) | 3D Iterative Closest Point (ICP), KdTree3D/RTree2D, polygon Boolean clipping, Delaunay triangulation. |
+| | **`ZeroMotion`** | [`kzxl/ZeroMotion`](https://github.com/kzxl/ZeroMotion) | Robotics & motion control: Forward/Inverse Kinematics (6-Axis, SCARA, Cartesian), Geometric Jacobians, CCD & Analytical closed-form IK, 7-phase Jerk-limited S-curve trajectory generation, pure C# ROS URDF parser. |
 | | **`ZeroVideo`** | [`kzxl/ZeroVideo`](https://github.com/kzxl/ZeroVideo) | Industrial Motion JPEG client, RTSP 1.0 transport, RFC 3550 RTP, H.264 NALU/SPS Exp-Golomb, zero-LOH `VideoFramePool`. |
 | | **`ZeroAudioVisual`** | [`kzxl/ZeroAudioVisual`](https://github.com/kzxl/ZeroAudioVisual) | Acoustic predictive maintenance, multi-channel microphone array beamforming & defect localization. |
 | | **`ZeroInference`** | [`kzxl/ZeroInference`](https://github.com/kzxl/ZeroInference) | Polymorphic `IInferenceSession`, ONNX parser, CPU & OnnxRuntime GPU providers, YOLOv8/v11 anchor-free decoders. |
