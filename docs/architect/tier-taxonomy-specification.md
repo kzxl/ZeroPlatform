@@ -45,6 +45,7 @@ graph TD
         Ocr["ZeroOcr"]:::l3
         Sig["ZeroSignal, ZeroAudio & ZeroAudioVisual"]:::l3
         Geom["ZeroGeometry"]:::l3
+        Scan["ZeroScan3D"]:::l3
         Mot["ZeroMotion"]:::l3
     end
 
@@ -135,6 +136,7 @@ graph TD
 | **`ZeroAudio`** | Pure C# audio DSP & streaming engine, WAV/RIFF codec, lock-free SPSC `AudioRingBuffer`, ArrayPool-backed `AudioBuffer`, cubic Hermite resampling, STFT spectrograms, Voice Activity Detection (VAD). |
 | **`ZeroGeometry`** | 3D ICP rigid cloud alignment, KdTree3D/RTree2D spatial queries, surface normal estimation, Sutherland-Hodgman clipping, Delaunay triangulation. |
 | **`ZeroMotion`** | Robotics & motion control: Forward/Inverse Kinematics (6-Axis, SCARA, Cartesian), Geometric Jacobians, CCD & Analytical closed-form IK, 7-phase Jerk-limited S-curve trajectory generation, pure C# ROS URDF parser. |
+| **`ZeroScan3D`** | 3D Spatial scanning & Visual SLAM: Pinhole camera RGB-D unprojection, 6-DOF visual odometry tracking, incremental sparse voxel grid mapping, continuous TSDF volume integration, Marching Cubes isosurface extraction (OBJ/PLY). |
 | **`ZeroVideo`** | Industrial Motion JPEG client, RTSP 1.0 session transport, RFC 3550 RTP demuxing, H.264 NALU scanner & Exp-Golomb SPS parser, zero-LOH `VideoFramePool`, PTS playback. |
 | **`ZeroAudioVisual`** | Acoustic predictive maintenance & multi-channel microphone array beamforming defect localization. |
 | **`ZeroInference`** | Polymorphic `IInferenceSession`, pure C# ONNX binary model parser, CPU execution graph & OnnxRuntime GPU providers, YOLOv8/v11 anchor-free decoders (detect, pose, seg). |

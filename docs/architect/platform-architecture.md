@@ -37,6 +37,7 @@ graph TD
         Ocr["ZeroOcr"]:::l3
         Sig["ZeroSignal, ZeroAudio & ZeroAudioVisual"]:::l3
         Geom["ZeroGeometry"]:::l3
+        Scan["ZeroScan3D"]:::l3
         Mot["ZeroMotion"]:::l3
     end
 
@@ -96,6 +97,7 @@ graph TD
 | *(Perception & Intelligence)* | **`ZeroAudio`** | [`kzxl/ZeroAudio`](https://github.com/kzxl/ZeroAudio) | High-performance audio capture/playback, WAV/PCM codecs, channel mixing, and circular DMA audio buffers. |
 | | **`ZeroGeometry`** | [`kzxl/ZeroGeometry`](https://github.com/kzxl/ZeroGeometry) | 3D Iterative Closest Point (ICP), KdTree3D/RTree2D, polygon Boolean clipping, Delaunay triangulation. |
 | | **`ZeroMotion`** | [`kzxl/ZeroMotion`](https://github.com/kzxl/ZeroMotion) | Robotics & motion control: Forward/Inverse Kinematics (6-Axis, SCARA, Cartesian), Geometric Jacobians, CCD & Analytical closed-form IK, 7-phase Jerk-limited S-curve trajectory generation, pure C# ROS URDF parser. |
+| | **`ZeroScan3D`** | [`kzxl/ZeroScan3D`](https://github.com/kzxl/ZeroScan3D) | Pure C# 3D spatial scanning & Visual SLAM, pinhole RGB-D camera unprojection, 6-DOF visual odometry tracking, incremental sparse voxel grid mapping, continuous TSDF volume integration, and Marching Cubes 3D surface mesh reconstruction (OBJ/PLY). |
 | | **`ZeroVideo`** | [`kzxl/ZeroVideo`](https://github.com/kzxl/ZeroVideo) | Industrial Motion JPEG client, RTSP 1.0 transport, RFC 3550 RTP, H.264 NALU/SPS Exp-Golomb, zero-LOH `VideoFramePool`. |
 | | **`ZeroAudioVisual`** | [`kzxl/ZeroAudioVisual`](https://github.com/kzxl/ZeroAudioVisual) | Acoustic predictive maintenance, multi-channel microphone array beamforming & defect localization. |
 | | **`ZeroInference`** | [`kzxl/ZeroInference`](https://github.com/kzxl/ZeroInference) | Polymorphic `IInferenceSession`, ONNX parser, CPU & OnnxRuntime GPU providers, YOLOv8/v11 anchor-free decoders. |

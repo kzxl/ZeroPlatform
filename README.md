@@ -41,6 +41,7 @@ graph TD
         Ocr["ZeroOcr"]:::l3
         Sig["ZeroSignal, ZeroAudio & ZeroAudioVisual"]:::l3
         Geom["ZeroGeometry"]:::l3
+        Scan["ZeroScan3D"]:::l3
         Motion["ZeroMotion"]:::l3
     end
 
@@ -113,6 +114,7 @@ graph TD
 | **`ZeroAudio`** | [`kzxl/ZeroAudio`](https://github.com/kzxl/ZeroAudio) | High-performance audio capture/playback, WAV/PCM codecs, channel mixing, circular DMA audio buffer, and sub-ms acoustic streaming. |
 | **`ZeroGeometry`** | [`kzxl/ZeroGeometry`](https://github.com/kzxl/ZeroGeometry) | 3D ICP rigid cloud alignment, KdTree3D/RTree2D spatial queries, surface normal estimation, Sutherland-Hodgman clipping, 2D Delaunay triangulation, 2D Homography DLT & RANSAC. |
 | **`ZeroMotion`** | [`kzxl/ZeroMotion`](https://github.com/kzxl/ZeroMotion) | Industrial Robotics Kinematics & Motion Planning: Forward Kinematics (6-Axis, SCARA, Delta, Cartesian), Geometric Jacobians, CCD & Analytical Closed-Form Inverse Kinematics, 7-Phase Jerk-Limited S-Curve Trajectory, and ROS URDF model parser. |
+| **`ZeroScan3D`** | [`kzxl/ZeroScan3D`](https://github.com/kzxl/ZeroScan3D) | Pure C# 3D spatial scanning & Visual SLAM, pinhole RGB-D camera unprojection, 6-DOF visual odometry tracking, incremental sparse voxel grid mapping, continuous TSDF volume integration, and Marching Cubes 3D surface mesh reconstruction (OBJ/PLY). |
 | **`ZeroVideo`** | [`kzxl/ZeroVideo`](https://github.com/kzxl/ZeroVideo) | Industrial Motion JPEG client, RTSP 1.0 session transport, RFC 3550 RTP demuxing, H.264 NALU scanner & Exp-Golomb SPS parser, zero-LOH `VideoFramePool`, PTS playback. |
 | **`ZeroAudioVisual`** | [`kzxl/ZeroAudioVisual`](https://github.com/kzxl/ZeroAudioVisual) | Acoustic predictive maintenance, multi-channel microphone array beamforming & audio-visual defect localization. |
 | **`ZeroInference`** | [`kzxl/ZeroInference`](https://github.com/kzxl/ZeroInference) | Polymorphic `IInferenceSession`, Pure C# ONNX binary model parser, Transformer operators (RoPE `RotaryEmbedding`, CPU cache-tiled `FlashAttentionKernel`), CPU execution graph & OnnxRuntime GPU providers, YOLOv8/v11 decoders. |

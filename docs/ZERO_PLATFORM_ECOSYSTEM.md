@@ -43,6 +43,7 @@ graph TD
         ZeroAudio["🔊 ZeroAudio<br/><i>WAV/PCM Codec, DMA Audio Buffer</i>"]:::l3
         ZeroAudioVisual["🎙️ ZeroAudioVisual<br/><i>Beamforming & Acoustic Vision</i>"]:::l3
         ZeroGeometry["📐 ZeroGeometry<br/><i>ICP PointCloud, KdTree & Polygons</i>"]:::l3
+        ZeroScan3D["🛰️ ZeroScan3D<br/><i>Visual SLAM, TSDF & Marching Cubes</i>"]:::l3
         ZeroMotion["🤖 ZeroMotion<br/><i>Kinematics, S-Curve & URDF</i>"]:::l3
         ZeroTokenizer["🔤 ZeroTokenizer<br/><i>BPE, Tiktoken & Knapsack Budget</i>"]:::l3
         ZeroLlm["🧠 ZeroLlm<br/><i>SLM Runtime, GGUF & Paged KV</i>"]:::l3
@@ -121,6 +122,7 @@ graph TD
 | **`ZeroAudio`** | [`kzxl/ZeroAudio`](https://github.com/kzxl/ZeroAudio) | `ZeroAudio` | High-performance audio capture/playback, WAV/PCM codecs, channel mixing, circular DMA audio buffer, and sub-ms acoustic streaming. |
 | **`ZeroGeometry`** | [`kzxl/ZeroGeometry`](https://github.com/kzxl/ZeroGeometry) | `ZeroGeometry.Core` | 3D ICP rigid cloud alignment, KdTree3D/RTree2D spatial queries, surface normal estimation, Sutherland-Hodgman clipping, 2D Delaunay triangulation, 2D Homography DLT & RANSAC. |
 | **`ZeroMotion`** | [`kzxl/ZeroMotion`](https://github.com/kzxl/ZeroMotion) | `ZeroMotion.Core` | Industrial Robotics Kinematics & Motion Planning: Forward Kinematics (6-Axis, SCARA, Delta, Cartesian), Geometric Jacobians, CCD & Analytical Closed-Form Inverse Kinematics, 7-Phase Jerk-Limited S-Curve Trajectory, and ROS URDF model parser. |
+| **`ZeroScan3D`** | [`kzxl/ZeroScan3D`](https://github.com/kzxl/ZeroScan3D) | `ZeroScan3D.Core` | Pure C# 3D spatial scanning & Visual SLAM, pinhole RGB-D camera unprojection, 6-DOF visual odometry tracking, incremental sparse voxel grid mapping, continuous TSDF volume integration, and Marching Cubes 3D surface mesh reconstruction (OBJ/PLY). |
 | **`ZeroVideo`** | [`kzxl/ZeroVideo`](https://github.com/kzxl/ZeroVideo) | `ZeroVideo` | Industrial Motion JPEG client, RTSP 1.0 session transport, RFC 3550 RTP demuxing, H.264 NALU scanner & Exp-Golomb SPS parser, zero-LOH `VideoFramePool`, PTS playback. |
 | **`ZeroAudioVisual`** | [`kzxl/ZeroAudioVisual`](https://github.com/kzxl/ZeroAudioVisual) | `ZeroAudioVisual` | Acoustic predictive maintenance, multi-channel microphone array beamforming & audio-visual defect localization. |
 | **`ZeroInference`** | [`kzxl/ZeroInference`](https://github.com/kzxl/ZeroInference) | `ZeroInference.Core` | Polymorphic `IInferenceSession`, Pure C# ONNX binary model parser, Transformer operators (RoPE `RotaryEmbedding`, CPU cache-tiled `FlashAttentionKernel`), CPU execution graph & OnnxRuntime GPU providers, YOLOv8/v11 decoders. |

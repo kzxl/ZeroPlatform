@@ -129,6 +129,10 @@
     <Project Path="ZeroMotion/src/ZeroMotion.Core/ZeroMotion.Core.csproj" />
     <Project Path="ZeroMotion/tests/ZeroMotion.Tests/ZeroMotion.Tests.csproj" />
   </Folder>
+  <Folder Name="/03_L3_PerceptionAndIntelligence/ZeroScan3D/">
+    <Project Path="ZeroScan3D/src/ZeroScan3D.Core/ZeroScan3D.Core.csproj" />
+    <Project Path="ZeroScan3D/tests/ZeroScan3D.Tests/ZeroScan3D.Tests.csproj" />
+  </Folder>
 
   <!-- ================================================================= -->
   <!-- LAYER 4: GRAPHICS & SPATIAL 3D (GPU ACCELERATED VISUALIZATION)    -->
