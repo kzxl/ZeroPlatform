@@ -350,3 +350,31 @@ Include the corresponding badge markdown at the top of each repository's `README
 - **Role**: Sovereign Central Ecosystem Orchestrator & Multi-Repo Workspace
 - **GitHub Description**: Sovereign pure C# industrial software ecosystem: 40 autonomous subsystems (including 1 web UI suite) spanning foundational lock-free primitives, DSP, GPU vision, TSDB, OCR, SLM, Vector DB, AI Agents, Fieldbus, Motion, 3D SLAM, and SCADA UI.
 - **GitHub Topics**: `csharp`, `dotnet`, `zeroplatform`, `monorepo-orchestrator`, `industrial-automation`, `scada`, `edge-computing`, `computer-vision`, `deep-learning`, `lock-free`, `ocr`, `ai-agent`, `fieldbus`, `robotics`, `slam`
+
+---
+
+## 4. ZeroUniverse Multi-Language Sovereign Ecosystem
+
+```
+                       ┌────────────────────────────────────────────────────────┐
+                       │               ZeroPlatform (.NET 8/9/10)               │
+                       │   Desktop HMI • SCADA • Distributed Cloud • Vision     │
+                       └───────────────────────────▲────────────────────────────┘
+                                                   │ IPC / ZeroMQ / gRPC
+                                                   ▼
+┌────────────────────────────────────────────────────────────────────────────────────────────────┐
+│                                       ZeroRust (`zero-rs`)                                     │
+├───────────────────────────────┬────────────────────────────────┬───────────────────────────────┤
+│          zero-core            │           zero-bus             │          zero-motion          │
+│ • #![no_std] primitives      │ • Real-time CAN 2.0 / CAN-FD   │ • 6-DOF / SCARA / Cartesian   │
+│ • Lock-free SPSC RingBuffer   │ • CANopen CiA 301 (NMT/SDO/PDO)│ • Forward & Inverse Kinematics│
+│ • Zero-alloc Binary Parsing   │ • CiA 402 Servo Drive Profile  │ • Geometric Jacobian Matrix   │
+│ • Q16.16/Q32.32 Fixed Point   │ • Micro-second Cyclic Sync     │ • 7-Phase Jerk-Limited S-Curve│
+└───────────────────────────────┴────────────────────────────────┴───────────────────────────────┘
+```
+
+| Domain | Sovereign Platform | Repository | Primary Scope & Strengths |
+| :--- | :--- | :--- | :--- |
+| **Enterprise / Desktop / Vision / AI** | **ZeroPlatform (.NET)** | [`kzxl/ZeroPlatform`](https://github.com/kzxl/ZeroPlatform) | Desktop HMI (WinForms/WPF), Distributed SCADA, GPU Vision, OCR, SLM, Vector DB, AI Agents. |
+| **Hard Real-Time / Robotics / Fieldbus** | **ZeroRust (`zero-rs`)** | [`kzxl/ZeroRust`](https://github.com/kzxl/ZeroRust) | `#![no_std]` Baremetal MCUs, Linux RT-PREEMPT, Microsecond Deterministic Motion, CANopen/CiA 402, 7-Phase S-Curve. |
+
