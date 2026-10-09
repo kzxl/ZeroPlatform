@@ -140,5 +140,53 @@ namespace ZeroData.Tests
             Assert.Equal(2.0f, fMin);
             Assert.Equal(8.0f, fMax);
         }
+
+        [Fact]
+        public void TestVectorizedColumnFilter_DateTime()
+        {
+            var baseDate = new DateTime(2026, 1, 1);
+            var dates = new DateTime[10];
+            for (int i = 0; i < 10; i++) dates[i] = baseDate.AddDays(i);
+
+            var col = new DataColumn<DateTime>("Dates", dates);
+            col.SetNull(5); // row 5 is null
+
+            // GreaterThan Jan 4th
+            var filteredGt = col.Filter(FilterOp.GreaterThan, baseDate.AddDays(4));
+            // Should match row 6, 7, 8, 9 (row 5 is null) => 4 rows
+            Assert.Equal(4, filteredGt.Length);
+            for (int i = 0; i < filteredGt.Length; i++)
+            {
+                Assert.True(filteredGt[i] > baseDate.AddDays(4));
+            }
+
+            // Between Jan 2nd and Jan 7th
+            var filteredBetween = col.FilterBetween(baseDate.AddDays(2), baseDate.AddDays(7), inclusive: true);
+            // Rows 2, 3, 4, 6, 7 (5 is null) => 5 rows
+            Assert.Equal(5, filteredBetween.Length);
+        }
+
+        [Fact]
+        public void TestVectorizedColumnFilter_Decimal()
+        {
+            var amounts = new decimal[] { 100.50m, 250.75m, 500.00m, 750.25m, 1000.00m };
+            var col = new DataColumn<decimal>("Amounts", amounts);
+            col.SetNull(2); // row 2 (500.00m) is null
+
+            // GreaterThanOrEqual 250.75m
+            var filtered = col.Filter(FilterOp.GreaterThanOrEqual, 250.75m);
+            // Rows 1, 3, 4 (row 2 is null) => 3 rows
+            Assert.Equal(3, filtered.Length);
+            Assert.Equal(250.75m, filtered[0]);
+            Assert.Equal(750.25m, filtered[1]);
+            Assert.Equal(1000.00m, filtered[2]);
+
+            // FilterBetween [200m, 800m]
+            var filteredBetween = col.FilterBetween(200.00m, 800.00m, inclusive: true);
+            // Rows 1, 3 (row 2 is null) => 2 rows
+            Assert.Equal(2, filteredBetween.Length);
+            Assert.Equal(250.75m, filteredBetween[0]);
+            Assert.Equal(750.25m, filteredBetween[1]);
+        }
     }
 }
