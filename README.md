@@ -12,6 +12,18 @@
 
 ---
 
+> [!IMPORTANT]
+> ### 🛡️ Strategic Focus & Subsystem Upgrade Freeze Notice
+> To maximize production stability and eliminate technical debt at the root of the Directed Acyclic Graph (DAG), **active feature upgrades on all Tier 1 through Tier 5 subsystems are TEMPORARILY PAUSED (STABILIZATION FREEZE)**.
+> 
+> Engineering effort is 100% focused on the deep hardening, verification, and industrial certification of the **Core Bedrock Foundation (Tier 0)**:
+> - **[`ZeroPrimitives`](ZeroPrimitives/)**: Off-heap linear bump allocators (`PagingArenaAllocator`), hardware SIMD, zero-allocation span parsers, UUIDv7, and ULID.
+> - **[`ZeroConcurrency`](ZeroConcurrency/)**: Lock-free SPSC/MPMC ring buffers (`ZeroRingBuffer`), Go-like CSP channels (`ZeroChannel`), and pooled ValueTask promises (`ZeroPromise`).
+>
+> All other 38 subsystems remain in **Maintenance / Stable mode**; no non-critical upgrades or breaking changes will be applied until Tier 0 achieves full certified maturity.
+
+---
+
 ## 🏛️ Ecosystem Architecture (6-Tier Strict DAG)
 
 ```mermaid

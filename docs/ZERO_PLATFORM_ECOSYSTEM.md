@@ -1,6 +1,8 @@
 # 🌌 ZeroPlatform Ecosystem: The Sovereign .NET Industrial Automation Suite
 
 > **Architectural Standard**: 100% Pure C#, Zero External Dependencies, Zero Commercial Licenses, Multi-Targeting across `.NET 8.0+`, `.NET Framework 4.6.2+`, and `.NET Standard 2.0`.
+>
+> ⚠️ **STRATEGIC GOVERNANCE STATUS**: Active upgrades on **Tier 1 through Tier 5 are TEMPORARILY PAUSED (STABILIZATION FREEZE)**. All core engineering resources are dedicated to hardening and zero-allocation optimization of **Tier 0 Foundation (`ZeroPrimitives` & `ZeroConcurrency`)**.
 
 The **ZeroPlatform** is a comprehensive, modular software suite engineered for mission-critical industrial automation, computer vision, digital signal processing (DSP), edge AI inference, high-speed time-series persistence, and hardware-accelerated HMI/SCADA visual studio controls.
 
