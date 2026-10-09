@@ -271,7 +271,14 @@ namespace ZeroDocuments.Excel.Internal
                 if (seg == ".") continue;
                 if (seg == "..")
                 {
-                    if (segments.Count > 0) segments.RemoveAt(segments.Count - 1);
+                    if (segments.Count > 0)
+                    {
+                        segments.RemoveAt(segments.Count - 1);
+                    }
+                    else
+                    {
+                        throw new InvalidDataException($"Path traversal escape attempt detected in relationship path: '{relative}' from base '{baseDirectory}'.");
+                    }
                     continue;
                 }
                 segments.Add(seg);
@@ -293,7 +300,29 @@ namespace ZeroDocuments.Excel.Internal
             return string.IsNullOrEmpty(dir) ? $"_rels/{file}.rels" : $"{dir}/_rels/{file}.rels";
         }
 
-        private static string NormalizePath(string path) => path.Replace('\\', '/').TrimStart('/');
+        private static string NormalizePath(string path)
+        {
+            string p = path.Replace('\\', '/').TrimStart('/');
+            if (p.StartsWith("../") || p.Contains("/../") || p.EndsWith("/..") || p == "..")
+            {
+                var segments = p.Split(new[] { '/' }, StringSplitOptions.RemoveEmptyEntries);
+                int depth = 0;
+                foreach (var seg in segments)
+                {
+                    if (seg == "..")
+                    {
+                        depth--;
+                        if (depth < 0)
+                            throw new InvalidDataException($"Malicious Zip entry path traversal (Zip Slip) detected: '{path}'.");
+                    }
+                    else if (seg != ".")
+                    {
+                        depth++;
+                    }
+                }
+            }
+            return p;
+        }
 
         #endregion
 

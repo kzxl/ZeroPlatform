@@ -152,5 +152,23 @@ namespace ZeroDocuments.Tests
             Assert.Contains("\0", table.Rows[0]["ColA"]?.ToString());
             Assert.Contains("\u0001\u0002", table.Rows[0]["ColB"]?.ToString());
         }
+
+        [Fact]
+        public void CorruptOpenXml_ZipSlipPathTraversal_ThrowsInvalidDataException()
+        {
+            using var ms = new MemoryStream();
+            using (var zip = new ZipArchive(ms, ZipArchiveMode.Create, leaveOpen: true))
+            {
+                var entry = zip.CreateEntry("../../malicious.xml");
+                using var writer = new StreamWriter(entry.Open());
+                writer.WriteLine("<root>payload</root>");
+            }
+            ms.Position = 0;
+
+            Assert.Throws<InvalidDataException>(() =>
+            {
+                ExcelReader.ReadRows(ms);
+            });
+        }
     }
 }

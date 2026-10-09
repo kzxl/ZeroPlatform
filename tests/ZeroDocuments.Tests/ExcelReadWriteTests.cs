@@ -124,5 +124,30 @@ namespace ZeroDocuments.Tests
                 }
             }
         }
+
+        [Fact]
+        public void WriteFromDataReader_StreamsDirectly_AndRoundtripsAccurately()
+        {
+            var table = new DataTable("Orders");
+            table.Columns.Add("OrderId", typeof(int));
+            table.Columns.Add("Customer", typeof(string));
+            table.Columns.Add("TotalAmount", typeof(decimal));
+
+            table.Rows.Add(1001, "Công ty TNHH Giải pháp Phần mềm ABC", 15400000.50m);
+            table.Rows.Add(1002, "Tập đoàn Sản xuất & Cơ khí XYZ", 28900000.00m);
+
+            using var reader = table.CreateDataReader();
+            using var ms = new MemoryStream();
+
+            ZeroExcel.WriteFromDataReader(ms, reader, "OrderSummary", includeHeaders: true);
+            ms.Position = 0;
+
+            var readTable = ExcelReader.ReadToDataTable(ms, "A2:C3", "OrderSummary");
+            Assert.Equal(2, readTable.Rows.Count);
+            Assert.Equal("1001", readTable.Rows[0][0]?.ToString());
+            Assert.Equal("Công ty TNHH Giải pháp Phần mềm ABC", readTable.Rows[0][1]?.ToString());
+            Assert.Equal("1002", readTable.Rows[1][0]?.ToString());
+            Assert.Equal("Tập đoàn Sản xuất & Cơ khí XYZ", readTable.Rows[1][1]?.ToString());
+        }
     }
 }

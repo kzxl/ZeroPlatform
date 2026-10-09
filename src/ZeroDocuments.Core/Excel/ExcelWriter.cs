@@ -66,6 +66,39 @@ namespace ZeroDocuments.Excel
         }
 
         /// <summary>
+        /// Writes an IDataReader directly to an Excel (.xlsx) file on disk atomically.
+        /// Streams records forward-only without buffering the dataset in memory.
+        /// </summary>
+        public static void WriteToFile(string filePath, IDataReader reader, string sheetName = "Sheet1", bool includeHeaders = true) =>
+            WriteToFile(filePath, reader, null, sheetName, includeHeaders);
+
+        /// <summary>
+        /// Writes an IDataReader directly to an Excel (.xlsx) file on disk atomically with custom options.
+        /// </summary>
+        public static void WriteToFile(string filePath, IDataReader reader, ExcelWriterOptions? options, string sheetName = "Sheet1", bool includeHeaders = true)
+        {
+            if (reader == null) throw new ArgumentNullException(nameof(reader));
+            AtomicFileWriter.Write(filePath, stream => WriteToStream(stream, reader, options, sheetName, includeHeaders));
+        }
+
+        /// <summary>
+        /// Writes an IDataReader directly to a stream in OpenXML Excel (.xlsx) format.
+        /// </summary>
+        public static void WriteToStream(Stream stream, IDataReader reader, string sheetName = "Sheet1", bool includeHeaders = true) =>
+            WriteToStream(stream, reader, null, sheetName, includeHeaders);
+
+        /// <summary>
+        /// Writes an IDataReader directly to a stream in OpenXML Excel (.xlsx) format with custom options.
+        /// </summary>
+        public static void WriteToStream(Stream stream, IDataReader reader, ExcelWriterOptions? options, string sheetName = "Sheet1", bool includeHeaders = true)
+        {
+            if (stream == null) throw new ArgumentNullException(nameof(stream));
+            if (reader == null) throw new ArgumentNullException(nameof(reader));
+
+            WriteRowsToStream(stream, TabularSource.FromDataReader(reader), options, includeHeaders ? TabularSource.GetHeaders(reader) : null, sheetName);
+        }
+
+        /// <summary>
         /// Writes a collection of objects to an Excel (.xlsx) file on disk atomically.
         /// Public properties are mapped to columns.
         /// </summary>

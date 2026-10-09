@@ -67,5 +67,34 @@ namespace ZeroDocuments.Common
                 yield return values;
             }
         }
+
+        public static IReadOnlyList<string> GetHeaders(IDataReader reader)
+        {
+            int count = reader.FieldCount;
+            var headers = new string[count];
+            for (int i = 0; i < count; i++)
+            {
+                headers[i] = reader.GetName(i);
+            }
+            return headers;
+        }
+
+        /// <summary>
+        /// Yields IDataReader rows as value arrays. DBNull becomes null; streams records forward-only without materializing in memory.
+        /// </summary>
+        public static IEnumerable<IReadOnlyList<object?>> FromDataReader(IDataReader reader)
+        {
+            int columnCount = reader.FieldCount;
+            while (reader.Read())
+            {
+                var values = new object?[columnCount];
+                for (int i = 0; i < columnCount; i++)
+                {
+                    object v = reader.GetValue(i);
+                    values[i] = v == DBNull.Value ? null : v;
+                }
+                yield return values;
+            }
+        }
     }
 }
