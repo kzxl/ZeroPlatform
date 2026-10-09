@@ -200,8 +200,10 @@ namespace ZeroPrimitives.Mapping
                     var underlyingTarget = Nullable.GetUnderlyingType(targetProp.PropertyType) ?? targetProp.PropertyType;
                     if (underlyingSource == underlyingTarget)
                     {
-                        var cast = Expression.Convert(sourceAccess, targetProp.PropertyType);
-                        var assign = Expression.Assign(Expression.Property(targetParam, targetProp), cast);
+                        Expression expr = (Nullable.GetUnderlyingType(matchSource.PropertyType) != null && Nullable.GetUnderlyingType(targetProp.PropertyType) == null)
+                            ? Expression.Coalesce(sourceAccess, Expression.Default(targetProp.PropertyType))
+                            : (Expression)Expression.Convert(sourceAccess, targetProp.PropertyType);
+                        var assign = Expression.Assign(Expression.Property(targetParam, targetProp), expr);
                         blockExpressions.Add(assign);
                     }
                 }
@@ -267,8 +269,10 @@ namespace ZeroPrimitives.Mapping
                     var underlyingTarget = Nullable.GetUnderlyingType(targetProp.PropertyType) ?? targetProp.PropertyType;
                     if (underlyingSource == underlyingTarget)
                     {
-                        var cast = Expression.Convert(sourceAccess, targetProp.PropertyType);
-                        var assign = Expression.Assign(Expression.Property(typedTarget, targetProp), cast);
+                        Expression expr = (Nullable.GetUnderlyingType(matchSource.PropertyType) != null && Nullable.GetUnderlyingType(targetProp.PropertyType) == null)
+                            ? Expression.Coalesce(sourceAccess, Expression.Default(targetProp.PropertyType))
+                            : (Expression)Expression.Convert(sourceAccess, targetProp.PropertyType);
+                        var assign = Expression.Assign(Expression.Property(typedTarget, targetProp), expr);
                         blockExpressions.Add(assign);
                     }
                 }
