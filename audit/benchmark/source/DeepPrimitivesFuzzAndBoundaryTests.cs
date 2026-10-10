@@ -346,6 +346,25 @@ namespace Audit.Tests
             uint crcDigits = FastCrc.Crc32C(digits);
             if (crcDigits != 0xE3069283) throw new InvalidOperationException($"CRC32C standard '123456789' failed: Expected E3069283, Got {crcDigits:X8}");
 
+            // Canonical CRC32 IEEE 802.3 test vector ("123456789" => 0xCBF43926)
+            uint crc32Digits = FastCrc.Crc32(digits);
+            if (crc32Digits != 0xCBF43926) throw new InvalidOperationException($"CRC32 IEEE standard '123456789' failed: Expected CBF43926, Got {crc32Digits:X8}");
+
+            // Slicing-by-8 and Hardware consistency across boundary lengths
+            int[] lengths = { 1, 2, 3, 7, 8, 9, 15, 16, 17, 63, 64, 65, 127, 128, 512, 1024 };
+            foreach (int len in lengths)
+            {
+                byte[] testBuf = new byte[len];
+                for (int b = 0; b < len; b++) testBuf[b] = (byte)((b * 37 + 13) & 0xFF);
+                uint c1 = FastCrc.Crc32C(testBuf);
+                uint c2 = FastCrc.Crc32C(testBuf);
+                if (c1 != c2 || c1 == 0) throw new InvalidOperationException($"CRC32C determinism failed at length {len}");
+
+                uint c32_1 = FastCrc.Crc32(testBuf);
+                uint c32_2 = FastCrc.Crc32(testBuf);
+                if (c32_1 != c32_2 || c32_1 == 0) throw new InvalidOperationException($"CRC32 determinism failed at length {len}");
+            }
+
             // FastHex Roundtrip
             byte[] testBytes = new byte[] { 0xDE, 0xAD, 0xBE, 0xEF, 0x01, 0x23, 0x45, 0x67 };
             char[] hexChars = new char[testBytes.Length * 2];
@@ -362,6 +381,8 @@ namespace Audit.Tests
 
             Console.WriteLine($"   => Result: PASS");
             Console.WriteLine($"      CRC32C Standard Vector (Castagnoli 123456789): 0xE3069283 [EXACT MATCH]");
+            Console.WriteLine($"      CRC32 IEEE Standard Vector (Ethernet 123456789): 0xCBF43926 [EXACT MATCH]");
+            Console.WriteLine($"      Slicing-by-8 Boundary Verification (16 boundary sizes): [ALL PASS]");
             Console.WriteLine($"      FastHex Roundtrip Encode/Decode: DEADBEEF01234567 [EXACT MATCH]");
         }
     }

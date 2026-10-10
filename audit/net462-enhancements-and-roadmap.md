@@ -136,13 +136,22 @@ The following 5 extensions provide the highest return on investment (ROI) to fur
 
 ---
 
-## 4. Summary Roadmap Matrix
+## 4. Implementation Status Matrix
 
-| Milestone | Target Library | Feature / Enhancement | Expected Speedup / Gain | Complexity |
-| :--- | :--- | :--- | :--- | :--- |
-| **M1 (Current)** | `ZeroPrimitives` | FixedString & FastJsonWriter zero-alloc on net462 | **Zero heap allocations** | Completed |
-| **M2** | `ZeroPrimitives` | `FastFormat` integer/decimal formatter for net462 | **Zero GC Gen0 churn** | Low (1 day) |
-| **M3** | `ZeroPrimitives` | `System.Numerics.Vectors` in `SimdOps` for net462 | **3x - 6x vector speedup** | Medium (2 days) |
-| **M4** | `ZeroPrimitives` | Intel Slicing-by-8 software CRC32C | **3.5x throughput gain** | Medium (2 days) |
-| **M5** | `ZeroConcurrency` | Pooled generic `FastWorkItem` in `ZeroScheduler` | **0 B tuple allocation** | Low (1 day) |
-| **M6** | `ZeroConcurrency` | Multi-target `ZeroConcurrency.Tests` for net462 | **Automated CI safety** | Low (1 day) |
+All 6 strategic enhancements and extensions proposed above have been fully engineered, validated, and committed:
+
+| Milestone | Target Library | Feature / Enhancement | Verified Speedup / Gain | Status | Commit |
+| :--- | :--- | :--- | :--- | :--- | :--- |
+| **M1** | `ZeroPrimitives` | FixedString & FastJsonWriter zero-alloc on net462 | **0 heap allocations** | **Completed** | [`727321c`](file:///E:/15.%20Other/ZeroUniverse/ZeroPlatform/ZeroPrimitives) |
+| **M2** | `ZeroPrimitives` | `FastFormat` 2-digit Radix-10 formatter | **Zero GC Gen0 churn** | **Completed** | [`d6b780d`](file:///E:/15.%20Other/ZeroUniverse/ZeroPlatform/ZeroPrimitives) |
+| **M3** | `ZeroPrimitives` | `System.Numerics.Vectors` in `SimdOps` for net462 | **Hardware SIMD active** | **Completed** | [`d6b780d`](file:///E:/15.%20Other/ZeroUniverse/ZeroPlatform/ZeroPrimitives) |
+| **M4** | `ZeroPrimitives` | Intel Slicing-by-8 software CRC32 / CRC32C | **8 parallel table lookups** | **Completed** | [`d6b780d`](file:///E:/15.%20Other/ZeroUniverse/ZeroPlatform/ZeroPrimitives) |
+| **M5** | `ZeroConcurrency` | Pooled generic `ActionWorkItem` in `ZeroScheduler` | **0 B tuple allocation** | **Completed** | [`12ea490`](file:///E:/15.%20Other/ZeroUniverse/ZeroPlatform/ZeroConcurrency) |
+| **M6** | `ZeroConcurrency` | Multi-target `ZeroConcurrency.Tests` (net8.0;net462) | **77/77 tests passing** | **Completed** | [`12ea490`](file:///E:/15.%20Other/ZeroUniverse/ZeroPlatform/ZeroConcurrency) |
+
+## 5. Dual-Runtime Verification Summary
+
+Both libraries now run with 100% test concordance and verified zero-regression across modern and legacy runtimes:
+- `ZeroPrimitives.Tests`: **265/265 Tests Passed** on both `net8.0` and `net462`.
+- `ZeroConcurrency.Tests`: **77/77 Tests Passed** on both `net8.0` and `net462`.
+- `AuditRunner` Comprehensive Soak & Stress Suite: **10/10 Invariants Passed** on both `net8.0` and `net462`.

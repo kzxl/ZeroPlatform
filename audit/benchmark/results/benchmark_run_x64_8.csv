@@ -1,17 +1,17 @@
 Benchmark|Implementation|Dataset / Scenario|Mean Time|Throughput|Allocated/Op|Gen0|Verified Correctness
-Parsing|FastNumberParser.TryParseInt32|1M Int32 strings|19.0 ns|52,593,656 ops/s|0 B|0|VERIFIED
-Parsing|int.TryParse (BCL)|1M Int32 strings|51.6 ns|19,394,805 ops/s|0 B|0|VERIFIED
-Mapping|FastMapper.Map|500k DTO instances|120.8 ns|8,280,997 ops/s|1 B|5|VERIFIED
-Mapping|Manual Initializer|500k DTO instances|12.6 ns|79,405,412 ops/s|1 B|5|VERIFIED
-Allocators|Managed Heap (new byte[])|200k x 16KB|873.6 ns|1,144,717 ops/s|6 B|522|VERIFIED
-Allocators|ArrayPool<byte>.Shared|200k x 16KB|26.0 ns|38,448,229 ops/s|0 B|0|VERIFIED
-Allocators|NativeMemoryPool.Shared|200k x 16KB|78.8 ns|12,697,203 ops/s|0 B|1|VERIFIED
-Allocators|PagingArenaAllocator|200k x 16KB|3.7 ns|270,379,884 ops/s|0 B|0|VERIFIED
-SPSC|ConcurrentQueue<int>|2M items 2 threads|25.5 ns|39,198,086 ops/s|7 B|1|VERIFIED
-SPSC|ZeroRingBuffer<int>|2M items 2 threads|16.8 ns|59,430,419 ops/s|0 B|0|VERIFIED
-MPMC|ConcurrentQueue<int>|2M items 4P/4C|125.0 ns|8,002,715 ops/s|2 B|0|VERIFIED
-MPMC|ZeroMpmcRingBuffer<int>|2M items 4P/4C|99.9 ns|10,010,962 ops/s|0 B|0|VERIFIED
-Channels|System.Threading.Channels|500k bounded 1024|146.0 ns|6,850,629 ops/s|0 B|0|VERIFIED
-Channels|ZeroChannel<int>|500k bounded 1024|81.7 ns|12,240,621 ops/s|0 B|0|VERIFIED
-AsyncPromise|TaskCompletionSource<int>|1M sync completions|36.8 ns|27,139,325 ops/s|1 B|15|VERIFIED
-AsyncPromise|ZeroPromise<int>|1M sync completions|45.6 ns|21,909,357 ops/s|0 B|0|VERIFIED
+Parsing|FastNumberParser.TryParseInt32|1M Int32 strings|19.4 ns|51,599,321 ops/s|0 B|0|VERIFIED
+Parsing|int.TryParse (BCL)|1M Int32 strings|52.4 ns|19,067,122 ops/s|0 B|0|VERIFIED
+Mapping|FastMapper.Map|500k DTO instances|125.0 ns|7,999,155 ops/s|1 B|5|VERIFIED
+Mapping|Manual Initializer|500k DTO instances|12.9 ns|77,814,956 ops/s|1 B|5|VERIFIED
+Allocators|Managed Heap (new byte[])|200k x 16KB|934.1 ns|1,070,492 ops/s|6 B|522|VERIFIED
+Allocators|ArrayPool<byte>.Shared|200k x 16KB|27.7 ns|36,047,077 ops/s|0 B|0|VERIFIED
+Allocators|NativeMemoryPool.Shared|200k x 16KB|79.7 ns|12,546,500 ops/s|0 B|1|VERIFIED
+Allocators|PagingArenaAllocator|200k x 16KB|4.2 ns|239,980,802 ops/s|0 B|0|VERIFIED
+SPSC|ConcurrentQueue<int>|2M items 2 threads|19.0 ns|52,516,733 ops/s|7 B|1|VERIFIED
+SPSC|ZeroRingBuffer<int>|2M items 2 threads|15.1 ns|66,295,412 ops/s|0 B|0|VERIFIED
+MPMC|ConcurrentQueue<int>|2M items 4P/4C|134.7 ns|7,423,627 ops/s|3 B|1|VERIFIED
+MPMC|ZeroMpmcRingBuffer<int>|2M items 4P/4C|109.4 ns|9,143,217 ops/s|0 B|0|VERIFIED
+Channels|System.Threading.Channels|500k bounded 1024|147.4 ns|6,785,255 ops/s|0 B|0|VERIFIED
+Channels|ZeroChannel<int>|500k bounded 1024|80.1 ns|12,486,670 ops/s|0 B|0|VERIFIED
+AsyncPromise|TaskCompletionSource<int>|1M sync completions|35.5 ns|28,152,757 ops/s|1 B|15|VERIFIED
+AsyncPromise|ZeroPromise<int>|1M sync completions|48.2 ns|20,759,723 ops/s|0 B|0|VERIFIED
