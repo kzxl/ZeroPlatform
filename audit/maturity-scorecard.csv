@@ -1,0 +1,16 @@
+Subsystem,Repository,Correctness (20%),Code Quality (10%),Testing (15%),Verified Perf (15%),Memory Safety (10%),Documentation (10%),Compatibility (10%),Release Maturity (10%),Weighted Score,Overall Maturity,Perf Potential,Verified Perf,Production Readiness,Compatibility Rating,Maintenance Risk,Evidence Confidence
+FastNumberParser / Parsers,ZeroPrimitives,9.5,9.0,9.5,9.0,10.0,8.0,10.0,8.5,9.20,Production Ready,9.5,9.0,READY,READY,LOW,VERIFIED
+Arena & Paging Allocator,ZeroPrimitives,9.0,8.5,9.0,10.0,8.0,8.0,10.0,8.0,8.85,Production Ready,10.0,10.0,READY,READY,LOW,VERIFIED
+NativeMemoryPool & Block,ZeroPrimitives,7.0,6.5,7.0,6.5,7.0,7.0,9.0,7.5,7.05,Refactor Needed,9.0,6.5,CONDITIONALLY COMPATIBLE,READY,MEDIUM,VERIFIED
+FastMapper & FastTableMapper,ZeroPrimitives,7.0,7.0,8.0,6.0,8.0,7.0,9.0,7.5,7.25,Internally Usable,8.0,6.0,USE INTERNALLY,READY,MEDIUM,VERIFIED
+Hardware SIMD & SimdOps,ZeroPrimitives,8.5,8.0,7.5,8.5,8.5,7.5,6.5,7.5,7.95,Modern .NET Only,9.5,8.5,USE INTERNALLY,CONDITIONALLY COMPATIBLE,MEDIUM,VERIFIED
+ZeroRingBuffer (SPSC),ZeroConcurrency,9.8,9.0,9.5,10.0,9.5,8.0,10.0,8.5,9.45,Production Ready (Certified),10.0,10.0,READY,READY,LOW,VERIFIED
+ZeroMpmcRingBuffer (MPMC),ZeroConcurrency,7.5,8.0,7.5,7.0,8.5,7.5,9.0,7.5,7.65,Refactor Needed,9.5,7.0,REFACTOR (P1),READY,MEDIUM,VERIFIED
+DisruptorRing,ZeroConcurrency,8.5,8.5,8.0,8.5,9.0,8.0,9.0,7.5,8.35,Production Ready,9.5,8.5,KEEP AND STABILIZE,READY,LOW,VERIFIED
+ZeroChannel,ZeroConcurrency,9.0,9.0,8.5,8.5,9.0,8.5,9.0,8.0,8.75,Production Ready,9.0,8.5,READY,READY,LOW,VERIFIED
+ZeroPromise & PromisePool,ZeroConcurrency,8.0,8.5,8.0,7.5,8.5,7.5,9.0,8.0,8.05,Stabilize,8.5,7.5,KEEP AND STABILIZE,READY,LOW,VERIFIED
+ZeroWorkStealingPool,ZeroConcurrency,5.5,5.5,5.0,5.0,6.0,6.0,9.0,6.0,5.80,Prototype / Replace,7.0,5.0,REPLACE,READY,HIGH,VERIFIED
+ZeroMmfMpmcQueue (IPC),ZeroConcurrency,6.0,7.0,6.0,7.5,6.5,7.0,7.0,6.5,6.65,Experimental / Unsafe,9.0,7.5,USE INTERNALLY,CONDITIONALLY COMPATIBLE,HIGH,PARTIALLY VERIFIED
+CommunityToolkit.HighPerformance,Competitor,9.5,9.5,9.5,9.0,9.5,9.5,7.0,9.5,9.25,Mature Enterprise,9.5,9.0,READY,MODERN .NET ONLY,LOW,STRONGLY SUPPORTED
+System.Threading.Channels,Competitor,9.8,9.5,9.8,9.0,9.8,9.5,9.5,10.0,9.65,Battle Tested,9.5,9.0,READY,READY,MINIMAL,VERIFIED
+System.Collections.Concurrent.ConcurrentQueue,Competitor,9.8,9.5,9.8,8.5,9.8,9.5,10.0,10.0,9.55,Standard BCL,9.0,8.5,READY,READY,MINIMAL,VERIFIED
