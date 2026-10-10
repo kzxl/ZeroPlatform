@@ -306,7 +306,14 @@ namespace ZeroPrimitives.Text
         }
 
 #if !NET8_0_OR_GREATER
-        public override string ToString() => Encoding.UTF8.GetString(_buffer.Slice(0, _pos).ToArray());
+        public override unsafe string ToString()
+        {
+            if (_pos == 0) return string.Empty;
+            fixed (byte* p = _buffer)
+            {
+                return Encoding.UTF8.GetString(p, _pos);
+            }
+        }
 #else
         public override string ToString() => Encoding.UTF8.GetString(_buffer.Slice(0, _pos));
 #endif

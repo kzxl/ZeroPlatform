@@ -34,10 +34,12 @@ namespace ZeroPrimitives.Text
                 }
                 _length = (byte)written;
 #else
-                byte[] encoded = Encoding.UTF8.GetBytes(chars.ToString());
-                int len = Math.Min(encoded.Length, MaxByteCapacity);
-                for (int i = 0; i < len; i++) ptr[i] = encoded[i];
-                _length = (byte)len;
+                fixed (char* cPtr = chars)
+                {
+                    int len = Math.Min(chars.Length, MaxByteCapacity);
+                    int written = Encoding.UTF8.GetBytes(cPtr, len, ptr, MaxByteCapacity);
+                    _length = (byte)written;
+                }
 #endif
             }
         }
@@ -55,13 +57,7 @@ namespace ZeroPrimitives.Text
             if (_length == 0) return string.Empty;
             fixed (byte* ptr = _bytes)
             {
-#if NET8_0_OR_GREATER
                 return Encoding.UTF8.GetString(ptr, _length);
-#else
-                byte[] managed = new byte[_length];
-                for (int i = 0; i < _length; i++) managed[i] = ptr[i];
-                return Encoding.UTF8.GetString(managed);
-#endif
             }
         }
 
@@ -115,10 +111,12 @@ namespace ZeroPrimitives.Text
                 }
                 _length = (byte)written;
 #else
-                byte[] encoded = Encoding.UTF8.GetBytes(chars.ToString());
-                int len = Math.Min(encoded.Length, MaxByteCapacity);
-                for (int i = 0; i < len; i++) ptr[i] = encoded[i];
-                _length = (byte)len;
+                fixed (char* cPtr = chars)
+                {
+                    int len = Math.Min(chars.Length, MaxByteCapacity);
+                    int written = Encoding.UTF8.GetBytes(cPtr, len, ptr, MaxByteCapacity);
+                    _length = (byte)written;
+                }
 #endif
             }
         }
@@ -136,13 +134,7 @@ namespace ZeroPrimitives.Text
             if (_length == 0) return string.Empty;
             fixed (byte* ptr = _bytes)
             {
-#if NET8_0_OR_GREATER
                 return Encoding.UTF8.GetString(ptr, _length);
-#else
-                byte[] managed = new byte[_length];
-                for (int i = 0; i < _length; i++) managed[i] = ptr[i];
-                return Encoding.UTF8.GetString(managed);
-#endif
             }
         }
 
