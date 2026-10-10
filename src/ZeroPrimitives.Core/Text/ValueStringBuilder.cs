@@ -106,7 +106,15 @@ namespace ZeroPrimitives.Text
             value.TryFormat(_chars.Slice(_pos), out charsWritten, default, CultureInfo.InvariantCulture);
             _pos += charsWritten;
 #else
-            Append(value.ToString(CultureInfo.InvariantCulture));
+            Span<char> dest = _chars.Slice(_pos);
+            if (FastFormat.TryFormatInt32(value, dest, out int charsWritten))
+            {
+                _pos += charsWritten;
+                return;
+            }
+            Grow(16);
+            FastFormat.TryFormatInt32(value, _chars.Slice(_pos), out charsWritten);
+            _pos += charsWritten;
 #endif
         }
 
@@ -123,7 +131,15 @@ namespace ZeroPrimitives.Text
             value.TryFormat(_chars.Slice(_pos), out charsWritten, default, CultureInfo.InvariantCulture);
             _pos += charsWritten;
 #else
-            Append(value.ToString(CultureInfo.InvariantCulture));
+            Span<char> dest = _chars.Slice(_pos);
+            if (FastFormat.TryFormatInt64(value, dest, out int charsWritten))
+            {
+                _pos += charsWritten;
+                return;
+            }
+            Grow(32);
+            FastFormat.TryFormatInt64(value, _chars.Slice(_pos), out charsWritten);
+            _pos += charsWritten;
 #endif
         }
 

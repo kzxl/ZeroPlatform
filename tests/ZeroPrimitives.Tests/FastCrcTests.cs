@@ -40,5 +40,30 @@ namespace ZeroPrimitives.Tests
             Assert.Equal(0xFFFF, FastCrc.Crc16Modbus(ReadOnlySpan<byte>.Empty));
             Assert.Equal(0u, FastCrc.Crc32(ReadOnlySpan<byte>.Empty));
         }
+
+        [Theory]
+        [InlineData(1)]
+        [InlineData(2)]
+        [InlineData(3)]
+        [InlineData(7)]
+        [InlineData(8)]
+        [InlineData(9)]
+        [InlineData(15)]
+        [InlineData(16)]
+        [InlineData(17)]
+        [InlineData(64)]
+        [InlineData(128)]
+        [InlineData(1024)]
+        public void Crc32_VariousLengths_DeterministicallyComputes(int length)
+        {
+            byte[] data = new byte[length];
+            for (int i = 0; i < length; i++) data[i] = (byte)((i * 19 + 7) & 0xFF);
+
+            uint crc1 = FastCrc.Crc32(data);
+            uint crc2 = FastCrc.Crc32(data);
+
+            Assert.Equal(crc1, crc2);
+            Assert.NotEqual(0u, crc1);
+        }
     }
 }

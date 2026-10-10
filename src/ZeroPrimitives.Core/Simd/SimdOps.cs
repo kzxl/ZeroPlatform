@@ -156,6 +156,28 @@ namespace ZeroPrimitives.Simd
                         if (pMax[k] > localMax) localMax = pMax[k];
                     }
                 }
+#else
+                if (Vector.IsHardwareAccelerated && length >= Vector<byte>.Count)
+                {
+                    int vCount = Vector<byte>.Count;
+                    Vector<byte> vMin = *(Vector<byte>*)p;
+                    Vector<byte> vMax = vMin;
+
+                    i = vCount;
+                    while (i <= length - vCount)
+                    {
+                        Vector<byte> vCurr = *(Vector<byte>*)(p + i);
+                        vMin = Vector.Min(vMin, vCurr);
+                        vMax = Vector.Max(vMax, vCurr);
+                        i += vCount;
+                    }
+
+                    for (int k = 0; k < vCount; k++)
+                    {
+                        if (vMin[k] < localMin) localMin = vMin[k];
+                        if (vMax[k] > localMax) localMax = vMax[k];
+                    }
+                }
 #endif
                 for (; i < length; i++)
                 {
@@ -200,6 +222,22 @@ namespace ZeroPrimitives.Simd
 
                     float* pSum = (float*)&vSum;
                     sum += pSum[0] + pSum[1] + pSum[2] + pSum[3] + pSum[4] + pSum[5] + pSum[6] + pSum[7];
+                }
+#else
+                if (Vector.IsHardwareAccelerated && length >= Vector<float>.Count)
+                {
+                    int vCount = Vector<float>.Count;
+                    Vector<float> vSum = Vector<float>.Zero;
+
+                    while (i <= length - vCount)
+                    {
+                        Vector<float> va = *(Vector<float>*)(pA + i);
+                        Vector<float> vb = *(Vector<float>*)(pB + i);
+                        vSum += va * vb;
+                        i += vCount;
+                    }
+
+                    sum += Vector.Dot(vSum, Vector<float>.One);
                 }
 #endif
                 for (; i < length; i++)

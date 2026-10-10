@@ -230,6 +230,13 @@ namespace ZeroPrimitives.Text
                 _pos += written;
                 return;
             }
+#else
+            EnsureCapacity(32);
+            if (FastFormat.TryFormatInt64Utf8(val, _buffer.Slice(_pos), out int written))
+            {
+                _pos += written;
+                return;
+            }
 #endif
             string s = val.ToString(CultureInfo.InvariantCulture);
             for (int i = 0; i < s.Length; i++) WriteByte((byte)s[i]);

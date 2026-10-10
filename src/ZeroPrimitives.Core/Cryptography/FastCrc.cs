@@ -115,53 +115,81 @@ namespace ZeroPrimitives.Cryptography
 
         #region CRC32 (IEEE 802.3, Polynomial 0xEDB88320)
 
-        private static readonly uint[] Crc32Table = GenerateCrc32Table();
+        private static readonly uint[] Crc32Table = GenerateSlicing8Table(0xEDB88320u);
 
-        private static uint[] GenerateCrc32Table()
+        private static uint[] GenerateSlicing8Table(uint polynomial)
         {
-            var table = new uint[256];
+            var table = new uint[8 * 256];
             for (uint i = 0; i < 256; i++)
             {
                 uint entry = i;
                 for (int j = 0; j < 8; j++)
                 {
                     if ((entry & 1) == 1)
-                        entry = (entry >> 1) ^ 0xEDB88320u;
+                        entry = (entry >> 1) ^ polynomial;
                     else
                         entry >>= 1;
                 }
                 table[i] = entry;
             }
+
+            for (int slice = 1; slice < 8; slice++)
+            {
+                int prevOffset = (slice - 1) * 256;
+                int currentOffset = slice * 256;
+                for (int i = 0; i < 256; i++)
+                {
+                    uint prev = table[prevOffset + i];
+                    table[currentOffset + i] = (prev >> 8) ^ table[prev & 0xFF];
+                }
+            }
+
             return table;
         }
 
         /// <summary>
         /// Computes standard 32-bit CRC (Ethernet, PNG, ZIP, camera frame buffer integrity).
-        /// Features 4-way loop unrolling for maximum instruction throughput.
+        /// Employs Intel Slicing-by-8 algorithm (8 parallel table lookups per 8 bytes) for instruction-level parallelism.
         /// </summary>
         [MethodImpl(MethodImplOptions.AggressiveInlining)]
         public static unsafe uint Crc32(ReadOnlySpan<byte> data)
         {
-            uint crc = 0xFFFFFFFFu;
             if (data.IsEmpty) return 0;
 
+            uint crc = 0xFFFFFFFFu;
+            fixed (uint* t = Crc32Table)
             fixed (byte* p = data)
             {
                 byte* ptr = p;
                 byte* end = p + data.Length;
 
-                while (ptr + 4 <= end)
+                uint* t0 = t;
+                uint* t1 = t + 256;
+                uint* t2 = t + 512;
+                uint* t3 = t + 768;
+                uint* t4 = t + 1024;
+                uint* t5 = t + 1280;
+                uint* t6 = t + 1536;
+                uint* t7 = t + 1792;
+
+                while (ptr + 8 <= end)
                 {
-                    crc = (crc >> 8) ^ Crc32Table[(crc ^ ptr[0]) & 0xFF];
-                    crc = (crc >> 8) ^ Crc32Table[(crc ^ ptr[1]) & 0xFF];
-                    crc = (crc >> 8) ^ Crc32Table[(crc ^ ptr[2]) & 0xFF];
-                    crc = (crc >> 8) ^ Crc32Table[(crc ^ ptr[3]) & 0xFF];
-                    ptr += 4;
+                    uint one = crc ^ Unsafe.ReadUnaligned<uint>(ptr);
+                    uint two = Unsafe.ReadUnaligned<uint>(ptr + 4);
+                    crc = t7[one & 0xFF]
+                        ^ t6[(one >> 8) & 0xFF]
+                        ^ t5[(one >> 16) & 0xFF]
+                        ^ t4[one >> 24]
+                        ^ t3[two & 0xFF]
+                        ^ t2[(two >> 8) & 0xFF]
+                        ^ t1[(two >> 16) & 0xFF]
+                        ^ t0[two >> 24];
+                    ptr += 8;
                 }
 
                 while (ptr < end)
                 {
-                    crc = (crc >> 8) ^ Crc32Table[(crc ^ *ptr++) & 0xFF];
+                    crc = (crc >> 8) ^ t0[(crc ^ *ptr++) & 0xFF];
                 }
             }
 
@@ -172,25 +200,7 @@ namespace ZeroPrimitives.Cryptography
 
         #region CRC32C (Castagnoli, Polynomial 0x82F63B78 - Hardware Accelerated)
 
-        private static readonly uint[] Crc32CTable = GenerateCrc32CTable();
-
-        private static uint[] GenerateCrc32CTable()
-        {
-            var table = new uint[256];
-            for (uint i = 0; i < 256; i++)
-            {
-                uint entry = i;
-                for (int j = 0; j < 8; j++)
-                {
-                    if ((entry & 1) == 1)
-                        entry = (entry >> 1) ^ 0x82F63B78u;
-                    else
-                        entry >>= 1;
-                }
-                table[i] = entry;
-            }
-            return table;
-        }
+        private static readonly uint[] Crc32CTable = GenerateSlicing8Table(0x82F63B78u);
 
         /// <summary>
         /// Indicates whether hardware-accelerated CRC32C instructions (SSE4.2 on x86/x64 or ARM64) are active.
@@ -296,25 +306,41 @@ namespace ZeroPrimitives.Cryptography
             }
 #endif
 
-            // Software fallback table with 4-way unrolling
+            // Software fallback using Intel Slicing-by-8 algorithm
             uint swCrc = 0xFFFFFFFFu;
+            fixed (uint* t = Crc32CTable)
             fixed (byte* p = data)
             {
                 byte* ptr = p;
                 byte* end = p + data.Length;
 
-                while (ptr + 4 <= end)
+                uint* t0 = t;
+                uint* t1 = t + 256;
+                uint* t2 = t + 512;
+                uint* t3 = t + 768;
+                uint* t4 = t + 1024;
+                uint* t5 = t + 1280;
+                uint* t6 = t + 1536;
+                uint* t7 = t + 1792;
+
+                while (ptr + 8 <= end)
                 {
-                    swCrc = (swCrc >> 8) ^ Crc32CTable[(swCrc ^ ptr[0]) & 0xFF];
-                    swCrc = (swCrc >> 8) ^ Crc32CTable[(swCrc ^ ptr[1]) & 0xFF];
-                    swCrc = (swCrc >> 8) ^ Crc32CTable[(swCrc ^ ptr[2]) & 0xFF];
-                    swCrc = (swCrc >> 8) ^ Crc32CTable[(swCrc ^ ptr[3]) & 0xFF];
-                    ptr += 4;
+                    uint one = swCrc ^ Unsafe.ReadUnaligned<uint>(ptr);
+                    uint two = Unsafe.ReadUnaligned<uint>(ptr + 4);
+                    swCrc = t7[one & 0xFF]
+                          ^ t6[(one >> 8) & 0xFF]
+                          ^ t5[(one >> 16) & 0xFF]
+                          ^ t4[one >> 24]
+                          ^ t3[two & 0xFF]
+                          ^ t2[(two >> 8) & 0xFF]
+                          ^ t1[(two >> 16) & 0xFF]
+                          ^ t0[two >> 24];
+                    ptr += 8;
                 }
 
                 while (ptr < end)
                 {
-                    swCrc = (swCrc >> 8) ^ Crc32CTable[(swCrc ^ *ptr++) & 0xFF];
+                    swCrc = (swCrc >> 8) ^ t0[(swCrc ^ *ptr++) & 0xFF];
                 }
             }
 
