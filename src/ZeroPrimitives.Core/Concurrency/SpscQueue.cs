@@ -17,6 +17,8 @@ namespace ZeroPrimitives.Concurrency
     {
         [System.Runtime.InteropServices.FieldOffset(64)]
         public uint Value;
+        [System.Runtime.InteropServices.FieldOffset(72)]
+        public uint CachedTail;
     }
 
     [System.Runtime.InteropServices.StructLayout(System.Runtime.InteropServices.LayoutKind.Explicit, Size = 128)]
@@ -24,6 +26,8 @@ namespace ZeroPrimitives.Concurrency
     {
         [System.Runtime.InteropServices.FieldOffset(64)]
         public uint Value;
+        [System.Runtime.InteropServices.FieldOffset(72)]
+        public uint CachedHead;
     }
 
     public sealed class SpscQueue<T>
@@ -34,8 +38,6 @@ namespace ZeroPrimitives.Concurrency
         // Guaranteed physical 128-byte cache-line isolation preventing false sharing across all CLRs
         private SpscHeadSlot _head;
         private SpscTailSlot _tail;
-
-
 
         /// <summary>
         /// Initializes a new SPSC queue with a power-of-two capacity.
@@ -56,7 +58,9 @@ namespace ZeroPrimitives.Concurrency
             _buffer = new T[capacityPowerOfTwo];
             _mask = (uint)(capacityPowerOfTwo - 1);
             _head.Value = 0;
+            _head.CachedTail = 0;
             _tail.Value = 0;
+            _tail.CachedHead = 0;
         }
 
         public int Capacity
@@ -89,16 +93,18 @@ namespace ZeroPrimitives.Concurrency
         public bool TryEnqueue(T item)
         {
             uint tail = _tail.Value;
-            uint head = Volatile.Read(ref _head.Value);
-
-            if ((tail - head) < (uint)_buffer.Length)
+            if ((tail - _tail.CachedHead) >= (uint)_buffer.Length)
             {
-                _buffer[tail & _mask] = item;
-                Volatile.Write(ref _tail.Value, tail + 1);
-                return true;
+                _tail.CachedHead = Volatile.Read(ref _head.Value);
+                if ((tail - _tail.CachedHead) >= (uint)_buffer.Length)
+                {
+                    return false;
+                }
             }
 
-            return false;
+            _buffer[tail & _mask] = item;
+            Volatile.Write(ref _tail.Value, tail + 1);
+            return true;
         }
 
         /// <summary>
@@ -109,19 +115,21 @@ namespace ZeroPrimitives.Concurrency
         public bool TryDequeue(out T item)
         {
             uint head = _head.Value;
-            uint tail = Volatile.Read(ref _tail.Value);
-
-            if (head != tail)
+            if (head == _head.CachedTail)
             {
-                uint index = head & _mask;
-                item = _buffer[index];
-                _buffer[index] = default!; // Allow GC collection of reference types
-                Volatile.Write(ref _head.Value, head + 1);
-                return true;
+                _head.CachedTail = Volatile.Read(ref _tail.Value);
+                if (head == _head.CachedTail)
+                {
+                    item = default!;
+                    return false;
+                }
             }
 
-            item = default!;
-            return false;
+            uint index = head & _mask;
+            item = _buffer[index];
+            _buffer[index] = default!; // Allow GC collection of reference types
+            Volatile.Write(ref _head.Value, head + 1);
+            return true;
         }
 
         /// <summary>

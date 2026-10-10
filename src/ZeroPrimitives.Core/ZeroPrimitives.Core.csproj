@@ -4,9 +4,9 @@
     <LangVersion>latest</LangVersion>
     <AllowUnsafeBlocks>true</AllowUnsafeBlocks>
     <Nullable>enable</Nullable>
-    <Version>1.7.0</Version>
-    <AssemblyVersion>1.7.0.0</AssemblyVersion>
-    <FileVersion>1.7.0.0</FileVersion>
+    <Version>1.8.0</Version>
+    <AssemblyVersion>1.8.0.0</AssemblyVersion>
+    <FileVersion>1.8.0.0</FileVersion>
     <Authors>Phong Võ (kzxl)</Authors>
     <Company>ZeroUniverse</Company>
     <Description>Pure C# ultra-fast, zero-allocation primitive conversions, low-level span/pointer number parsers, Uuid7, FastUlid, hardware CRC32C, FastHex, SpanSplitter, BitOps, ByteRingBuffer, and compiled object mapping for high-throughput .NET applications.</Description>

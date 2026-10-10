@@ -69,13 +69,16 @@ namespace ZeroPrimitives.Parsing
         }
 
         [MethodImpl(MethodImplOptions.AggressiveInlining)]
-        public string GetString()
+        public unsafe string GetString()
         {
 #if NET8_0_OR_GREATER
             return Encoding.UTF8.GetString(_valueSpan);
 #else
-            byte[] temp = _valueSpan.ToArray();
-            return Encoding.UTF8.GetString(temp, 0, temp.Length);
+            if (_valueSpan.IsEmpty) return string.Empty;
+            fixed (byte* p = _valueSpan)
+            {
+                return Encoding.UTF8.GetString(p, _valueSpan.Length);
+            }
 #endif
         }
 

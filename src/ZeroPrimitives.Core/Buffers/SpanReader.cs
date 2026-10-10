@@ -580,27 +580,37 @@ namespace ZeroPrimitives.Buffers
         }
 
         [MethodImpl(MethodImplOptions.AggressiveInlining)]
-        public string ReadStringUtf8(int byteLength)
+        public unsafe string ReadStringUtf8(int byteLength)
         {
             var bytes = ReadBytes(byteLength);
 #if NET8_0_OR_GREATER
             return Encoding.UTF8.GetString(bytes);
 #else
-            byte[] temp = bytes.ToArray();
-            return Encoding.UTF8.GetString(temp, 0, temp.Length);
+            if (bytes.IsEmpty) return string.Empty;
+            fixed (byte* p = bytes)
+            {
+                return Encoding.UTF8.GetString(p, bytes.Length);
+            }
 #endif
         }
 
         [MethodImpl(MethodImplOptions.AggressiveInlining)]
-        public bool TryReadStringUtf8(int byteLength, out string value)
+        public unsafe bool TryReadStringUtf8(int byteLength, out string value)
         {
             if (TryReadBytes(byteLength, out var bytes))
             {
 #if NET8_0_OR_GREATER
                 value = Encoding.UTF8.GetString(bytes);
 #else
-                byte[] temp = bytes.ToArray();
-                value = Encoding.UTF8.GetString(temp, 0, temp.Length);
+                if (bytes.IsEmpty)
+                {
+                    value = string.Empty;
+                    return true;
+                }
+                fixed (byte* p = bytes)
+                {
+                    value = Encoding.UTF8.GetString(p, bytes.Length);
+                }
 #endif
                 return true;
             }

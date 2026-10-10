@@ -107,7 +107,14 @@ namespace ZeroPrimitives.Mapping
         public static DataTable Deserialize(byte[]? bytes)
         {
             if (bytes == null || bytes.Length == 0) return new DataTable();
-            return Deserialize((ReadOnlySpan<byte>)bytes);
+
+            if (bytes.Length >= 4 &&
+                bytes[0] == MagicZ && bytes[1] == MagicD && bytes[2] == MagicT && bytes[3] == MagicV1)
+            {
+                return DeserializeZdt(bytes);
+            }
+
+            return new DataTable();
         }
 
         /// <summary>

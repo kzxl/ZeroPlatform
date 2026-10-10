@@ -45,6 +45,22 @@ namespace ZeroPrimitives.Tests
         }
 
         [Fact]
+        public void SpanReader_Utf8String_HandlesUnicodeAndZeroLengths()
+        {
+            string original = "Xin chào ZeroPlatform! Công nghệ cao ⚡ \u00A9 2026";
+            byte[] encoded = System.Text.Encoding.UTF8.GetBytes(original);
+
+            var reader = new SpanReader(encoded);
+            Assert.Equal(original, reader.ReadStringUtf8(encoded.Length));
+            Assert.Equal(0, reader.Remaining);
+
+            var emptyReader = new SpanReader(ReadOnlySpan<byte>.Empty);
+            Assert.Equal(string.Empty, emptyReader.ReadStringUtf8(0));
+            Assert.True(emptyReader.TryReadStringUtf8(0, out string emptyVal));
+            Assert.Equal(string.Empty, emptyVal);
+        }
+
+        [Fact]
         public void ArrayPoolRentScope_ReturnsToPoolOnDispose()
         {
             using (var scope = ArrayPoolRentScope<byte>.Rent(256))
