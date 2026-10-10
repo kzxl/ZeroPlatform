@@ -132,7 +132,9 @@ namespace ZeroPrimitives.Core.Identifiers
                 }
                 else
                 {
-                    // Clock within same millisecond: increment 80-bit random counter monotonically
+                    // Clock within same millisecond or clock jittered backwards under thread preemption:
+                    // Pin to _lastUnixMs and increment 80-bit random counter monotonically
+                    unixTimeMs = _lastUnixMs;
                     if (_lastRandLow == ulong.MaxValue)
                     {
                         _lastRandLow = 0;
@@ -158,7 +160,7 @@ namespace ZeroPrimitives.Core.Identifiers
                     }
                 }
 
-                finalHigh = ((ulong)unixTimeMs << 16) | (_lastRandHigh & 0xFFFF);
+                finalHigh = ((ulong)_lastUnixMs << 16) | (_lastRandHigh & 0xFFFF);
                 finalLow = _lastRandLow;
             }
 
