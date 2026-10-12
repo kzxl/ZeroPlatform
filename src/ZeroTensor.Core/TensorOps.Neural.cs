@@ -1,7 +1,12 @@
 using System;
+using System.Buffers;
 using System.Numerics;
 using System.Runtime.CompilerServices;
 using System.Threading.Tasks;
+#if NET8_0_OR_GREATER
+using System.Runtime.Intrinsics;
+using System.Runtime.Intrinsics.X86;
+#endif
 
 namespace ZeroTensor.Core
 {
@@ -631,6 +636,311 @@ namespace ZeroTensor.Core
 
         #region Attention: FlashAttentionCpu (Tiled Online Softmax with SIMD & GQA)
 
+        [MethodImpl(MethodImplOptions.AggressiveInlining)]
+        private static unsafe void FlashAttentionComputeRow(
+            float* pQ_i,
+            float* pOut_i,
+            float* pK_base,
+            float* pV_base,
+            float* pMask_row,
+            int sK,
+            int d,
+            int dV,
+            float scaleFactor,
+            int vecSize)
+        {
+            Span<float> acc = stackalloc float[Math.Min(dV, 512)];
+            float[]? rented = null;
+            if (dV > 512)
+            {
+                rented = ArrayPool<float>.Shared.Rent(dV);
+                acc = rented.AsSpan(0, dV);
+            }
+
+            try
+            {
+                acc.Clear();
+                fixed (float* pAcc = acc)
+                {
+                    float maxScore = float.NegativeInfinity;
+                    float sumExp = 0f;
+
+                    const int Bc = 32;
+                    Span<float> blockScores = stackalloc float[Bc];
+                    Span<float> blockWeights = stackalloc float[Bc];
+
+                    for (int j0 = 0; j0 < sK; j0 += Bc)
+                    {
+                        int bLen = Math.Min(Bc, sK - j0);
+
+                        // 1. SIMD dot products for block
+#if NET8_0_OR_GREATER
+                        if (Avx2.IsSupported && Fma.IsSupported)
+                        {
+                            int k = 0;
+                            for (; k <= bLen - 4; k += 4)
+                            {
+                                int j = j0 + k;
+                                float* pK0 = pK_base + j * d;
+                                float* pK1 = pK0 + d;
+                                float* pK2 = pK1 + d;
+                                float* pK3 = pK2 + d;
+
+                                var vDot0 = Vector256<float>.Zero;
+                                var vDot1 = Vector256<float>.Zero;
+                                var vDot2 = Vector256<float>.Zero;
+                                var vDot3 = Vector256<float>.Zero;
+
+                                int c = 0;
+                                for (; c <= d - 8; c += 8)
+                                {
+                                    var vQ = Vector256.Load(pQ_i + c);
+                                    vDot0 = Fma.MultiplyAdd(vQ, Vector256.Load(pK0 + c), vDot0);
+                                    vDot1 = Fma.MultiplyAdd(vQ, Vector256.Load(pK1 + c), vDot1);
+                                    vDot2 = Fma.MultiplyAdd(vQ, Vector256.Load(pK2 + c), vDot2);
+                                    vDot3 = Fma.MultiplyAdd(vQ, Vector256.Load(pK3 + c), vDot3);
+                                }
+
+                                float dot0 = Vector256.Sum(vDot0);
+                                float dot1 = Vector256.Sum(vDot1);
+                                float dot2 = Vector256.Sum(vDot2);
+                                float dot3 = Vector256.Sum(vDot3);
+
+                                for (; c < d; c++)
+                                {
+                                    float qVal = pQ_i[c];
+                                    dot0 += qVal * pK0[c];
+                                    dot1 += qVal * pK1[c];
+                                    dot2 += qVal * pK2[c];
+                                    dot3 += qVal * pK3[c];
+                                }
+
+                                blockScores[k] = dot0 * scaleFactor;
+                                blockScores[k + 1] = dot1 * scaleFactor;
+                                blockScores[k + 2] = dot2 * scaleFactor;
+                                blockScores[k + 3] = dot3 * scaleFactor;
+                            }
+
+                            for (; k < bLen; k++)
+                            {
+                                int j = j0 + k;
+                                float* pK = pK_base + j * d;
+                                var vDot = Vector256<float>.Zero;
+                                int c = 0;
+                                for (; c <= d - 8; c += 8)
+                                {
+                                    vDot = Fma.MultiplyAdd(Vector256.Load(pQ_i + c), Vector256.Load(pK + c), vDot);
+                                }
+                                float dot = Vector256.Sum(vDot);
+                                for (; c < d; c++)
+                                {
+                                    dot += pQ_i[c] * pK[c];
+                                }
+                                blockScores[k] = dot * scaleFactor;
+                            }
+                        }
+                        else
+#endif
+                        {
+                            for (int k = 0; k < bLen; k++)
+                            {
+                                int j = j0 + k;
+                                float* pK = pK_base + j * d;
+                                float dot = 0f;
+                                int c = 0;
+                                if (Vector.IsHardwareAccelerated && d >= vecSize)
+                                {
+                                    var vDot = Vector<float>.Zero;
+                                    for (; c <= d - vecSize; c += vecSize)
+                                    {
+                                        var vQ = Unsafe.ReadUnaligned<Vector<float>>(pQ_i + c);
+                                        var vK = Unsafe.ReadUnaligned<Vector<float>>(pK + c);
+                                        vDot += vQ * vK;
+                                    }
+                                    for (int kIdx = 0; kIdx < vecSize; kIdx++) dot += vDot[kIdx];
+                                }
+                                for (; c < d; c++) dot += pQ_i[c] * pK[c];
+                                blockScores[k] = dot * scaleFactor;
+                            }
+                        }
+
+                        // Apply attention mask if provided
+                        if (pMask_row != null)
+                        {
+                            for (int k = 0; k < bLen; k++)
+                            {
+                                blockScores[k] += pMask_row[j0 + k];
+                            }
+                        }
+
+                        // 2. Block max
+                        float mBlock = float.NegativeInfinity;
+                        for (int k = 0; k < bLen; k++)
+                        {
+                            if (blockScores[k] > mBlock) mBlock = blockScores[k];
+                        }
+
+                        if (float.IsNegativeInfinity(mBlock))
+                        {
+                            continue;
+                        }
+
+                        // 3. Exponentiate & sum
+                        float lBlock = 0f;
+                        for (int k = 0; k < bLen; k++)
+                        {
+                            float s = blockScores[k];
+                            if (s <= float.NegativeInfinity + 1000f)
+                            {
+                                blockWeights[k] = 0f;
+                            }
+                            else
+                            {
+                                float p = (float)Math.Exp(s - mBlock);
+                                blockWeights[k] = p;
+                                lBlock += p;
+                            }
+                        }
+
+                        // 4. Online statistics merge
+                        float mNew = Math.Max(maxScore, mBlock);
+                        float alpha = float.IsNegativeInfinity(maxScore) ? 0f : (float)Math.Exp(maxScore - mNew);
+                        float beta = (float)Math.Exp(mBlock - mNew);
+
+                        sumExp = sumExp * alpha + lBlock * beta;
+                        maxScore = mNew;
+
+                        // 5. Rescale accumulator if needed
+                        if (alpha != 1.0f)
+                        {
+#if NET8_0_OR_GREATER
+                            if (Avx.IsSupported)
+                            {
+                                var vAlpha = Vector256.Create(alpha);
+                                int cv = 0;
+                                for (; cv <= dV - 8; cv += 8)
+                                {
+                                    Vector256.Store(Vector256.Load(pAcc + cv) * vAlpha, pAcc + cv);
+                                }
+                                for (; cv < dV; cv++) pAcc[cv] *= alpha;
+                            }
+                            else
+#endif
+                            {
+                                int cv = 0;
+                                if (Vector.IsHardwareAccelerated && dV >= vecSize)
+                                {
+                                    var vAlpha = new Vector<float>(alpha);
+                                    for (; cv <= dV - vecSize; cv += vecSize)
+                                    {
+                                        var vA = Unsafe.ReadUnaligned<Vector<float>>(pAcc + cv);
+                                        Unsafe.WriteUnaligned(pAcc + cv, vA * vAlpha);
+                                    }
+                                }
+                                for (; cv < dV; cv++) pAcc[cv] *= alpha;
+                            }
+                        }
+
+                        // 6. Accumulate V: pAcc += (blockWeights[k] * beta) * V[j0 + k]
+                        for (int k = 0; k < bLen; k++)
+                        {
+                            float w = blockWeights[k] * beta;
+                            if (w == 0f) continue;
+
+                            float* pV = pV_base + (j0 + k) * dV;
+
+#if NET8_0_OR_GREATER
+                            if (Avx2.IsSupported && Fma.IsSupported)
+                            {
+                                var vW = Vector256.Create(w);
+                                int cv = 0;
+                                for (; cv <= dV - 16; cv += 16)
+                                {
+                                    var vA0 = Vector256.Load(pAcc + cv);
+                                    var vA1 = Vector256.Load(pAcc + cv + 8);
+                                    var vV0 = Vector256.Load(pV + cv);
+                                    var vV1 = Vector256.Load(pV + cv + 8);
+                                    Vector256.Store(Fma.MultiplyAdd(vW, vV0, vA0), pAcc + cv);
+                                    Vector256.Store(Fma.MultiplyAdd(vW, vV1, vA1), pAcc + cv + 8);
+                                }
+                                for (; cv <= dV - 8; cv += 8)
+                                {
+                                    var vA = Vector256.Load(pAcc + cv);
+                                    var vV = Vector256.Load(pV + cv);
+                                    Vector256.Store(Fma.MultiplyAdd(vW, vV, vA), pAcc + cv);
+                                }
+                                for (; cv < dV; cv++)
+                                {
+                                    pAcc[cv] += w * pV[cv];
+                                }
+                            }
+                            else
+#endif
+                            {
+                                int cv = 0;
+                                if (Vector.IsHardwareAccelerated && dV >= vecSize)
+                                {
+                                    var vW = new Vector<float>(w);
+                                    for (; cv <= dV - vecSize; cv += vecSize)
+                                    {
+                                        var vA = Unsafe.ReadUnaligned<Vector<float>>(pAcc + cv);
+                                        var vV = Unsafe.ReadUnaligned<Vector<float>>(pV + cv);
+                                        Unsafe.WriteUnaligned(pAcc + cv, vA + vW * vV);
+                                    }
+                                }
+                                for (; cv < dV; cv++)
+                                {
+                                    pAcc[cv] += w * pV[cv];
+                                }
+                            }
+                        }
+                    }
+
+                    // 7. Output normalization
+                    float invSum = sumExp > 0f ? 1.0f / sumExp : 0f;
+#if NET8_0_OR_GREATER
+                    if (Avx.IsSupported)
+                    {
+                        var vInv = Vector256.Create(invSum);
+                        int cv = 0;
+                        for (; cv <= dV - 8; cv += 8)
+                        {
+                            Vector256.Store(Vector256.Load(pAcc + cv) * vInv, pOut_i + cv);
+                        }
+                        for (; cv < dV; cv++)
+                        {
+                            pOut_i[cv] = pAcc[cv] * invSum;
+                        }
+                    }
+                    else
+#endif
+                    {
+                        int cv = 0;
+                        if (Vector.IsHardwareAccelerated && dV >= vecSize)
+                        {
+                            var vInv = new Vector<float>(invSum);
+                            for (; cv <= dV - vecSize; cv += vecSize)
+                            {
+                                var vA = Unsafe.ReadUnaligned<Vector<float>>(pAcc + cv);
+                                Unsafe.WriteUnaligned(pOut_i + cv, vA * vInv);
+                            }
+                        }
+                        for (; cv < dV; cv++)
+                        {
+                            pOut_i[cv] = pAcc[cv] * invSum;
+                        }
+                    }
+                }
+            }
+            finally
+            {
+                if (rented != null)
+                {
+                    ArrayPool<float>.Shared.Return(rented);
+                }
+            }
+        }
+
         /// <summary>
         /// Tiled Online Softmax Attention (FlashAttention for CPU).
         /// Computes Softmax(Q @ K.T * scale + mask) @ V without materializing the O(N^2) attention score matrix.
@@ -717,7 +1027,10 @@ namespace ZeroTensor.Core
 
                     Action runParallel = () =>
                     {
-                        Parallel.For(0, batchCount, b =>
+                        int totalRows = batchCount * sQ;
+                        int maskBatchModulo = (maskContig != null && maskBatchStride > 0) ? (maskContig.Length / maskBatchStride) : 1;
+
+                        if (totalRows == 1)
                         {
                             float* localQ = (float*)ptrQ;
                             float* localK = (float*)ptrK;
@@ -725,137 +1038,74 @@ namespace ZeroTensor.Core
                             float* localOut = (float*)ptrOut;
                             float* localMask = (float*)ptrMask;
 
-                            int bKV = b;
-                            if (isGqa)
-                            {
-                                int bSeq = b / hQ;
-                                int curHQ = b % hQ;
-                                int curHKV = curHQ / gqaGroup;
-                                bKV = bSeq * hKV + curHKV;
-                            }
+                            int bKV = isGqa ? ((0 / hQ) * hKV + ((0 % hQ) / gqaGroup)) : 0;
+                            float* pQ_i = localQ;
+                            float* pOut_i = localOut;
+                            float* pK_base = localK + bKV * kBatchStride;
+                            float* pV_base = localV + bKV * vBatchStride;
+                            float* pMask_row = localMask;
 
-                            int qBatchOff = b * qBatchStride;
-                            int kBatchOff = bKV * kBatchStride;
-                            int vBatchOff = bKV * vBatchStride;
-                            int outBatchOff = b * outBatchStride;
-                            int maskBatchOff = b * maskBatchStride;
-
-                            Span<float> acc = stackalloc float[Math.Min(dV, 512)];
-                            float[]? heapAcc = null;
-                            if (dV > 512)
+                            FlashAttentionComputeRow(pQ_i, pOut_i, pK_base, pV_base, pMask_row, sK, d, dV, scaleFactor, vecSize);
+                        }
+                        else if (batchCount >= Environment.ProcessorCount)
+                        {
+                            Parallel.For(0, batchCount, b =>
                             {
-                                heapAcc = new float[dV];
-                                acc = heapAcc.AsSpan();
-                            }
+                                float* localQ = (float*)ptrQ;
+                                float* localK = (float*)ptrK;
+                                float* localV = (float*)ptrV;
+                                float* localOut = (float*)ptrOut;
+                                float* localMask = (float*)ptrMask;
 
-                            fixed (float* pAcc = acc)
-                            {
+                                int bKV = isGqa ? ((b / hQ) * hKV + ((b % hQ) / gqaGroup)) : b;
+
+                                int qBatchOff = b * qBatchStride;
+                                int kBatchOff = bKV * kBatchStride;
+                                int vBatchOff = bKV * vBatchStride;
+                                int outBatchOff = b * outBatchStride;
+
+                                float* pK_base = localK + kBatchOff;
+                                float* pV_base = localV + vBatchOff;
+
                                 for (int i = 0; i < sQ; i++)
                                 {
-                                    int qOff = qBatchOff + i * d;
-                                    int outOff = outBatchOff + i * dV;
-                                    int maskRowOff = localMask != null ? (maskBatchStride > 0 ? (b % (maskContig!.Length / maskBatchStride)) * maskBatchStride + i * sK : 0) : 0;
+                                    float* pQ_i = localQ + qBatchOff + i * d;
+                                    float* pOut_i = localOut + outBatchOff + i * dV;
+                                    float* pMask_row = localMask != null ? (localMask + (maskBatchStride > 0 ? (b % maskBatchModulo) * maskBatchStride + i * sK : 0)) : null;
 
-                                    float maxScore = float.NegativeInfinity;
-                                    float sumExp = 0f;
-                                    acc.Clear();
-
-                                    for (int j = 0; j < sK; j++)
-                                    {
-                                        int kOff = kBatchOff + j * d;
-                                        int vOff = vBatchOff + j * dV;
-
-                                        // 1. SIMD-accelerated Dot Product: Q[i] . K[j]
-                                        float dot = 0f;
-                                        int c = 0;
-                                        if (Vector.IsHardwareAccelerated && d >= vecSize)
-                                        {
-                                            var vDot = Vector<float>.Zero;
-                                            for (; c <= d - vecSize; c += vecSize)
-                                            {
-                                                var vQ = Unsafe.ReadUnaligned<Vector<float>>(localQ + qOff + c);
-                                                var vK = Unsafe.ReadUnaligned<Vector<float>>(localK + kOff + c);
-                                                vDot += vQ * vK;
-                                            }
-                                            for (int kIdx = 0; kIdx < vecSize; kIdx++) dot += vDot[kIdx];
-                                        }
-                                        for (; c < d; c++)
-                                        {
-                                            dot += localQ[qOff + c] * localK[kOff + c];
-                                        }
-
-                                        float score = dot * scaleFactor;
-                                        if (localMask != null)
-                                        {
-                                            score += localMask[maskRowOff + j];
-                                        }
-
-                                        // 2. Online Softmax & Value accumulation with SIMD Vector update
-                                        if (score > maxScore)
-                                        {
-                                            float alpha = (float)Math.Exp(maxScore - score);
-                                            sumExp = sumExp * alpha + 1f;
-
-                                            var vAlpha = new Vector<float>(alpha);
-                                            int cv = 0;
-                                            if (Vector.IsHardwareAccelerated && dV >= vecSize)
-                                            {
-                                                for (; cv <= dV - vecSize; cv += vecSize)
-                                                {
-                                                    var vA = Unsafe.ReadUnaligned<Vector<float>>(pAcc + cv);
-                                                    var vVal = Unsafe.ReadUnaligned<Vector<float>>(localV + vOff + cv);
-                                                    Unsafe.WriteUnaligned(pAcc + cv, vA * vAlpha + vVal);
-                                                }
-                                            }
-                                            for (; cv < dV; cv++)
-                                            {
-                                                pAcc[cv] = pAcc[cv] * alpha + localV[vOff + cv];
-                                            }
-
-                                            maxScore = score;
-                                        }
-                                        else
-                                        {
-                                            float p = (float)Math.Exp(score - maxScore);
-                                            sumExp += p;
-
-                                            var vP = new Vector<float>(p);
-                                            int cv = 0;
-                                            if (Vector.IsHardwareAccelerated && dV >= vecSize)
-                                            {
-                                                for (; cv <= dV - vecSize; cv += vecSize)
-                                                {
-                                                    var vA = Unsafe.ReadUnaligned<Vector<float>>(pAcc + cv);
-                                                    var vVal = Unsafe.ReadUnaligned<Vector<float>>(localV + vOff + cv);
-                                                    Unsafe.WriteUnaligned(pAcc + cv, vA + vP * vVal);
-                                                }
-                                            }
-                                            for (; cv < dV; cv++)
-                                            {
-                                                pAcc[cv] += p * localV[vOff + cv];
-                                            }
-                                        }
-                                    }
-
-                                    // 3. Normalize output with invSum via SIMD
-                                    float invSum = sumExp > 0f ? 1.0f / sumExp : 0f;
-                                    var vInv = new Vector<float>(invSum);
-                                    int cOut = 0;
-                                    if (Vector.IsHardwareAccelerated && dV >= vecSize)
-                                    {
-                                        for (; cOut <= dV - vecSize; cOut += vecSize)
-                                        {
-                                            var vA = Unsafe.ReadUnaligned<Vector<float>>(pAcc + cOut);
-                                            Unsafe.WriteUnaligned(localOut + outOff + cOut, vA * vInv);
-                                        }
-                                    }
-                                    for (; cOut < dV; cOut++)
-                                    {
-                                        localOut[outOff + cOut] = pAcc[cOut] * invSum;
-                                    }
+                                    FlashAttentionComputeRow(pQ_i, pOut_i, pK_base, pV_base, pMask_row, sK, d, dV, scaleFactor, vecSize);
                                 }
-                            }
-                        });
+                            });
+                        }
+                        else
+                        {
+                            Parallel.For(0, totalRows, rowIdx =>
+                            {
+                                float* localQ = (float*)ptrQ;
+                                float* localK = (float*)ptrK;
+                                float* localV = (float*)ptrV;
+                                float* localOut = (float*)ptrOut;
+                                float* localMask = (float*)ptrMask;
+
+                                int b = rowIdx / sQ;
+                                int i = rowIdx % sQ;
+
+                                int bKV = isGqa ? ((b / hQ) * hKV + ((b % hQ) / gqaGroup)) : b;
+
+                                int qBatchOff = b * qBatchStride;
+                                int kBatchOff = bKV * kBatchStride;
+                                int vBatchOff = bKV * vBatchStride;
+                                int outBatchOff = b * outBatchStride;
+
+                                float* pQ_i = localQ + qBatchOff + i * d;
+                                float* pOut_i = localOut + outBatchOff + i * dV;
+                                float* pK_base = localK + kBatchOff;
+                                float* pV_base = localV + vBatchOff;
+                                float* pMask_row = localMask != null ? (localMask + (maskBatchStride > 0 ? (b % maskBatchModulo) * maskBatchStride + i * sK : 0)) : null;
+
+                                FlashAttentionComputeRow(pQ_i, pOut_i, pK_base, pV_base, pMask_row, sK, d, dV, scaleFactor, vecSize);
+                            });
+                        }
                     };
 
                     if (maskContig != null)
