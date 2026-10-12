@@ -1019,6 +1019,35 @@ namespace ZeroTensor.Core
                 fixed (float* pV = &vContig.Storage.GetPinnableReference(vContig.Offset))
                 fixed (float* pOut = &result.Storage.GetPinnableReference(result.Offset))
                 {
+#if NET8_0_OR_GREATER
+                    if (Native.ZeroTensorNativeBridge.IsAvailable)
+                    {
+                        if (maskContig != null)
+                        {
+                            fixed (float* pM = &maskContig.Storage.GetPinnableReference(maskContig.Offset))
+                            {
+                                if (Native.ZeroTensorNativeBridge.FlashAttention(
+                                    batchCount, sQ, sK, d, dV, scaleFactor,
+                                    isGqa, hQ, hKV, gqaGroup,
+                                    pQ, pK, pV, pM, pOut) == 0)
+                                {
+                                    return result;
+                                }
+                            }
+                        }
+                        else
+                        {
+                            if (Native.ZeroTensorNativeBridge.FlashAttention(
+                                batchCount, sQ, sK, d, dV, scaleFactor,
+                                isGqa, hQ, hKV, gqaGroup,
+                                pQ, pK, pV, null, pOut) == 0)
+                            {
+                                return result;
+                            }
+                        }
+                    }
+#endif
+
                     IntPtr ptrQ = (IntPtr)pQ;
                     IntPtr ptrK = (IntPtr)pK;
                     IntPtr ptrV = (IntPtr)pV;

@@ -340,6 +340,14 @@ namespace ZeroTensor.Core
             int rowByteStride = numBlocksPerRow * bytesPerBlock;
 
 #if NET8_0_OR_GREATER
+            if (Native.ZeroTensorNativeBridge.IsAvailable)
+            {
+                if (Native.ZeroTensorNativeBridge.GemvQ4_0((byte*)ptrWeight, pAct, pDst, nRows, kCols) == 0)
+                {
+                    return;
+                }
+            }
+
             if (Avx2.IsSupported && Fma.IsSupported)
             {
                 var vMask = Vector256.Create(0x0F);
@@ -430,6 +438,14 @@ namespace ZeroTensor.Core
             int rowByteStride = numBlocksPerRow * bytesPerBlock;
 
 #if NET8_0_OR_GREATER
+            if (Native.ZeroTensorNativeBridge.IsAvailable)
+            {
+                if (Native.ZeroTensorNativeBridge.GemvQ8_0((byte*)ptrWeight, pAct, pDst, nRows, kCols) == 0)
+                {
+                    return;
+                }
+            }
+
             if (Avx2.IsSupported && Fma.IsSupported)
             {
                 Parallel.For(0, nRows, r =>

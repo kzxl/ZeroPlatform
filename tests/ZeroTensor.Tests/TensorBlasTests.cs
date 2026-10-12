@@ -91,5 +91,16 @@ namespace ZeroTensor.Tests
             Assert.Equal(17f, y[0]);
             Assert.Equal(39f, y[1]);
         }
+
+        [Fact]
+        public void ZeroRust_NativeBridge_IsAvailable_And_Executes()
+        {
+            Assert.True(ZeroTensor.Core.Native.ZeroTensorNativeBridge.IsAvailable);
+            var a = Tensor.Ones<float>(16, 16);
+            var b = Tensor.Ones<float>(16, 16);
+            var c = TensorBlas.MatMul(a, b);
+            Assert.Equal(16f, c[0, 0]);
+            Assert.Equal(16f, c[15, 15]);
+        }
     }
 }

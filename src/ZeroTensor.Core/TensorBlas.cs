@@ -133,6 +133,14 @@ namespace ZeroTensor.Core
                     if (sB1 == 1 && sC1 == 1)
                     {
 #if NET8_0_OR_GREATER
+                        if (ZeroTensor.Core.Native.ZeroTensorNativeBridge.IsAvailable)
+                        {
+                            if (ZeroTensor.Core.Native.ZeroTensorNativeBridge.Gemm(m, n, k, alpha, localA, sA0, sA1, localB, sB0, sB1, beta, localC, sC0, sC1, runParallel) == 0)
+                            {
+                                return;
+                            }
+                        }
+
                         if (Vector256.IsHardwareAccelerated && Vector256<float>.Count == 8)
                         {
                             GemmGotoBlasNet8(localA, sA0, localB, sB0, localC, sC0, m, k, n, alpha, beta, runParallel);
