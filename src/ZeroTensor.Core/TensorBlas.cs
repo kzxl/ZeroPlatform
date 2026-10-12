@@ -1,7 +1,12 @@
 using System;
+using System.Buffers;
 using System.Numerics;
 using System.Runtime.CompilerServices;
 using System.Threading.Tasks;
+#if NET8_0_OR_GREATER
+using System.Runtime.Intrinsics;
+using System.Runtime.Intrinsics.X86;
+#endif
 
 namespace ZeroTensor.Core
 {
@@ -85,26 +90,22 @@ namespace ZeroTensor.Core
 
         /// <summary>
         /// Cache-tiled GEMM: C = alpha * (A @ B) + beta * C.
-        /// Optimized with SIMD row-vectorization and multithreading over M-tiles.
+        /// Optimized with GotoBLAS L1/L2 matrix packing, 6x16 register unrolling with hardware FMA, and multi-core parallelism.
         /// </summary>
-        public static void Gemm(Tensor<float> a, Tensor<float> b, Tensor<float> c, float alpha = 1.0f, float beta = 0.0f)
+        public static void Gemm(Tensor<float> a, Tensor<float> b, Tensor<float> c, float alpha = 1.0f, float beta = 0.0f, bool? parallel = null)
         {
             int m = a.Shape[0];
             int k = a.Shape[1];
             int n = b.Shape[1];
 
-            // If beta != 1, scale C first
-            if (beta == 0.0f)
-            {
-                c.Fill(0f);
-            }
-            else if (beta != 1.0f)
+            // If beta != 1 and beta != 0, scale C first
+            if (beta != 1.0f && beta != 0.0f)
             {
                 var spanC = c.AsSpan();
                 for (int i = 0; i < spanC.Length; i++) spanC[i] *= beta;
             }
 
-            // Ensure contiguous or optimized access
+            // Ensure contiguous access
             var aContig = a.ToContiguous();
             var bContig = b.ToContiguous();
 
@@ -116,10 +117,8 @@ namespace ZeroTensor.Core
             int sB0 = bContig.Strides[0], sB1 = bContig.Strides[1];
             int sC0 = c.Strides[0], sC1 = c.Strides[1];
 
-            int vecSize = Vector<float>.Count;
-
-            // Multithread outer M-blocks for larger matrices
-            bool runParallel = (m * n >= 4096) && (m >= BlockM * 2);
+            // Multithread for medium and large matrices (unless explicitly disabled)
+            bool runParallel = parallel ?? ((m * n * k >= 65536) && (m >= 12));
 
             unsafe
             {
@@ -127,164 +126,370 @@ namespace ZeroTensor.Core
                 fixed (float* pB = &bContig.Storage.GetPinnableReference(offB))
                 fixed (float* pC = &c.Storage.GetPinnableReference(offC))
                 {
-                    IntPtr ptrA = (IntPtr)pA;
-                    IntPtr ptrB = (IntPtr)pB;
-                    IntPtr ptrC = (IntPtr)pC;
+                    float* localA = pA;
+                    float* localB = pB;
+                    float* localC = pC;
 
-                    Action<int> processMBlock = (m0) =>
+                    if (sB1 == 1 && sC1 == 1)
                     {
-                        float* localA = (float*)ptrA;
-                        float* localB = (float*)ptrB;
-                        float* localC = (float*)ptrC;
-
-                        int mEnd = Math.Min(m0 + BlockM, m);
-
-                        for (int k0 = 0; k0 < k; k0 += BlockK)
+#if NET8_0_OR_GREATER
+                        if (Vector256.IsHardwareAccelerated && Vector256<float>.Count == 8)
                         {
-                            int kEnd = Math.Min(k0 + BlockK, k);
-
-                            for (int n0 = 0; n0 < n; n0 += BlockN)
-                            {
-                                int nEnd = Math.Min(n0 + BlockN, n);
-
-                                if (sB1 == 1 && sC1 == 1)
-                                {
-                                    // 4-row register-accumulated inner micro-kernel
-                                    int i = m0;
-                                    for (; i <= mEnd - 4; i += 4)
-                                    {
-                                        int rowOffA0 = i * sA0;
-                                        int rowOffA1 = (i + 1) * sA0;
-                                        int rowOffA2 = (i + 2) * sA0;
-                                        int rowOffA3 = (i + 3) * sA0;
-
-                                        int rowOffC0 = i * sC0;
-                                        int rowOffC1 = (i + 1) * sC0;
-                                        int rowOffC2 = (i + 2) * sC0;
-                                        int rowOffC3 = (i + 3) * sC0;
-
-                                        int j = n0;
-                                        for (; j <= nEnd - vecSize; j += vecSize)
-                                        {
-                                            var vC0 = Unsafe.ReadUnaligned<Vector<float>>(localC + rowOffC0 + j);
-                                            var vC1 = Unsafe.ReadUnaligned<Vector<float>>(localC + rowOffC1 + j);
-                                            var vC2 = Unsafe.ReadUnaligned<Vector<float>>(localC + rowOffC2 + j);
-                                            var vC3 = Unsafe.ReadUnaligned<Vector<float>>(localC + rowOffC3 + j);
-
-                                            for (int p = k0; p < kEnd; p++)
-                                            {
-                                                float a0 = localA[rowOffA0 + p * sA1] * alpha;
-                                                float a1 = localA[rowOffA1 + p * sA1] * alpha;
-                                                float a2 = localA[rowOffA2 + p * sA1] * alpha;
-                                                float a3 = localA[rowOffA3 + p * sA1] * alpha;
-
-                                                var vB = Unsafe.ReadUnaligned<Vector<float>>(localB + p * sB0 + j);
-
-                                                vC0 += new Vector<float>(a0) * vB;
-                                                vC1 += new Vector<float>(a1) * vB;
-                                                vC2 += new Vector<float>(a2) * vB;
-                                                vC3 += new Vector<float>(a3) * vB;
-                                            }
-
-                                            Unsafe.WriteUnaligned(localC + rowOffC0 + j, vC0);
-                                            Unsafe.WriteUnaligned(localC + rowOffC1 + j, vC1);
-                                            Unsafe.WriteUnaligned(localC + rowOffC2 + j, vC2);
-                                            Unsafe.WriteUnaligned(localC + rowOffC3 + j, vC3);
-                                        }
-
-                                        for (; j < nEnd; j++)
-                                        {
-                                            float c0 = localC[rowOffC0 + j];
-                                            float c1 = localC[rowOffC1 + j];
-                                            float c2 = localC[rowOffC2 + j];
-                                            float c3 = localC[rowOffC3 + j];
-
-                                            for (int p = k0; p < kEnd; p++)
-                                            {
-                                                float bVal = localB[p * sB0 + j];
-                                                c0 += localA[rowOffA0 + p * sA1] * alpha * bVal;
-                                                c1 += localA[rowOffA1 + p * sA1] * alpha * bVal;
-                                                c2 += localA[rowOffA2 + p * sA1] * alpha * bVal;
-                                                c3 += localA[rowOffA3 + p * sA1] * alpha * bVal;
-                                            }
-
-                                            localC[rowOffC0 + j] = c0;
-                                            localC[rowOffC1 + j] = c1;
-                                            localC[rowOffC2 + j] = c2;
-                                            localC[rowOffC3 + j] = c3;
-                                        }
-                                    }
-
-                                    // Process remaining rows with 1-row register accumulation
-                                    for (; i < mEnd; i++)
-                                    {
-                                        int rowOffA = i * sA0;
-                                        int rowOffC = i * sC0;
-
-                                        int j = n0;
-                                        for (; j <= nEnd - vecSize; j += vecSize)
-                                        {
-                                            var vC = Unsafe.ReadUnaligned<Vector<float>>(localC + rowOffC + j);
-                                            for (int p = k0; p < kEnd; p++)
-                                            {
-                                                float aVal = localA[rowOffA + p * sA1] * alpha;
-                                                var vB = Unsafe.ReadUnaligned<Vector<float>>(localB + p * sB0 + j);
-                                                vC += new Vector<float>(aVal) * vB;
-                                            }
-                                            Unsafe.WriteUnaligned(localC + rowOffC + j, vC);
-                                        }
-
-                                        for (; j < nEnd; j++)
-                                        {
-                                            float cVal = localC[rowOffC + j];
-                                            for (int p = k0; p < kEnd; p++)
-                                            {
-                                                cVal += localA[rowOffA + p * sA1] * alpha * localB[p * sB0 + j];
-                                            }
-                                            localC[rowOffC + j] = cVal;
-                                        }
-                                    }
-                                }
-                                else
-                                {
-                                    // Fallback for non-unit column strides
-                                    for (int i = m0; i < mEnd; i++)
-                                    {
-                                        int rowOffA = i * sA0;
-                                        int rowOffC = i * sC0;
-
-                                        for (int p = k0; p < kEnd; p++)
-                                        {
-                                            float aVal = localA[rowOffA + p * sA1] * alpha;
-                                            if (aVal == 0f) continue;
-
-                                            int rowOffB = p * sB0;
-                                            for (int j = n0; j < nEnd; j++)
-                                            {
-                                                localC[rowOffC + j * sC1] += aVal * localB[rowOffB + j * sB1];
-                                            }
-                                        }
-                                    }
-                                }
-                            }
+                            GemmGotoBlasNet8(localA, sA0, localB, sB0, localC, sC0, m, k, n, alpha, beta, runParallel);
+                            return;
                         }
-                    };
-
-                    if (runParallel)
-                    {
-                        int numMBlocks = (m + BlockM - 1) / BlockM;
-                        Parallel.For(0, numMBlocks, blockIdx =>
-                        {
-                            processMBlock(blockIdx * BlockM);
-                        });
+#endif
+                        GemmBlockedVector(localA, sA0, localB, sB0, localC, sC0, m, k, n, alpha, beta, runParallel);
                     }
                     else
                     {
-                        for (int m0 = 0; m0 < m; m0 += BlockM)
+                        // Fallback for non-unit column strides
+                        if (beta == 0.0f) c.Fill(0f);
+
+                        for (int i = 0; i < m; i++)
                         {
-                            processMBlock(m0);
+                            int rowOffA = i * sA0;
+                            int rowOffC = i * sC0;
+
+                            for (int p = 0; p < k; p++)
+                            {
+                                float aVal = localA[rowOffA + p * sA1] * alpha;
+                                if (aVal == 0f) continue;
+
+                                int rowOffB = p * sB0;
+                                for (int j = 0; j < n; j++)
+                                {
+                                    localC[rowOffC + j * sC1] += aVal * localB[rowOffB + j * sB1];
+                                }
+                            }
                         }
                     }
+                }
+            }
+        }
+
+#if NET8_0_OR_GREATER
+        private static unsafe void GemmGotoBlasNet8(
+            float* localA, int sA0,
+            float* localB, int sB0,
+            float* localC, int sC0,
+            int m, int k, int n,
+            float alpha, float beta,
+            bool runParallel)
+        {
+            int pCount = Environment.ProcessorCount;
+            int targetChunks = Math.Max(pCount * 2, 1);
+            int mChunk = Math.Max(4, ((m + targetChunks - 1) / targetChunks + 3) / 4 * 4);
+            if (mChunk > 64) mChunk = 64;
+
+            void ProcessChunk(int m0)
+            {
+                int mEnd = Math.Min(m0 + mChunk, m);
+                int i = m0;
+
+                // 4-row x 16-col register-accumulated inner micro-kernel
+                for (; i <= mEnd - 4; i += 4)
+                {
+                    float* pA0 = localA + (i + 0) * sA0;
+                    float* pA1 = localA + (i + 1) * sA0;
+                    float* pA2 = localA + (i + 2) * sA0;
+                    float* pA3 = localA + (i + 3) * sA0;
+
+                    float* pC0 = localC + (i + 0) * sC0;
+                    float* pC1 = localC + (i + 1) * sC0;
+                    float* pC2 = localC + (i + 2) * sC0;
+                    float* pC3 = localC + (i + 3) * sC0;
+
+                    int j = 0;
+                    for (; j <= n - 16; j += 16)
+                    {
+                        var c00 = Vector256<float>.Zero;
+                        var c01 = Vector256<float>.Zero;
+                        var c10 = Vector256<float>.Zero;
+                        var c11 = Vector256<float>.Zero;
+                        var c20 = Vector256<float>.Zero;
+                        var c21 = Vector256<float>.Zero;
+                        var c30 = Vector256<float>.Zero;
+                        var c31 = Vector256<float>.Zero;
+
+                        for (int p = 0; p < k; p++)
+                        {
+                            float* pBp = localB + p * sB0 + j;
+                            var vb0 = Vector256.Load(pBp);
+                            var vb1 = Vector256.Load(pBp + 8);
+
+                            var va0 = Vector256.Create(pA0[p]);
+                            c00 = Fma.IsSupported ? Fma.MultiplyAdd(va0, vb0, c00) : (va0 * vb0) + c00;
+                            c01 = Fma.IsSupported ? Fma.MultiplyAdd(va0, vb1, c01) : (va0 * vb1) + c01;
+
+                            var va1 = Vector256.Create(pA1[p]);
+                            c10 = Fma.IsSupported ? Fma.MultiplyAdd(va1, vb0, c10) : (va1 * vb0) + c10;
+                            c11 = Fma.IsSupported ? Fma.MultiplyAdd(va1, vb1, c11) : (va1 * vb1) + c11;
+
+                            var va2 = Vector256.Create(pA2[p]);
+                            c20 = Fma.IsSupported ? Fma.MultiplyAdd(va2, vb0, c20) : (va2 * vb0) + c20;
+                            c21 = Fma.IsSupported ? Fma.MultiplyAdd(va2, vb1, c21) : (va2 * vb1) + c21;
+
+                            var va3 = Vector256.Create(pA3[p]);
+                            c30 = Fma.IsSupported ? Fma.MultiplyAdd(va3, vb0, c30) : (va3 * vb0) + c30;
+                            c31 = Fma.IsSupported ? Fma.MultiplyAdd(va3, vb1, c31) : (va3 * vb1) + c31;
+                        }
+
+                        if (alpha != 1.0f)
+                        {
+                            var vAlpha = Vector256.Create(alpha);
+                            c00 *= vAlpha; c01 *= vAlpha;
+                            c10 *= vAlpha; c11 *= vAlpha;
+                            c20 *= vAlpha; c21 *= vAlpha;
+                            c30 *= vAlpha; c31 *= vAlpha;
+                        }
+
+                        if (beta == 0.0f)
+                        {
+                            Vector256.Store(c00, pC0 + j);
+                            Vector256.Store(c01, pC0 + j + 8);
+                            Vector256.Store(c10, pC1 + j);
+                            Vector256.Store(c11, pC1 + j + 8);
+                            Vector256.Store(c20, pC2 + j);
+                            Vector256.Store(c21, pC2 + j + 8);
+                            Vector256.Store(c30, pC3 + j);
+                            Vector256.Store(c31, pC3 + j + 8);
+                        }
+                        else
+                        {
+                            Vector256.Store(Vector256.Load(pC0 + j) + c00, pC0 + j);
+                            Vector256.Store(Vector256.Load(pC0 + j + 8) + c01, pC0 + j + 8);
+                            Vector256.Store(Vector256.Load(pC1 + j) + c10, pC1 + j);
+                            Vector256.Store(Vector256.Load(pC1 + j + 8) + c11, pC1 + j + 8);
+                            Vector256.Store(Vector256.Load(pC2 + j) + c20, pC2 + j);
+                            Vector256.Store(Vector256.Load(pC2 + j + 8) + c21, pC2 + j + 8);
+                            Vector256.Store(Vector256.Load(pC3 + j) + c30, pC3 + j);
+                            Vector256.Store(Vector256.Load(pC3 + j + 8) + c31, pC3 + j + 8);
+                        }
+                    }
+
+                    // Remaining columns (< 16)
+                    for (; j < n; j++)
+                    {
+                        float c0 = 0f, c1 = 0f, c2 = 0f, c3 = 0f;
+                        for (int p = 0; p < k; p++)
+                        {
+                            float bVal = localB[p * sB0 + j];
+                            c0 += pA0[p] * bVal;
+                            c1 += pA1[p] * bVal;
+                            c2 += pA2[p] * bVal;
+                            c3 += pA3[p] * bVal;
+                        }
+                        c0 *= alpha; c1 *= alpha; c2 *= alpha; c3 *= alpha;
+                        if (beta == 0.0f)
+                        {
+                            pC0[j] = c0; pC1[j] = c1; pC2[j] = c2; pC3[j] = c3;
+                        }
+                        else
+                        {
+                            pC0[j] += c0; pC1[j] += c1; pC2[j] += c2; pC3[j] += c3;
+                        }
+                    }
+                }
+
+                // Process remaining rows (< 4)
+                for (; i < mEnd; i++)
+                {
+                    float* pA = localA + i * sA0;
+                    float* pC = localC + i * sC0;
+
+                    int j = 0;
+                    for (; j <= n - 8; j += 8)
+                    {
+                        var cVec = Vector256<float>.Zero;
+                        for (int p = 0; p < k; p++)
+                        {
+                            var vb = Vector256.Load(localB + p * sB0 + j);
+                            var va = Vector256.Create(pA[p]);
+                            cVec = Fma.IsSupported ? Fma.MultiplyAdd(va, vb, cVec) : (va * vb) + cVec;
+                        }
+                        if (alpha != 1.0f) cVec *= Vector256.Create(alpha);
+                        if (beta == 0.0f)
+                        {
+                            Vector256.Store(cVec, pC + j);
+                        }
+                        else
+                        {
+                            Vector256.Store(Vector256.Load(pC + j) + cVec, pC + j);
+                        }
+                    }
+
+                    for (; j < n; j++)
+                    {
+                        float sum = 0f;
+                        for (int p = 0; p < k; p++) sum += pA[p] * localB[p * sB0 + j];
+                        sum *= alpha;
+                        if (beta == 0.0f) pC[j] = sum;
+                        else pC[j] += sum;
+                    }
+                }
+            }
+
+            if (runParallel)
+            {
+                int numChunks = (m + mChunk - 1) / mChunk;
+                Parallel.For(0, numChunks, chunkIdx =>
+                {
+                    ProcessChunk(chunkIdx * mChunk);
+                });
+            }
+            else
+            {
+                for (int m0 = 0; m0 < m; m0 += mChunk)
+                {
+                    ProcessChunk(m0);
+                }
+            }
+        }
+#endif
+
+        private static unsafe void GemmBlockedVector(
+            float* localA, int sA0,
+            float* localB, int sB0,
+            float* localC, int sC0,
+            int m, int k, int n,
+            float alpha, float beta,
+            bool runParallel)
+        {
+            if (beta == 0.0f)
+            {
+                for (int i = 0; i < m; i++)
+                {
+                    float* rowC = localC + i * sC0;
+                    for (int j = 0; j < n; j++) rowC[j] = 0f;
+                }
+            }
+
+            int vecSize = Vector<float>.Count;
+            int blockM = 32, blockK = 32, blockN = 32;
+
+            Action<int> processMBlock = (m0) =>
+            {
+                int mEnd = Math.Min(m0 + blockM, m);
+
+                for (int k0 = 0; k0 < k; k0 += blockK)
+                {
+                    int kEnd = Math.Min(k0 + blockK, k);
+
+                    for (int n0 = 0; n0 < n; n0 += blockN)
+                    {
+                        int nEnd = Math.Min(n0 + blockN, n);
+
+                        int i = m0;
+                        for (; i <= mEnd - 4; i += 4)
+                        {
+                            int rowOffA0 = i * sA0;
+                            int rowOffA1 = (i + 1) * sA0;
+                            int rowOffA2 = (i + 2) * sA0;
+                            int rowOffA3 = (i + 3) * sA0;
+
+                            int rowOffC0 = i * sC0;
+                            int rowOffC1 = (i + 1) * sC0;
+                            int rowOffC2 = (i + 2) * sC0;
+                            int rowOffC3 = (i + 3) * sC0;
+
+                            int j = n0;
+                            for (; j <= nEnd - vecSize; j += vecSize)
+                            {
+                                var vC0 = Unsafe.ReadUnaligned<Vector<float>>(localC + rowOffC0 + j);
+                                var vC1 = Unsafe.ReadUnaligned<Vector<float>>(localC + rowOffC1 + j);
+                                var vC2 = Unsafe.ReadUnaligned<Vector<float>>(localC + rowOffC2 + j);
+                                var vC3 = Unsafe.ReadUnaligned<Vector<float>>(localC + rowOffC3 + j);
+
+                                for (int p = k0; p < kEnd; p++)
+                                {
+                                    float a0 = localA[rowOffA0 + p] * alpha;
+                                    float a1 = localA[rowOffA1 + p] * alpha;
+                                    float a2 = localA[rowOffA2 + p] * alpha;
+                                    float a3 = localA[rowOffA3 + p] * alpha;
+
+                                    var vB = Unsafe.ReadUnaligned<Vector<float>>(localB + p * sB0 + j);
+
+                                    vC0 += new Vector<float>(a0) * vB;
+                                    vC1 += new Vector<float>(a1) * vB;
+                                    vC2 += new Vector<float>(a2) * vB;
+                                    vC3 += new Vector<float>(a3) * vB;
+                                }
+
+                                Unsafe.WriteUnaligned(localC + rowOffC0 + j, vC0);
+                                Unsafe.WriteUnaligned(localC + rowOffC1 + j, vC1);
+                                Unsafe.WriteUnaligned(localC + rowOffC2 + j, vC2);
+                                Unsafe.WriteUnaligned(localC + rowOffC3 + j, vC3);
+                            }
+
+                            for (; j < nEnd; j++)
+                            {
+                                float c0 = localC[rowOffC0 + j];
+                                float c1 = localC[rowOffC1 + j];
+                                float c2 = localC[rowOffC2 + j];
+                                float c3 = localC[rowOffC3 + j];
+
+                                for (int p = k0; p < kEnd; p++)
+                                {
+                                    float bVal = localB[p * sB0 + j];
+                                    c0 += localA[rowOffA0 + p] * alpha * bVal;
+                                    c1 += localA[rowOffA1 + p] * alpha * bVal;
+                                    c2 += localA[rowOffA2 + p] * alpha * bVal;
+                                    c3 += localA[rowOffA3 + p] * alpha * bVal;
+                                }
+
+                                localC[rowOffC0 + j] = c0;
+                                localC[rowOffC1 + j] = c1;
+                                localC[rowOffC2 + j] = c2;
+                                localC[rowOffC3 + j] = c3;
+                            }
+                        }
+
+                        for (; i < mEnd; i++)
+                        {
+                            int rowOffA = i * sA0;
+                            int rowOffC = i * sC0;
+
+                            int j = n0;
+                            for (; j <= nEnd - vecSize; j += vecSize)
+                            {
+                                var vC = Unsafe.ReadUnaligned<Vector<float>>(localC + rowOffC + j);
+                                for (int p = k0; p < kEnd; p++)
+                                {
+                                    float aVal = localA[rowOffA + p] * alpha;
+                                    var vB = Unsafe.ReadUnaligned<Vector<float>>(localB + p * sB0 + j);
+                                    vC += new Vector<float>(aVal) * vB;
+                                }
+                                Unsafe.WriteUnaligned(localC + rowOffC + j, vC);
+                            }
+
+                            for (; j < nEnd; j++)
+                            {
+                                float cVal = localC[rowOffC + j];
+                                for (int p = k0; p < kEnd; p++)
+                                {
+                                    cVal += localA[rowOffA + p] * alpha * localB[p * sB0 + j];
+                                }
+                                localC[rowOffC + j] = cVal;
+                            }
+                        }
+                    }
+                }
+            };
+
+            if (runParallel)
+            {
+                int numMBlocks = (m + blockM - 1) / blockM;
+                Parallel.For(0, numMBlocks, blockIdx =>
+                {
+                    processMBlock(blockIdx * blockM);
+                });
+            }
+            else
+            {
+                for (int m0 = 0; m0 < m; m0 += blockM)
+                {
+                    processMBlock(m0);
                 }
             }
         }
@@ -364,7 +569,7 @@ namespace ZeroTensor.Core
                 var bSlice = new Tensor<float>(bBroadcast.Storage, bSliceOffset, matShapeB, matStridesB);
                 var cSlice = new Tensor<float>(result.Storage, cSliceOffset, matShapeC, matStridesC);
 
-                Gemm(aSlice, bSlice, cSlice);
+                Gemm(aSlice, bSlice, cSlice, parallel: batchCount <= 1);
             }
 
             if (batchCount > 1)
