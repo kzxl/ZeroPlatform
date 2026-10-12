@@ -6,6 +6,10 @@ using System.Runtime.CompilerServices;
 using System.Runtime.InteropServices;
 using System.Text;
 using System.Threading.Tasks;
+#if NET8_0_OR_GREATER
+using System.Runtime.Intrinsics;
+using System.Runtime.Intrinsics.X86;
+#endif
 using ZeroTensor.Core.Storage;
 
 namespace ZeroTensor.Core
@@ -335,6 +339,50 @@ namespace ZeroTensor.Core
             const int bytesPerBlock = 18;
             int rowByteStride = numBlocksPerRow * bytesPerBlock;
 
+#if NET8_0_OR_GREATER
+            if (Avx2.IsSupported && Fma.IsSupported)
+            {
+                var vMask = Vector256.Create(0x0F);
+                var vOffset = Vector256.Create(8);
+
+                Parallel.For(0, nRows, r =>
+                {
+                    byte* pRow = (byte*)ptrWeight + r * rowByteStride;
+                    float sum = 0f;
+                    int actOffset = 0;
+
+                    for (int b = 0; b < numBlocksPerRow; b++)
+                    {
+                        byte* blockPtr = pRow + b * bytesPerBlock;
+                        ushort rawScale = Unsafe.ReadUnaligned<ushort>(blockPtr);
+                        Half hScale = Unsafe.As<ushort, Half>(ref rawScale);
+                        float d = (float)hScale;
+                        byte* qs = blockPtr + 2;
+
+                        var raw0 = Avx2.ConvertToVector256Int32(qs);
+                        var raw1 = Avx2.ConvertToVector256Int32(qs + 8);
+
+                        var vW0_0 = Avx.ConvertToVector256Single(Avx2.Subtract(Avx2.And(raw0, vMask), vOffset));
+                        var vW1_0 = Avx.ConvertToVector256Single(Avx2.Subtract(Avx2.And(Avx2.ShiftRightLogical(raw0, 4), vMask), vOffset));
+
+                        var vW0_1 = Avx.ConvertToVector256Single(Avx2.Subtract(Avx2.And(raw1, vMask), vOffset));
+                        var vW1_1 = Avx.ConvertToVector256Single(Avx2.Subtract(Avx2.And(Avx2.ShiftRightLogical(raw1, 4), vMask), vOffset));
+
+                        var vDot0 = Avx.Multiply(vW0_0, Vector256.Load(pAct + actOffset));
+                        var vDot1 = Avx.Multiply(vW0_1, Vector256.Load(pAct + actOffset + 8));
+                        var vDot2 = Fma.MultiplyAdd(vW1_0, Vector256.Load(pAct + actOffset + 16), vDot0);
+                        var vDot3 = Fma.MultiplyAdd(vW1_1, Vector256.Load(pAct + actOffset + 24), vDot1);
+
+                        sum += Vector256.Sum(vDot2 + vDot3) * d;
+                        actOffset += Qk4_0;
+                    }
+
+                    pDst[r] = sum;
+                });
+                return;
+            }
+#endif
+
             Parallel.For(0, nRows, r =>
             {
                 byte* pRow = (byte*)ptrWeight + r * rowByteStride;
@@ -380,6 +428,48 @@ namespace ZeroTensor.Core
             int numBlocksPerRow = kCols / Qk8_0;
             const int bytesPerBlock = 34;
             int rowByteStride = numBlocksPerRow * bytesPerBlock;
+
+#if NET8_0_OR_GREATER
+            if (Avx2.IsSupported && Fma.IsSupported)
+            {
+                Parallel.For(0, nRows, r =>
+                {
+                    byte* pRow = (byte*)ptrWeight + r * rowByteStride;
+                    float sum = 0f;
+                    int actOffset = 0;
+
+                    for (int b = 0; b < numBlocksPerRow; b++)
+                    {
+                        byte* blockPtr = pRow + b * bytesPerBlock;
+                        ushort rawScale = Unsafe.ReadUnaligned<ushort>(blockPtr);
+                        Half hScale = Unsafe.As<ushort, Half>(ref rawScale);
+                        float d = (float)hScale;
+                        sbyte* qs = (sbyte*)(blockPtr + 2);
+
+                        var vW0 = Avx.ConvertToVector256Single(Avx2.ConvertToVector256Int32(qs));
+                        var vW1 = Avx.ConvertToVector256Single(Avx2.ConvertToVector256Int32(qs + 8));
+                        var vW2 = Avx.ConvertToVector256Single(Avx2.ConvertToVector256Int32(qs + 16));
+                        var vW3 = Avx.ConvertToVector256Single(Avx2.ConvertToVector256Int32(qs + 24));
+
+                        var vAct0 = Vector256.Load(pAct + actOffset);
+                        var vAct1 = Vector256.Load(pAct + actOffset + 8);
+                        var vAct2 = Vector256.Load(pAct + actOffset + 16);
+                        var vAct3 = Vector256.Load(pAct + actOffset + 24);
+
+                        var vDot0 = Avx.Multiply(vW0, vAct0);
+                        var vDot1 = Avx.Multiply(vW1, vAct1);
+                        var vDot2 = Fma.MultiplyAdd(vW2, vAct2, vDot0);
+                        var vDot3 = Fma.MultiplyAdd(vW3, vAct3, vDot1);
+
+                        sum += Vector256.Sum(vDot2 + vDot3) * d;
+                        actOffset += Qk8_0;
+                    }
+
+                    pDst[r] = sum;
+                });
+                return;
+            }
+#endif
 
             Parallel.For(0, nRows, r =>
             {
