@@ -340,7 +340,7 @@ namespace ZeroTensor.Core
             int rowByteStride = numBlocksPerRow * bytesPerBlock;
 
 #if NET8_0_OR_GREATER
-            if (Native.ZeroTensorNativeBridge.IsAvailable)
+            if (Native.ZeroTensorNativeBridge.ShouldDispatchGemv(nRows, kCols))
             {
                 if (Native.ZeroTensorNativeBridge.GemvQ4_0((byte*)ptrWeight, pAct, pDst, nRows, kCols) == 0)
                 {
@@ -438,7 +438,7 @@ namespace ZeroTensor.Core
             int rowByteStride = numBlocksPerRow * bytesPerBlock;
 
 #if NET8_0_OR_GREATER
-            if (Native.ZeroTensorNativeBridge.IsAvailable)
+            if (Native.ZeroTensorNativeBridge.ShouldDispatchGemv(nRows, kCols))
             {
                 if (Native.ZeroTensorNativeBridge.GemvQ8_0((byte*)ptrWeight, pAct, pDst, nRows, kCols) == 0)
                 {

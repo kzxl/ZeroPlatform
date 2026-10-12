@@ -133,7 +133,7 @@ namespace ZeroTensor.Core
                     if (sB1 == 1 && sC1 == 1)
                     {
 #if NET8_0_OR_GREATER
-                        if (ZeroTensor.Core.Native.ZeroTensorNativeBridge.IsAvailable)
+                        if (ZeroTensor.Core.Native.ZeroTensorNativeBridge.ShouldDispatchGemm(m, n, k, isBatched: false))
                         {
                             if (ZeroTensor.Core.Native.ZeroTensorNativeBridge.Gemm(m, n, k, alpha, localA, sA0, sA1, localB, sB0, sB1, beta, localC, sC0, sC1, runParallel) == 0)
                             {

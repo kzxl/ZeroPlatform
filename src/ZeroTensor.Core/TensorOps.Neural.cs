@@ -1020,7 +1020,7 @@ namespace ZeroTensor.Core
                 fixed (float* pOut = &result.Storage.GetPinnableReference(result.Offset))
                 {
 #if NET8_0_OR_GREATER
-                    if (Native.ZeroTensorNativeBridge.IsAvailable)
+                    if (Native.ZeroTensorNativeBridge.ShouldDispatchFlashAttention(batchCount, sQ, sK, d))
                     {
                         if (maskContig != null)
                         {

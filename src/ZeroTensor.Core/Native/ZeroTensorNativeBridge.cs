@@ -6,6 +6,27 @@ using System.Runtime.InteropServices;
 namespace ZeroTensor.Core.Native
 {
     /// <summary>
+    /// Execution policy for dispatching tensor compute between pure C# and native ZeroRust substrate.
+    /// </summary>
+    public enum NativeDispatchMode
+    {
+        /// <summary>
+        /// Automatically and adaptively dispatches based on matrix dimensions, arithmetic intensity, and latency characteristics.
+        /// </summary>
+        Auto = 0,
+
+        /// <summary>
+        /// Forces native ZeroRust execution when the library is loaded and available.
+        /// </summary>
+        ForceNative = 1,
+
+        /// <summary>
+        /// Forces pure C# SIMD execution with zero P/Invoke or native library overhead.
+        /// </summary>
+        ForcePureCSharp = 2
+    }
+
+    /// <summary>
     /// Dynamic C-ABI bridge to ZeroRust native compute substrate (zero_tensor.dll / libzero_tensor.so).
     /// Dynamically detects and resolves native AVX2/FMA kernels at runtime with graceful fallback to pure C#.
     /// </summary>
@@ -14,6 +35,59 @@ namespace ZeroTensor.Core.Native
         private static bool _initialized = false;
         private static bool _isAvailable = false;
         private static IntPtr _libraryHandle = IntPtr.Zero;
+
+        /// <summary>
+        /// Gets or sets the dispatch policy between pure C# and ZeroRust native execution.
+        /// Defaults to <see cref="NativeDispatchMode.Auto"/>.
+        /// </summary>
+        public static NativeDispatchMode DispatchMode { get; set; } = NativeDispatchMode.Auto;
+
+        /// <summary>
+        /// Determines whether GEMM should be dispatched to ZeroRust based on payload size and execution mode.
+        /// </summary>
+        [MethodImpl(MethodImplOptions.AggressiveInlining)]
+        public static bool ShouldDispatchGemm(int m, int n, int k, bool isBatched = false)
+        {
+            if (DispatchMode == NativeDispatchMode.ForcePureCSharp || !IsAvailable) return false;
+            if (DispatchMode == NativeDispatchMode.ForceNative) return true;
+
+            // Batched MatMul has high arithmetic intensity and benefits immensely from zero-copy native microkernels
+            if (isBatched) return true;
+
+            // Small matrices (M * N * K < 32768) are faster inlined in RyuJIT without FFI transition cost
+            long volume = (long)m * n * k;
+            return volume >= 32768;
+        }
+
+        /// <summary>
+        /// Determines whether FlashAttention should be dispatched to ZeroRust based on token count and context size.
+        /// </summary>
+        [MethodImpl(MethodImplOptions.AggressiveInlining)]
+        public static bool ShouldDispatchFlashAttention(int batchCount, int sQ, int sK, int d)
+        {
+            if (DispatchMode == NativeDispatchMode.ForcePureCSharp || !IsAvailable) return false;
+            if (DispatchMode == NativeDispatchMode.ForceNative) return true;
+
+            // Single token decode step with short context
+            if (batchCount == 1 && sQ == 1 && sK < 64) return false;
+
+            // Otherwise dispatch to ZeroRust AVX2/FMA block-tiled online softmax
+            long totalTokens = (long)batchCount * sQ * sK;
+            return totalTokens >= 2048;
+        }
+
+        /// <summary>
+        /// Determines whether Quantized GEMV should be dispatched to ZeroRust based on weight matrix dimensions.
+        /// </summary>
+        [MethodImpl(MethodImplOptions.AggressiveInlining)]
+        public static bool ShouldDispatchGemv(int nRows, int kCols)
+        {
+            if (DispatchMode == NativeDispatchMode.ForcePureCSharp || !IsAvailable) return false;
+            if (DispatchMode == NativeDispatchMode.ForceNative) return true;
+
+            long totalWeights = (long)nRows * kCols;
+            return totalWeights >= 32768;
+        }
 
 #if NET8_0_OR_GREATER
         private static delegate* unmanaged[Cdecl]<uint> _fnVersion;

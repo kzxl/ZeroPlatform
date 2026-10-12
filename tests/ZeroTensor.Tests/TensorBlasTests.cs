@@ -102,5 +102,42 @@ namespace ZeroTensor.Tests
             Assert.Equal(16f, c[0, 0]);
             Assert.Equal(16f, c[15, 15]);
         }
+
+        [Fact]
+        public void ZeroRust_AdaptiveDispatch_Modes_Execute_With_Parity()
+        {
+            var prevMode = ZeroTensor.Core.Native.ZeroTensorNativeBridge.DispatchMode;
+            try
+            {
+                var a = Tensor.Normal(seed: 42, shape: new[] { 64, 64 });
+                var b = Tensor.Normal(seed: 43, shape: new[] { 64, 64 });
+
+                // 1. Force Pure C#
+                ZeroTensor.Core.Native.ZeroTensorNativeBridge.DispatchMode = ZeroTensor.Core.Native.NativeDispatchMode.ForcePureCSharp;
+                var resCSharp = TensorBlas.MatMul(a, b);
+
+                // 2. Force Native ZeroRust
+                ZeroTensor.Core.Native.ZeroTensorNativeBridge.DispatchMode = ZeroTensor.Core.Native.NativeDispatchMode.ForceNative;
+                var resNative = TensorBlas.MatMul(a, b);
+
+                // 3. Auto Adaptive
+                ZeroTensor.Core.Native.ZeroTensorNativeBridge.DispatchMode = ZeroTensor.Core.Native.NativeDispatchMode.Auto;
+                var resAuto = TensorBlas.MatMul(a, b);
+
+                // Verify numerical parity across all modes
+                for (int i = 0; i < 64; i++)
+                {
+                    for (int j = 0; j < 64; j++)
+                    {
+                        Assert.Equal(resCSharp[i, j], resNative[i, j], precision: 4);
+                        Assert.Equal(resCSharp[i, j], resAuto[i, j], precision: 4);
+                    }
+                }
+            }
+            finally
+            {
+                ZeroTensor.Core.Native.ZeroTensorNativeBridge.DispatchMode = prevMode;
+            }
+        }
     }
 }
