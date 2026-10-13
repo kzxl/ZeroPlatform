@@ -152,6 +152,23 @@ namespace ZeroTensor.Core
             var result = new Tensor<float>(contigX.Shape);
             int batchRows = contigX.Length / normDim;
 
+            if (contigW != null && Native.ZeroTensorNativeBridge.IsAvailable && Native.ZeroTensorNativeBridge.DispatchMode != Native.NativeDispatchMode.ForcePureCSharp)
+            {
+                unsafe
+                {
+                    fixed (float* pSrcBase = &contigX.Storage.GetPinnableReference(contigX.Offset))
+                    fixed (float* pDstBase = &result.Storage.GetPinnableReference(result.Offset))
+                    fixed (float* pWBase = &contigW.Storage.GetPinnableReference(contigW.Offset))
+                    {
+                        for (int r = 0; r < batchRows; r++)
+                        {
+                            Native.ZeroTensorNativeBridge.RmsNorm(normDim, pSrcBase + r * normDim, pWBase, pDstBase + r * normDim, eps);
+                        }
+                        return result;
+                    }
+                }
+            }
+
             float invNormDim = 1.0f / normDim;
             int vecSize = Vector<float>.Count;
 
@@ -436,6 +453,22 @@ namespace ZeroTensor.Core
 
             var result = new Tensor<float>(contigGate.Shape);
             int len = contigGate.Length;
+
+            if (Native.ZeroTensorNativeBridge.IsAvailable && Native.ZeroTensorNativeBridge.DispatchMode != Native.NativeDispatchMode.ForcePureCSharp)
+            {
+                unsafe
+                {
+                    fixed (float* pG = &contigGate.Storage.GetPinnableReference(contigGate.Offset))
+                    fixed (float* pU = &contigUp.Storage.GetPinnableReference(contigUp.Offset))
+                    fixed (float* pDst = &result.Storage.GetPinnableReference(result.Offset))
+                    {
+                        if (Native.ZeroTensorNativeBridge.SwiGLU(len, pG, pU, pDst) == 0)
+                        {
+                            return result;
+                        }
+                    }
+                }
+            }
 
             unsafe
             {
@@ -1230,6 +1263,21 @@ namespace ZeroTensor.Core
 
             int totalHeads = x.Length / (seqLen * headDim);
             int halfDim = headDim / 2;
+
+            if (interleaved && Native.ZeroTensorNativeBridge.IsAvailable && Native.ZeroTensorNativeBridge.DispatchMode != Native.NativeDispatchMode.ForcePureCSharp)
+            {
+                unsafe
+                {
+                    fixed (float* pX = &x.Storage.GetPinnableReference(x.Offset))
+                    {
+                        if (Native.ZeroTensorNativeBridge.RoPE(totalHeads, seqLen, headDim, startPos, thetaBase, pX) == 0)
+                        {
+                            return;
+                        }
+                    }
+                }
+            }
+
             int totalTableElems = seqLen * halfDim;
 
             // Precompute cos & sin table across all sequence positions ONCE for all heads

@@ -3,6 +3,7 @@ using System.Diagnostics;
 using System.IO;
 using ZeroPrimitives.Memory;
 using ZeroTensor.Core;
+using ZeroTensor.Core.Native;
 using ZeroTensor.Core.Neural;
 using ZeroTensor.Core.Storage;
 
@@ -38,6 +39,7 @@ namespace ZeroTensor.Benchmarks
             RunGgufDequantizeBenchmark();
             RunSwiGLUBenchmark();
             RunStreamingGemvQuantizedBenchmark();
+            RunHeadToHeadComparison();
 
             Console.WriteLine("\nAll benchmarks completed successfully.");
         }
@@ -478,5 +480,239 @@ namespace ZeroTensor.Benchmarks
             Console.WriteLine($"Q4_0 GEMV (4096 x 4096): {q4Ms:F2} ms | Compute: {gflops / (q4Ms / 1000.0):F2} GFLOPS (Weights: {q4Weights.Length / (1024 * 1024.0):F1} MB)");
             Console.WriteLine($"Q8_0 GEMV (4096 x 4096): {q8Ms:F2} ms | Compute: {gflops / (q8Ms / 1000.0):F2} GFLOPS (Weights: {q8Weights.Length / (1024 * 1024.0):F1} MB)\n");
         }
+
+        private static void RunHeadToHeadComparison()
+        {
+            Console.WriteLine("================================================================================");
+            Console.WriteLine("    HEAD-TO-HEAD: Pure C# (.NET 8 AVX2) vs ZeroRust LLVM Native Substrate       ");
+            Console.WriteLine("================================================================================");
+            Console.WriteLine($"ZeroRust Native Engine Loaded: {ZeroTensorNativeBridge.IsAvailable}\n");
+
+            if (!ZeroTensorNativeBridge.IsAvailable)
+            {
+                Console.WriteLine("Warning: ZeroRust native library not detected. Skipping head-to-head.");
+                return;
+            }
+
+            Console.WriteLine(string.Format("{0,-38} | {1,12} | {2,12} | {3,10}", "Workload", "Pure C#", "ZeroRust", "Speedup"));
+            Console.WriteLine(new string('-', 80));
+
+            // 1. GEMM 256x256
+            CompareGemm(256, 30);
+
+            // 2. GEMM 512x512
+            CompareGemm(512, 10);
+
+            // 3. Batched MatMul
+            CompareBatchedMatMul(64, 128, 64, 64, 10);
+
+            // 4. FlashAttention
+            CompareFlashAttention(1, 8, 128, 64, 10);
+
+            // 5. Streaming Q4_0
+            CompareQuantGemv(4096, 4096, isQ4: true, 20);
+
+            // 6. Streaming Q8_0
+            CompareQuantGemv(4096, 4096, isQ4: false, 20);
+
+            // 7. RMSNorm (LLM Hidden Dim = 4096, Batch = 512)
+            CompareRMSNorm(512, 4096, 30);
+
+            // 8. SwiGLU Activation (512 x 4096 elements)
+            CompareSwiGLU(512 * 4096, 30);
+
+            // 9. RoPE (32 heads, 512 tokens, dim 128)
+            CompareRoPE(32, 512, 128, 30);
+
+            Console.WriteLine(new string('=', 80));
+            ZeroTensorNativeBridge.DispatchMode = NativeDispatchMode.Auto;
+        }
+
+        private static void CompareGemm(int size, int iters)
+        {
+            var a = Tensor.Ones<float>(size, size);
+            var b = Tensor.Ones<float>(size, size);
+
+            // Warmup
+            var _ = TensorBlas.MatMul(a, b);
+
+            // 1. Pure C#
+            ZeroTensorNativeBridge.DispatchMode = NativeDispatchMode.ForcePureCSharp;
+            var sw = Stopwatch.StartNew();
+            for (int i = 0; i < iters; i++) { var c = TensorBlas.MatMul(a, b); }
+            sw.Stop();
+            double csharpMs = sw.Elapsed.TotalMilliseconds / iters;
+
+            // 2. ZeroRust Native
+            ZeroTensorNativeBridge.DispatchMode = NativeDispatchMode.ForceNative;
+            sw.Restart();
+            for (int i = 0; i < iters; i++) { var c = TensorBlas.MatMul(a, b); }
+            sw.Stop();
+            double rustMs = sw.Elapsed.TotalMilliseconds / iters;
+
+            double speedup = csharpMs / rustMs;
+            string label = $"GEMM FP32 [{size}x{size}]";
+            Console.WriteLine(string.Format("{0,-38} | {1,9:F2} ms | {2,9:F2} ms | {3,8:F2}x", label, csharpMs, rustMs, speedup));
+        }
+
+        private static void CompareBatchedMatMul(int b, int m, int k, int n, int iters)
+        {
+            var q = Tensor.Ones<float>(b, m, k);
+            var kWeight = Tensor.Ones<float>(b, k, n);
+
+            // 1. Pure C#
+            ZeroTensorNativeBridge.DispatchMode = NativeDispatchMode.ForcePureCSharp;
+            var sw = Stopwatch.StartNew();
+            for (int i = 0; i < iters; i++) { var outTensor = TensorBlas.MatMul(q, kWeight); }
+            sw.Stop();
+            double csharpMs = sw.Elapsed.TotalMilliseconds / iters;
+
+            // 2. ZeroRust Native
+            ZeroTensorNativeBridge.DispatchMode = NativeDispatchMode.ForceNative;
+            sw.Restart();
+            for (int i = 0; i < iters; i++) { var outTensor = TensorBlas.MatMul(q, kWeight); }
+            sw.Stop();
+            double rustMs = sw.Elapsed.TotalMilliseconds / iters;
+
+            double speedup = csharpMs / rustMs;
+            string label = $"Batched MatMul [{b}x{m}x{k} @ {k}x{n}]";
+            Console.WriteLine(string.Format("{0,-38} | {1,9:F2} ms | {2,9:F2} ms | {3,8:F2}x", label, csharpMs, rustMs, speedup));
+        }
+
+        private static void CompareFlashAttention(int batchSize, int numHeads, int seqLen, int headDim, int iters)
+        {
+            var q = Tensor.Ones<float>(batchSize, numHeads, seqLen, headDim);
+            var k = Tensor.Ones<float>(batchSize, numHeads, seqLen, headDim);
+            var v = Tensor.Ones<float>(batchSize, numHeads, seqLen, headDim);
+
+            // 1. Pure C#
+            ZeroTensorNativeBridge.DispatchMode = NativeDispatchMode.ForcePureCSharp;
+            var sw = Stopwatch.StartNew();
+            for (int i = 0; i < iters; i++) { var outTensor = TensorOps.ScaledDotProductAttention(q, k, v); }
+            sw.Stop();
+            double csharpMs = sw.Elapsed.TotalMilliseconds / iters;
+
+            // 2. ZeroRust Native
+            ZeroTensorNativeBridge.DispatchMode = NativeDispatchMode.ForceNative;
+            sw.Restart();
+            for (int i = 0; i < iters; i++) { var outTensor = TensorOps.ScaledDotProductAttention(q, k, v); }
+            sw.Stop();
+            double rustMs = sw.Elapsed.TotalMilliseconds / iters;
+
+            double speedup = csharpMs / rustMs;
+            string label = $"FlashAttention [seq={seqLen}, heads={numHeads}]";
+            Console.WriteLine(string.Format("{0,-38} | {1,9:F2} ms | {2,9:F2} ms | {3,8:F2}x", label, csharpMs, rustMs, speedup));
+        }
+
+        private static void CompareQuantGemv(int rows, int cols, bool isQ4, int iters)
+        {
+            var act = Tensor.Normal(seed: 42, shape: new[] { cols });
+            int bytesPerBlock = isQ4 ? 18 : 34;
+            int blocksPerRow = cols / 32;
+            byte[] weights = new byte[rows * blocksPerRow * bytesPerBlock];
+            for (int i = 0; i < weights.Length; i++) weights[i] = (byte)(i % 255);
+
+            // 1. Pure C#
+            ZeroTensorNativeBridge.DispatchMode = NativeDispatchMode.ForcePureCSharp;
+            var sw = Stopwatch.StartNew();
+            for (int i = 0; i < iters; i++)
+            {
+                var _ = isQ4 ? TensorBlas.GemvQ4_0(act, weights, rows, cols) : TensorBlas.GemvQ8_0(act, weights, rows, cols);
+            }
+            sw.Stop();
+            double csharpMs = sw.Elapsed.TotalMilliseconds / iters;
+
+            // 2. ZeroRust Native
+            ZeroTensorNativeBridge.DispatchMode = NativeDispatchMode.ForceNative;
+            sw.Restart();
+            for (int i = 0; i < iters; i++)
+            {
+                var _ = isQ4 ? TensorBlas.GemvQ4_0(act, weights, rows, cols) : TensorBlas.GemvQ8_0(act, weights, rows, cols);
+            }
+            sw.Stop();
+            double rustMs = sw.Elapsed.TotalMilliseconds / iters;
+
+            double speedup = csharpMs / rustMs;
+            string label = isQ4 ? $"Streaming Q4_0 GEMV [{rows}x{cols}]" : $"Streaming Q8_0 GEMV [{rows}x{cols}]";
+            Console.WriteLine(string.Format("{0,-38} | {1,9:F2} ms | {2,9:F2} ms | {3,8:F2}x", label, csharpMs, rustMs, speedup));
+        }
+
+        private static void CompareRMSNorm(int batchRows, int hiddenDim, int iters)
+        {
+            var x = Tensor.Ones<float>(batchRows, hiddenDim);
+            var w = Tensor.Ones<float>(hiddenDim);
+
+            // 1. Pure C#
+            ZeroTensorNativeBridge.DispatchMode = NativeDispatchMode.ForcePureCSharp;
+            var sw = Stopwatch.StartNew();
+            for (int i = 0; i < iters; i++) { var _ = TensorOps.RMSNorm(x, w); }
+            sw.Stop();
+            double csharpMs = sw.Elapsed.TotalMilliseconds / iters;
+
+            // 2. ZeroRust Native
+            ZeroTensorNativeBridge.DispatchMode = NativeDispatchMode.ForceNative;
+            sw.Restart();
+            for (int i = 0; i < iters; i++) { var _ = TensorOps.RMSNorm(x, w); }
+            sw.Stop();
+            double rustMs = sw.Elapsed.TotalMilliseconds / iters;
+
+            double speedup = csharpMs / rustMs;
+            string label = $"RMSNorm [{batchRows}x{hiddenDim}]";
+            Console.WriteLine(string.Format("{0,-38} | {1,9:F2} ms | {2,9:F2} ms | {3,8:F2}x", label, csharpMs, rustMs, speedup));
+        }
+
+        private static void CompareSwiGLU(int length, int iters)
+        {
+            var gate = Tensor.Ones<float>(length);
+            var up = Tensor.Ones<float>(length);
+
+            // 1. Pure C#
+            ZeroTensorNativeBridge.DispatchMode = NativeDispatchMode.ForcePureCSharp;
+            var sw = Stopwatch.StartNew();
+            for (int i = 0; i < iters; i++) { var _ = TensorOps.SwiGLU(gate, up); }
+            sw.Stop();
+            double csharpMs = sw.Elapsed.TotalMilliseconds / iters;
+
+            // 2. ZeroRust Native
+            ZeroTensorNativeBridge.DispatchMode = NativeDispatchMode.ForceNative;
+            sw.Restart();
+            for (int i = 0; i < iters; i++) { var _ = TensorOps.SwiGLU(gate, up); }
+            sw.Stop();
+            double rustMs = sw.Elapsed.TotalMilliseconds / iters;
+
+            double speedup = csharpMs / rustMs;
+            string label = $"SwiGLU [N={length}]";
+            Console.WriteLine(string.Format("{0,-38} | {1,9:F2} ms | {2,9:F2} ms | {3,8:F2}x", label, csharpMs, rustMs, speedup));
+        }
+
+        private static void CompareRoPE(int heads, int seqLen, int headDim, int iters)
+        {
+            // 1. Pure C#
+            ZeroTensorNativeBridge.DispatchMode = NativeDispatchMode.ForcePureCSharp;
+            var sw = Stopwatch.StartNew();
+            for (int i = 0; i < iters; i++)
+            {
+                var q = Tensor.Ones<float>(heads, seqLen, headDim);
+                TensorOps.ApplyRoPEInPlace(q, startPos: 0, thetaBase: 10000.0f, interleaved: true);
+            }
+            sw.Stop();
+            double csharpMs = sw.Elapsed.TotalMilliseconds / iters;
+
+            // 2. ZeroRust Native
+            ZeroTensorNativeBridge.DispatchMode = NativeDispatchMode.ForceNative;
+            sw.Restart();
+            for (int i = 0; i < iters; i++)
+            {
+                var q = Tensor.Ones<float>(heads, seqLen, headDim);
+                TensorOps.ApplyRoPEInPlace(q, startPos: 0, thetaBase: 10000.0f, interleaved: true);
+            }
+            sw.Stop();
+            double rustMs = sw.Elapsed.TotalMilliseconds / iters;
+
+            double speedup = csharpMs / rustMs;
+            string label = $"RoPE [{heads}h, {seqLen}seq, {headDim}d]";
+            Console.WriteLine(string.Format("{0,-38} | {1,9:F2} ms | {2,9:F2} ms | {3,8:F2}x", label, csharpMs, rustMs, speedup));
+        }
     }
 }
+

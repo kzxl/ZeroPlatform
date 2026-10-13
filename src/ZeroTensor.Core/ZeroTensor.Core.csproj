@@ -30,4 +30,12 @@
       <_Parameter1>ZeroNeural.Tests</_Parameter1>
     </AssemblyAttribute>
   </ItemGroup>
+
+  <ItemGroup>
+    <Content Include="..\..\runtimes\**\*.*">
+      <PackagePath>runtimes</PackagePath>
+      <Pack>true</Pack>
+      <CopyToOutputDirectory>PreserveNewest</CopyToOutputDirectory>
+    </Content>
+  </ItemGroup>
 </Project>
