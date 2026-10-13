@@ -43,6 +43,17 @@ namespace ZeroTokenizer.Core
         public const string Expert = "<expert>";
         public const string EndExpert = "</expert>";
 
+        // Multimodal, Vision & Telemetry Special Tokens
+        public const string Image = "<image>";
+        public const string EndImage = "</image>";
+        public const string VisionPatch = "<vision_patch>";
+        public const string Roi = "<roi>";
+        public const string EndRoi = "</roi>";
+        public const string OcrBlock = "<ocr_block>";
+        public const string EndOcrBlock = "</ocr_block>";
+        public const string SensorEvent = "<sensor_event>";
+        public const string EndSensorEvent = "</sensor_event>";
+
         public static readonly IReadOnlyList<string> All = new[]
         {
             Pad, Bos, Eos, Unk,
@@ -53,7 +64,12 @@ namespace ZeroTokenizer.Core
             ToolCall, EndToolCall,
             ToolResult, EndToolResult,
             Response, EndResponse,
-            Expert, EndExpert
+            Expert, EndExpert,
+            Image, EndImage,
+            VisionPatch,
+            Roi, EndRoi,
+            OcrBlock, EndOcrBlock,
+            SensorEvent, EndSensorEvent
         };
     }
 }
