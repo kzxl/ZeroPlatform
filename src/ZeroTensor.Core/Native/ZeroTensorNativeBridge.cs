@@ -102,6 +102,10 @@ namespace ZeroTensor.Core.Native
         private static delegate* unmanaged[Cdecl]<byte*, float, float*, float*, nuint, nuint, int> _fnGemvFp8;
         private static delegate* unmanaged[Cdecl]<byte*, float*, float*, nuint, nuint, int> _fnGemvQ4_K;
         private static delegate* unmanaged[Cdecl]<nuint, nuint, nuint, nuint, float, float*, int> _fnRoPEF32;
+        private static delegate* unmanaged[Cdecl]<nuint, nuint, nuint, nuint, nuint, float, float*, float*, float*, int*, float*, int> _fnPagedAttentionF32;
+        private static delegate* unmanaged[Cdecl]<nuint, nuint, nuint, nuint, nuint, nuint, float, float, float*, float*, float*, float*, float*, float*, float*, float*, float*, float*, float*, float*, int> _fnTransformerLayerF32;
+        private static delegate* unmanaged[Cdecl]<nuint, nuint, nuint, nuint, nuint, nuint, float, float, float*, float*, byte*, byte*, byte*, byte*, float*, byte*, byte*, byte*, float*, float*, int> _fnTransformerLayerQ4_0;
+        private static delegate* unmanaged[Cdecl]<nuint, sbyte*, sbyte*, int*, int> _fnDotI8;
 #endif
 
         /// <summary>
@@ -171,6 +175,14 @@ namespace ZeroTensor.Core.Native
                                 _fnGemvQ4_K = (delegate* unmanaged[Cdecl]<byte*, float*, float*, nuint, nuint, int>)pQ4K;
                             if (NativeLibrary.TryGetExport(_libraryHandle, "zc_rope_f32", out IntPtr pRope))
                                 _fnRoPEF32 = (delegate* unmanaged[Cdecl]<nuint, nuint, nuint, nuint, float, float*, int>)pRope;
+                            if (NativeLibrary.TryGetExport(_libraryHandle, "zc_paged_attention_f32", out IntPtr pPaged))
+                                _fnPagedAttentionF32 = (delegate* unmanaged[Cdecl]<nuint, nuint, nuint, nuint, nuint, float, float*, float*, float*, int*, float*, int>)pPaged;
+                            if (NativeLibrary.TryGetExport(_libraryHandle, "zc_transformer_layer_f32", out IntPtr pTransF32))
+                                _fnTransformerLayerF32 = (delegate* unmanaged[Cdecl]<nuint, nuint, nuint, nuint, nuint, nuint, float, float, float*, float*, float*, float*, float*, float*, float*, float*, float*, float*, float*, float*, int>)pTransF32;
+                            if (NativeLibrary.TryGetExport(_libraryHandle, "zc_transformer_layer_q4_0", out IntPtr pTransQ4))
+                                _fnTransformerLayerQ4_0 = (delegate* unmanaged[Cdecl]<nuint, nuint, nuint, nuint, nuint, nuint, float, float, float*, float*, byte*, byte*, byte*, byte*, float*, byte*, byte*, byte*, float*, float*, int>)pTransQ4;
+                            if (NativeLibrary.TryGetExport(_libraryHandle, "zc_dot_i8", out IntPtr pDotI8))
+                                _fnDotI8 = (delegate* unmanaged[Cdecl]<nuint, sbyte*, sbyte*, int*, int>)pDotI8;
 
                             _isAvailable = true;
                         }
@@ -323,6 +335,58 @@ namespace ZeroTensor.Core.Native
             if (!_isAvailable || _fnRoPEF32 == null) return -1;
             return _fnRoPEF32((nuint)numHeads, (nuint)seqLen, (nuint)headDim, (nuint)posOffset, thetaBase, x);
         }
+
+        [MethodImpl(MethodImplOptions.AggressiveInlining)]
+        public static int PagedAttention(
+            int numHeads, int numKvHeads, int headDim, int blockSize, int contextLen,
+            float scale, float* q, float* kCache, float* vCache, int* blockTable, float* output)
+        {
+            if (!_isAvailable || _fnPagedAttentionF32 == null) return -1;
+            return _fnPagedAttentionF32(
+                (nuint)numHeads, (nuint)numKvHeads, (nuint)headDim, (nuint)blockSize, (nuint)contextLen,
+                scale, q, kCache, vCache, blockTable, output);
+        }
+
+        [MethodImpl(MethodImplOptions.AggressiveInlining)]
+        public static int TransformerLayerF32(
+            int hiddenDim, int intermediateDim, int numHeads, int numKvHeads, int headDim, int pos,
+            float rmsEps, float ropeTheta,
+            float* x, float* rmsAttnW, float* wq, float* wk, float* wv, float* wo,
+            float* rmsFfnW, float* wGate, float* wUp, float* wDown,
+            float* kCache, float* vCache)
+        {
+            if (!_isAvailable || _fnTransformerLayerF32 == null) return -1;
+            return _fnTransformerLayerF32(
+                (nuint)hiddenDim, (nuint)intermediateDim, (nuint)numHeads, (nuint)numKvHeads, (nuint)headDim, (nuint)pos,
+                rmsEps, ropeTheta,
+                x, rmsAttnW, wq, wk, wv, wo,
+                rmsFfnW, wGate, wUp, wDown,
+                kCache, vCache);
+        }
+
+        [MethodImpl(MethodImplOptions.AggressiveInlining)]
+        public static int TransformerLayerQ4_0(
+            int hiddenDim, int intermediateDim, int numHeads, int numKvHeads, int headDim, int pos,
+            float rmsEps, float ropeTheta,
+            float* x, float* rmsAttnW, byte* wqQ4, byte* wkQ4, byte* wvQ4, byte* woQ4,
+            float* rmsFfnW, byte* wGateQ4, byte* wUpQ4, byte* wDownQ4,
+            float* kCache, float* vCache)
+        {
+            if (!_isAvailable || _fnTransformerLayerQ4_0 == null) return -1;
+            return _fnTransformerLayerQ4_0(
+                (nuint)hiddenDim, (nuint)intermediateDim, (nuint)numHeads, (nuint)numKvHeads, (nuint)headDim, (nuint)pos,
+                rmsEps, ropeTheta,
+                x, rmsAttnW, wqQ4, wkQ4, wvQ4, woQ4,
+                rmsFfnW, wGateQ4, wUpQ4, wDownQ4,
+                kCache, vCache);
+        }
+
+        [MethodImpl(MethodImplOptions.AggressiveInlining)]
+        public static int DotI8(int n, sbyte* a, sbyte* b, int* output)
+        {
+            if (!_isAvailable || _fnDotI8 == null) return -1;
+            return _fnDotI8((nuint)n, a, b, output);
+        }
 #else
         public static int RmsNorm(int n, float* x, float* weight, float* dst, float eps = 1e-5f) => -1;
         public static int SiLU(int n, float* src, float* dst) => -1;
@@ -334,6 +398,11 @@ namespace ZeroTensor.Core.Native
         public static int GemvFp8(byte* ptrWeight, float scale, float* pAct, float* pDst, int nRows, int kCols) => -1;
         public static int GemvQ4_K(byte* ptrWeight, float* pAct, float* pDst, int nRows, int kCols) => -1;
         public static int RoPE(int numHeads, int seqLen, int headDim, int posOffset, float thetaBase, float* x) => -1;
+        public static int PagedAttention(int numHeads, int numKvHeads, int headDim, int blockSize, int contextLen, float scale, float* q, float* kCache, float* vCache, int* blockTable, float* output) => -1;
+        public static int TransformerLayerF32(int hiddenDim, int intermediateDim, int numHeads, int numKvHeads, int headDim, int pos, float rmsEps, float ropeTheta, float* x, float* rmsAttnW, float* wq, float* wk, float* wv, float* wo, float* rmsFfnW, float* wGate, float* wUp, float* wDown, float* kCache, float* vCache) => -1;
+        public static int TransformerLayerQ4_0(int hiddenDim, int intermediateDim, int numHeads, int numKvHeads, int headDim, int pos, float rmsEps, float ropeTheta, float* x, float* rmsAttnW, byte* wqQ4, byte* wkQ4, byte* wvQ4, byte* woQ4, float* rmsFfnW, byte* wGateQ4, byte* wUpQ4, byte* wDownQ4, float* kCache, float* vCache) => -1;
+        public static int DotI8(int n, sbyte* a, sbyte* b, int* output) => -1;
 #endif
     }
 }
+

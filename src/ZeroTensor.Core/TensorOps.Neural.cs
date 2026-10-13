@@ -2360,6 +2360,274 @@ namespace ZeroTensor.Core
             return Tensor.Pad(input, padBefore, padAfter, mode, value);
         }
 
+        /// <summary>
+        /// Evaluates vLLM-style PagedAttention over non-contiguous physical KV-Cache blocks using online softmax.
+        /// </summary>
+        /// <param name="q">Query tensor [NumHeads, HeadDim].</param>
+        /// <param name="kCache">Physical Key block pool [NumPhysicalBlocks, BlockSize, NumKvHeads, HeadDim].</param>
+        /// <param name="vCache">Physical Value block pool [NumPhysicalBlocks, BlockSize, NumKvHeads, HeadDim].</param>
+        /// <param name="blockTable">Logical-to-physical block mapping table.</param>
+        /// <param name="contextLen">Number of active valid tokens in context.</param>
+        /// <param name="scale">Optional attention scaling factor (defaults to 1 / sqrt(HeadDim)).</param>
+        public static Tensor<float> PagedAttention(
+            Tensor<float> q,
+            Tensor<float> kCache,
+            Tensor<float> vCache,
+            int[] blockTable,
+            int contextLen,
+            float? scale = null)
+        {
+            if (q == null) throw new ArgumentNullException(nameof(q));
+            if (kCache == null) throw new ArgumentNullException(nameof(kCache));
+            if (vCache == null) throw new ArgumentNullException(nameof(vCache));
+            if (blockTable == null) throw new ArgumentNullException(nameof(blockTable));
+            if (q.Rank != 2) throw new ArgumentException("Query tensor must have rank 2 [NumHeads, HeadDim].", nameof(q));
+            if (kCache.Rank != 4) throw new ArgumentException("kCache must have rank 4 [NumBlocks, BlockSize, NumKvHeads, HeadDim].", nameof(kCache));
+
+            int numHeads = q.Shape[0];
+            int headDim = q.Shape[1];
+            int blockSize = kCache.Shape[1];
+            int numKvHeads = kCache.Shape[2];
+            float attnScale = scale ?? (1.0f / (float)Math.Sqrt(headDim));
+
+            var contigQ = q.IsContiguous ? q : q.ToContiguous();
+            var contigK = kCache.IsContiguous ? kCache : kCache.ToContiguous();
+            var contigV = vCache.IsContiguous ? vCache : vCache.ToContiguous();
+            var output = new Tensor<float>(numHeads, headDim);
+
+            if (Native.ZeroTensorNativeBridge.IsAvailable && Native.ZeroTensorNativeBridge.DispatchMode != Native.NativeDispatchMode.ForcePureCSharp)
+            {
+                unsafe
+                {
+                    fixed (float* pQ = &contigQ.Storage.GetPinnableReference(contigQ.Offset))
+                    fixed (float* pK = &contigK.Storage.GetPinnableReference(contigK.Offset))
+                    fixed (float* pV = &contigV.Storage.GetPinnableReference(contigV.Offset))
+                    fixed (int* pBt = blockTable)
+                    fixed (float* pOut = &output.Storage.GetPinnableReference(output.Offset))
+                    {
+                        if (Native.ZeroTensorNativeBridge.PagedAttention(
+                            numHeads, numKvHeads, headDim, blockSize, contextLen,
+                            attnScale, pQ, pK, pV, pBt, pOut) == 0)
+                        {
+                            return output;
+                        }
+                    }
+                }
+            }
+
+            // Pure C# Fallback with Online Softmax
+            int gqaRatio = numHeads / numKvHeads;
+            int numLogicalBlocks = (contextLen + blockSize - 1) / blockSize;
+
+            unsafe
+            {
+                fixed (float* pQ = &contigQ.Storage.GetPinnableReference(contigQ.Offset))
+                fixed (float* pK = &contigK.Storage.GetPinnableReference(contigK.Offset))
+                fixed (float* pV = &contigV.Storage.GetPinnableReference(contigV.Offset))
+                fixed (float* pOut = &output.Storage.GetPinnableReference(output.Offset))
+                {
+                    for (int h = 0; h < numHeads; h++)
+                    {
+                        int kvH = h / gqaRatio;
+                        float* qHead = pQ + h * headDim;
+                        float* outHead = pOut + h * headDim;
+                        for (int d = 0; d < headDim; d++) outHead[d] = 0f;
+
+                        float mPrev = float.NegativeInfinity;
+                        float lPrev = 0f;
+
+                        for (int lb = 0; lb < numLogicalBlocks; lb++)
+                        {
+                            int physBlock = blockTable[lb];
+                            int tokensInBlock = Math.Min(blockSize, contextLen - lb * blockSize);
+
+                            for (int bo = 0; bo < tokensInBlock; bo++)
+                            {
+                                int kvOffset = ((physBlock * blockSize + bo) * numKvHeads + kvH) * headDim;
+                                float* kVec = pK + kvOffset;
+                                float* vVec = pV + kvOffset;
+
+                                float dot = 0f;
+                                for (int d = 0; d < headDim; d++) dot += qHead[d] * kVec[d];
+                                float score = dot * attnScale;
+
+                                float mCurr = Math.Max(mPrev, score);
+                                float alpha = (float)Math.Exp(mPrev - mCurr);
+                                float beta = (float)Math.Exp(score - mCurr);
+                                lPrev = lPrev * alpha + beta;
+
+                                for (int d = 0; d < headDim; d++)
+                                    outHead[d] = outHead[d] * alpha + beta * vVec[d];
+
+                                mPrev = mCurr;
+                            }
+                        }
+
+                        if (lPrev > 0f)
+                        {
+                            float invL = 1.0f / lPrev;
+                            for (int d = 0; d < headDim; d++) outHead[d] *= invL;
+                        }
+                    }
+                }
+            }
+
+            return output;
+        }
+
+        /// <summary>
+        /// Evaluates a fused End-to-End Transformer Decoder Layer in-place for single-token decoding at <paramref name="pos"/>.
+        /// Executes Pre-Attn RMSNorm -> QKV Proj -> RoPE -> GQA KV-Cache Attention -> Wo Proj + Residual -> FFN RMSNorm -> Gate/Up + SwiGLU -> Down Proj + Residual.
+        /// </summary>
+        public static void TransformerDecoderLayerInPlace(
+            Tensor<float> x,
+            Tensor<float> rmsAttnW,
+            Tensor<float> wq,
+            Tensor<float> wk,
+            Tensor<float> wv,
+            Tensor<float> wo,
+            Tensor<float> rmsFfnW,
+            Tensor<float> wGate,
+            Tensor<float> wUp,
+            Tensor<float> wDown,
+            Tensor<float> kCache,
+            Tensor<float> vCache,
+            int numHeads,
+            int numKvHeads,
+            int pos,
+            float rmsEps = 1e-5f,
+            float ropeTheta = 10000.0f)
+        {
+            if (x == null) throw new ArgumentNullException(nameof(x));
+            int hiddenDim = x.Length;
+            int headDim = hiddenDim / numHeads;
+            int intermediateDim = wGate.Shape[0];
+
+            if (Native.ZeroTensorNativeBridge.IsAvailable && Native.ZeroTensorNativeBridge.DispatchMode != Native.NativeDispatchMode.ForcePureCSharp)
+            {
+                unsafe
+                {
+                    fixed (float* pX = &x.Storage.GetPinnableReference(x.Offset))
+                    fixed (float* pRmsA = &rmsAttnW.Storage.GetPinnableReference(rmsAttnW.Offset))
+                    fixed (float* pWq = &wq.Storage.GetPinnableReference(wq.Offset))
+                    fixed (float* pWk = &wk.Storage.GetPinnableReference(wk.Offset))
+                    fixed (float* pWv = &wv.Storage.GetPinnableReference(wv.Offset))
+                    fixed (float* pWo = &wo.Storage.GetPinnableReference(wo.Offset))
+                    fixed (float* pRmsF = &rmsFfnW.Storage.GetPinnableReference(rmsFfnW.Offset))
+                    fixed (float* pWg = &wGate.Storage.GetPinnableReference(wGate.Offset))
+                    fixed (float* pWu = &wUp.Storage.GetPinnableReference(wUp.Offset))
+                    fixed (float* pWd = &wDown.Storage.GetPinnableReference(wDown.Offset))
+                    fixed (float* pKc = &kCache.Storage.GetPinnableReference(kCache.Offset))
+                    fixed (float* pVc = &vCache.Storage.GetPinnableReference(vCache.Offset))
+                    {
+                        if (Native.ZeroTensorNativeBridge.TransformerLayerF32(
+                            hiddenDim, intermediateDim, numHeads, numKvHeads, headDim, pos,
+                            rmsEps, ropeTheta,
+                            pX, pRmsA, pWq, pWk, pWv, pWo,
+                            pRmsF, pWg, pWu, pWd,
+                            pKc, pVc) == 0)
+                        {
+                            return;
+                        }
+                    }
+                }
+            }
+
+            // Pure C# Fallback
+            int qDim = numHeads * headDim;
+            int kvDim = numKvHeads * headDim;
+            int gqaRatio = numHeads / numKvHeads;
+            float scale = 1.0f / (float)Math.Sqrt(headDim);
+
+            var xNorm = RMSNorm(x.Reshape(1, hiddenDim), rmsAttnW, rmsEps).Reshape(hiddenDim, 1);
+            var qTensor = TensorBlas.MatMul(wq, xNorm).Reshape(numHeads, 1, headDim);
+            var kTensor = TensorBlas.MatMul(wk, xNorm).Reshape(numKvHeads, 1, headDim);
+            var vTensor = TensorBlas.MatMul(wv, xNorm).Reshape(kvDim);
+
+            ApplyRoPEInPlace(qTensor, pos, ropeTheta, interleaved: true);
+            ApplyRoPEInPlace(kTensor, pos, ropeTheta, interleaved: true);
+
+            unsafe
+            {
+                fixed (float* pK = &kTensor.Storage.GetPinnableReference(kTensor.Offset))
+                fixed (float* pV = &vTensor.Storage.GetPinnableReference(vTensor.Offset))
+                fixed (float* pKc = &kCache.Storage.GetPinnableReference(kCache.Offset))
+                fixed (float* pVc = &vCache.Storage.GetPinnableReference(vCache.Offset))
+                {
+                    for (int i = 0; i < kvDim; i++)
+                    {
+                        pKc[pos * kvDim + i] = pK[i];
+                        pVc[pos * kvDim + i] = pV[i];
+                    }
+                }
+            }
+
+            var attnOut = new Tensor<float>(qDim, 1);
+            unsafe
+            {
+                fixed (float* pQ = &qTensor.Storage.GetPinnableReference(qTensor.Offset))
+                fixed (float* pKc = &kCache.Storage.GetPinnableReference(kCache.Offset))
+                fixed (float* pVc = &vCache.Storage.GetPinnableReference(vCache.Offset))
+                fixed (float* pAttn = &attnOut.Storage.GetPinnableReference(attnOut.Offset))
+                {
+                    for (int h = 0; h < numHeads; h++)
+                    {
+                        int kvH = h / gqaRatio;
+                        float* qHead = pQ + h * headDim;
+                        float* outHead = pAttn + h * headDim;
+                        float mPrev = float.NegativeInfinity;
+                        float lPrev = 0f;
+
+                        for (int t = 0; t <= pos; t++)
+                        {
+                            float* kVec = pKc + t * kvDim + kvH * headDim;
+                            float* vVec = pVc + t * kvDim + kvH * headDim;
+                            float dot = 0f;
+                            for (int d = 0; d < headDim; d++) dot += qHead[d] * kVec[d];
+                            float score = dot * scale;
+                            float mCurr = Math.Max(mPrev, score);
+                            float alpha = (float)Math.Exp(mPrev - mCurr);
+                            float beta = (float)Math.Exp(score - mCurr);
+                            lPrev = lPrev * alpha + beta;
+                            for (int d = 0; d < headDim; d++) outHead[d] = outHead[d] * alpha + beta * vVec[d];
+                            mPrev = mCurr;
+                        }
+
+                        if (lPrev > 0f)
+                        {
+                            float invL = 1.0f / lPrev;
+                            for (int d = 0; d < headDim; d++) outHead[d] *= invL;
+                        }
+                    }
+                }
+            }
+
+            var projOut = TensorBlas.MatMul(wo, attnOut);
+            unsafe
+            {
+                fixed (float* pX = &x.Storage.GetPinnableReference(x.Offset))
+                fixed (float* pP = &projOut.Storage.GetPinnableReference(projOut.Offset))
+                {
+                    for (int i = 0; i < hiddenDim; i++) pX[i] += pP[i];
+                }
+            }
+
+            var xFfnNorm = RMSNorm(x.Reshape(1, hiddenDim), rmsFfnW, rmsEps).Reshape(hiddenDim, 1);
+            var gate = TensorBlas.MatMul(wGate, xFfnNorm).Reshape(intermediateDim);
+            var up = TensorBlas.MatMul(wUp, xFfnNorm).Reshape(intermediateDim);
+            var swiglu = SwiGLU(gate, up).Reshape(intermediateDim, 1);
+            var down = TensorBlas.MatMul(wDown, swiglu);
+
+            unsafe
+            {
+                fixed (float* pX = &x.Storage.GetPinnableReference(x.Offset))
+                fixed (float* pD = &down.Storage.GetPinnableReference(down.Offset))
+                {
+                    for (int i = 0; i < hiddenDim; i++) pX[i] += pD[i];
+                }
+            }
+        }
+
         #endregion
     }
 

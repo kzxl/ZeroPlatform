@@ -524,6 +524,12 @@ namespace ZeroTensor.Benchmarks
             // 9. RoPE (32 heads, 512 tokens, dim 128)
             CompareRoPE(32, 512, 128, 30);
 
+            // 10. PagedAttention (32q/8kv GQA, 1024 ctx, block=16)
+            ComparePagedAttention(32, 8, 128, 16, 1024, 30);
+
+            // 11. End-to-End Transformer Decoder Layer
+            CompareTransformerLayer(512, 1536, 8, 4, 64, 15);
+
             Console.WriteLine(new string('=', 80));
             ZeroTensorNativeBridge.DispatchMode = NativeDispatchMode.Auto;
         }
@@ -713,6 +719,86 @@ namespace ZeroTensor.Benchmarks
             string label = $"RoPE [{heads}h, {seqLen}seq, {headDim}d]";
             Console.WriteLine(string.Format("{0,-38} | {1,9:F2} ms | {2,9:F2} ms | {3,8:F2}x", label, csharpMs, rustMs, speedup));
         }
+
+        private static void ComparePagedAttention(int numHeads, int numKvHeads, int headDim, int blockSize, int contextLen, int iters)
+        {
+            int numBlocks = (contextLen + blockSize - 1) / blockSize;
+            var q = Tensor.Ones<float>(numHeads, headDim);
+            var kCache = Tensor.Ones<float>(numBlocks, blockSize, numKvHeads, headDim);
+            var vCache = Tensor.Ones<float>(numBlocks, blockSize, numKvHeads, headDim);
+            int[] blockTable = new int[numBlocks];
+            for (int i = 0; i < numBlocks; i++) blockTable[i] = (numBlocks - 1) - i;
+
+            // 1. Pure C#
+            ZeroTensorNativeBridge.DispatchMode = NativeDispatchMode.ForcePureCSharp;
+            var sw = Stopwatch.StartNew();
+            for (int i = 0; i < iters; i++)
+            {
+                var _ = TensorOps.PagedAttention(q, kCache, vCache, blockTable, contextLen);
+            }
+            sw.Stop();
+            double csharpMs = sw.Elapsed.TotalMilliseconds / iters;
+
+            // 2. ZeroRust Native
+            ZeroTensorNativeBridge.DispatchMode = NativeDispatchMode.ForceNative;
+            sw.Restart();
+            for (int i = 0; i < iters; i++)
+            {
+                var _ = TensorOps.PagedAttention(q, kCache, vCache, blockTable, contextLen);
+            }
+            sw.Stop();
+            double rustMs = sw.Elapsed.TotalMilliseconds / iters;
+
+            double speedup = csharpMs / rustMs;
+            string label = $"PagedAttention [{numHeads}q/{numKvHeads}kv, ctx={contextLen}]";
+            Console.WriteLine(string.Format("{0,-38} | {1,9:F2} ms | {2,9:F2} ms | {3,8:F2}x", label, csharpMs, rustMs, speedup));
+        }
+
+        private static void CompareTransformerLayer(int hiddenDim, int intermediateDim, int numHeads, int numKvHeads, int headDim, int iters)
+        {
+            int kvDim = numKvHeads * headDim;
+            var x = Tensor.Ones<float>(hiddenDim);
+            var rmsAttnW = Tensor.Ones<float>(hiddenDim);
+            var wq = Tensor.Full(0.01f, hiddenDim, hiddenDim);
+            var wk = Tensor.Full(0.01f, kvDim, hiddenDim);
+            var wv = Tensor.Full(0.01f, kvDim, hiddenDim);
+            var wo = Tensor.Full(0.01f, hiddenDim, hiddenDim);
+            var rmsFfnW = Tensor.Ones<float>(hiddenDim);
+            var wGate = Tensor.Full(0.01f, intermediateDim, hiddenDim);
+            var wUp = Tensor.Full(0.01f, intermediateDim, hiddenDim);
+            var wDown = Tensor.Full(0.01f, hiddenDim, intermediateDim);
+            var kCache = Tensor.Ones<float>(64, kvDim);
+            var vCache = Tensor.Ones<float>(64, kvDim);
+
+            // 1. Pure C#
+            ZeroTensorNativeBridge.DispatchMode = NativeDispatchMode.ForcePureCSharp;
+            var sw = Stopwatch.StartNew();
+            for (int i = 0; i < iters; i++)
+            {
+                TensorOps.TransformerDecoderLayerInPlace(
+                    x, rmsAttnW, wq, wk, wv, wo, rmsFfnW, wGate, wUp, wDown, kCache, vCache,
+                    numHeads, numKvHeads, pos: 32);
+            }
+            sw.Stop();
+            double csharpMs = sw.Elapsed.TotalMilliseconds / iters;
+
+            // 2. ZeroRust Native
+            ZeroTensorNativeBridge.DispatchMode = NativeDispatchMode.ForceNative;
+            sw.Restart();
+            for (int i = 0; i < iters; i++)
+            {
+                TensorOps.TransformerDecoderLayerInPlace(
+                    x, rmsAttnW, wq, wk, wv, wo, rmsFfnW, wGate, wUp, wDown, kCache, vCache,
+                    numHeads, numKvHeads, pos: 32);
+            }
+            sw.Stop();
+            double rustMs = sw.Elapsed.TotalMilliseconds / iters;
+
+            double speedup = csharpMs / rustMs;
+            string label = $"LLM Decoder Layer [d={hiddenDim}, ffn={intermediateDim}]";
+            Console.WriteLine(string.Format("{0,-38} | {1,9:F2} ms | {2,9:F2} ms | {3,8:F2}x", label, csharpMs, rustMs, speedup));
+        }
     }
 }
+
 

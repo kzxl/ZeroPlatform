@@ -946,5 +946,65 @@ namespace ZeroTensor.Tests
             Assert.Equal(0f, padded[0, 0, 1, 3]);
             Assert.Equal(0f, padded[0, 0, 1, 4]);
         }
+
+        [Fact]
+        public void PagedAttention_NativeMatchesPureCSharp()
+        {
+            int numHeads = 4, numKvHeads = 2, headDim = 8, blockSize = 4, contextLen = 10;
+            int numBlocks = 3;
+            var q = Tensor.Normal(seed: 42, shape: new[] { numHeads, headDim });
+            var kCache = Tensor.Normal(seed: 43, shape: new[] { numBlocks, blockSize, numKvHeads, headDim });
+            var vCache = Tensor.Normal(seed: 44, shape: new[] { numBlocks, blockSize, numKvHeads, headDim });
+            int[] blockTable = new[] { 2, 0, 1 };
+
+            ZeroTensor.Core.Native.ZeroTensorNativeBridge.DispatchMode = ZeroTensor.Core.Native.NativeDispatchMode.ForcePureCSharp;
+            var expected = TensorOps.PagedAttention(q, kCache, vCache, blockTable, contextLen);
+
+            ZeroTensor.Core.Native.ZeroTensorNativeBridge.DispatchMode = ZeroTensor.Core.Native.NativeDispatchMode.ForceNative;
+            var actual = TensorOps.PagedAttention(q, kCache, vCache, blockTable, contextLen);
+            ZeroTensor.Core.Native.ZeroTensorNativeBridge.DispatchMode = ZeroTensor.Core.Native.NativeDispatchMode.Auto;
+
+            for (int h = 0; h < numHeads; h++)
+                for (int d = 0; d < headDim; d++)
+                    Assert.True(Math.Abs(expected[h, d] - actual[h, d]) < 1e-3f);
+        }
+
+        [Fact]
+        public void TransformerDecoderLayerInPlace_NativeMatchesPureCSharp()
+        {
+            int hiddenDim = 16, intermediateDim = 32, numHeads = 4, numKvHeads = 2;
+            int kvDim = numKvHeads * (hiddenDim / numHeads);
+
+            var x1 = Tensor.Ones<float>(hiddenDim);
+            var x2 = Tensor.Ones<float>(hiddenDim);
+            var rmsAttnW = Tensor.Ones<float>(hiddenDim);
+            var wq = Tensor.Full(0.05f, hiddenDim, hiddenDim);
+            var wk = Tensor.Full(0.05f, kvDim, hiddenDim);
+            var wv = Tensor.Full(0.05f, kvDim, hiddenDim);
+            var wo = Tensor.Full(0.05f, hiddenDim, hiddenDim);
+            var rmsFfnW = Tensor.Ones<float>(hiddenDim);
+            var wGate = Tensor.Full(0.05f, intermediateDim, hiddenDim);
+            var wUp = Tensor.Full(0.05f, intermediateDim, hiddenDim);
+            var wDown = Tensor.Full(0.05f, hiddenDim, intermediateDim);
+            var kCache1 = Tensor.Zeros<float>(8, kvDim);
+            var vCache1 = Tensor.Zeros<float>(8, kvDim);
+            var kCache2 = Tensor.Zeros<float>(8, kvDim);
+            var vCache2 = Tensor.Zeros<float>(8, kvDim);
+
+            ZeroTensor.Core.Native.ZeroTensorNativeBridge.DispatchMode = ZeroTensor.Core.Native.NativeDispatchMode.ForcePureCSharp;
+            TensorOps.TransformerDecoderLayerInPlace(
+                x1, rmsAttnW, wq, wk, wv, wo, rmsFfnW, wGate, wUp, wDown, kCache1, vCache1,
+                numHeads, numKvHeads, pos: 0);
+
+            ZeroTensor.Core.Native.ZeroTensorNativeBridge.DispatchMode = ZeroTensor.Core.Native.NativeDispatchMode.ForceNative;
+            TensorOps.TransformerDecoderLayerInPlace(
+                x2, rmsAttnW, wq, wk, wv, wo, rmsFfnW, wGate, wUp, wDown, kCache2, vCache2,
+                numHeads, numKvHeads, pos: 0);
+            ZeroTensor.Core.Native.ZeroTensorNativeBridge.DispatchMode = ZeroTensor.Core.Native.NativeDispatchMode.Auto;
+
+            for (int i = 0; i < hiddenDim; i++)
+                Assert.True(Math.Abs(x1[i] - x2[i]) < 1e-3f);
+        }
     }
 }
+
