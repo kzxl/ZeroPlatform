@@ -70,8 +70,6 @@ namespace ZeroUI.WinForms.Documents
         private bool _showHeaderIcon = true;
 
         private readonly FlowLayoutPanel _attachmentToolbar;
-        private readonly Button _btnUploadImage;
-        private readonly Button _btnUploadPdf;
         private bool _enableAttachments = true;
 
         private ObservableCollection<ChatMessage> _messages;
@@ -163,7 +161,12 @@ namespace ZeroUI.WinForms.Documents
             _clearButton.FlatAppearance.BorderSize = 0;
             _clearButton.Click += (s, e) =>
             {
+                CancelActiveFlowRequest();
                 ClearMessages();
+                if (_flowProvider != null)
+                {
+                    _ = _flowProvider.ResetSessionAsync(_sessionContext.SessionId);
+                }
                 ClearChatRequested?.Invoke(this, EventArgs.Empty);
             };
             _headerPanel.Controls.Add(_clearButton);
@@ -235,6 +238,7 @@ namespace ZeroUI.WinForms.Documents
             _stopButton.Click += (s, e) =>
             {
                 _cancelStreaming = true;
+                CancelActiveFlowRequest();
                 StopGenerationRequested?.Invoke(this, EventArgs.Empty);
             };
             buttonPanel.Controls.Add(_stopButton);
@@ -242,7 +246,7 @@ namespace ZeroUI.WinForms.Documents
             _inputPanel.Controls.Add(_promptInputBox);
             _inputPanel.Controls.Add(buttonPanel);
 
-            // 2.5 Attachment Toolbar (Dock Bottom above Input)
+            // 2.5 Customizable Quick-Action & Attachment Toolbar (Dock Bottom above Input)
             _attachmentToolbar = new FlowLayoutPanel
             {
                 Dock = DockStyle.Bottom,
@@ -252,41 +256,7 @@ namespace ZeroUI.WinForms.Documents
                 WrapContents = false
             };
 
-            _btnUploadImage = new Button
-            {
-                Text = "📷 Tải ảnh đơn hàng",
-                Font = new Font("Segoe UI", 8.5f, FontStyle.Bold),
-                ForeColor = Color.FromArgb(147, 197, 253),
-                BackColor = Color.FromArgb(30, 41, 59),
-                FlatStyle = FlatStyle.Flat,
-                Size = new Size(150, 28),
-                Margin = new Padding(0, 0, 8, 0),
-                Cursor = Cursors.Hand
-            };
-            _btnUploadImage.FlatAppearance.BorderColor = Color.FromArgb(59, 130, 246);
-            _btnUploadImage.FlatAppearance.BorderSize = 1;
-            _btnUploadImage.MouseEnter += (s, e) => { _btnUploadImage.BackColor = Color.FromArgb(37, 99, 235); _btnUploadImage.ForeColor = Color.White; };
-            _btnUploadImage.MouseLeave += (s, e) => { _btnUploadImage.BackColor = Color.FromArgb(30, 41, 59); _btnUploadImage.ForeColor = Color.FromArgb(147, 197, 253); };
-            _btnUploadImage.Click += (s, e) => TriggerImageUpload();
-
-            _btnUploadPdf = new Button
-            {
-                Text = "📄 Tải tệp PDF",
-                Font = new Font("Segoe UI", 8.5f, FontStyle.Bold),
-                ForeColor = Color.FromArgb(244, 114, 182),
-                BackColor = Color.FromArgb(30, 41, 59),
-                FlatStyle = FlatStyle.Flat,
-                Size = new Size(120, 28),
-                Cursor = Cursors.Hand
-            };
-            _btnUploadPdf.FlatAppearance.BorderColor = Color.FromArgb(236, 72, 153);
-            _btnUploadPdf.FlatAppearance.BorderSize = 1;
-            _btnUploadPdf.MouseEnter += (s, e) => { _btnUploadPdf.BackColor = Color.FromArgb(219, 39, 119); _btnUploadPdf.ForeColor = Color.White; };
-            _btnUploadPdf.MouseLeave += (s, e) => { _btnUploadPdf.BackColor = Color.FromArgb(30, 41, 59); _btnUploadPdf.ForeColor = Color.FromArgb(244, 114, 182); };
-            _btnUploadPdf.Click += (s, e) => TriggerPdfUpload();
-
-            _attachmentToolbar.Controls.Add(_btnUploadImage);
-            _attachmentToolbar.Controls.Add(_btnUploadPdf);
+            InitializeGenericComponents();
 
             // 3. Suggestions Panel (Dock Bottom above Attachment Toolbar)
             _suggestionsPanel = new FlowLayoutPanel
@@ -326,6 +296,10 @@ namespace ZeroUI.WinForms.Documents
             Controls.Add(_suggestionsPanel);
             Controls.Add(_attachmentToolbar);
             Controls.Add(_inputPanel);
+            if (_contextBarPanel != null)
+            {
+                Controls.Add(_contextBarPanel);
+            }
             Controls.Add(_headerPanel);
 
             ApplyTheme();
@@ -334,6 +308,7 @@ namespace ZeroUI.WinForms.Documents
             Resize += (s, e) =>
             {
                 _clearButton.Location = new Point(Width - 80, 10);
+                UpdateContextBarUI();
                 RebuildAllMessages();
             };
         }
@@ -482,7 +457,7 @@ namespace ZeroUI.WinForms.Documents
         }
 
         [Category("ZeroUI")]
-        [Description("Enables or disables the attachment toolbar (Images & PDFs).")]
+        [Description("Enables or disables the customizable toolbar above the input box.")]
         [DefaultValue(true)]
         public bool EnableAttachments
         {
@@ -490,7 +465,7 @@ namespace ZeroUI.WinForms.Documents
             set
             {
                 _enableAttachments = value;
-                _attachmentToolbar.Visible = value;
+                _attachmentToolbar.Visible = value && _toolbarItems.Count > 0;
             }
         }
 
@@ -573,23 +548,11 @@ namespace ZeroUI.WinForms.Documents
             if (_suggestionsPanel != null)
                 _suggestionsPanel.BackColor = isDark ? Color.FromArgb(17, 24, 39) : Color.FromArgb(248, 250, 252);
 
-            // 4. Attachment Toolbar
+            // 4. Generic Toolbar & Context Bar
             if (_attachmentToolbar != null)
                 _attachmentToolbar.BackColor = isDark ? Color.FromArgb(20, 28, 44) : Color.FromArgb(241, 245, 249);
 
-            if (_btnUploadImage != null)
-            {
-                _btnUploadImage.BackColor = isDark ? Color.FromArgb(30, 41, 59) : Color.FromArgb(255, 255, 255);
-                _btnUploadImage.ForeColor = isDark ? Color.FromArgb(147, 197, 253) : Color.FromArgb(37, 99, 235);
-                _btnUploadImage.FlatAppearance.BorderColor = isDark ? Color.FromArgb(59, 130, 246) : Color.FromArgb(191, 219, 254);
-            }
-
-            if (_btnUploadPdf != null)
-            {
-                _btnUploadPdf.BackColor = isDark ? Color.FromArgb(30, 41, 59) : Color.FromArgb(255, 255, 255);
-                _btnUploadPdf.ForeColor = isDark ? Color.FromArgb(248, 113, 113) : Color.FromArgb(220, 38, 38);
-                _btnUploadPdf.FlatAppearance.BorderColor = isDark ? Color.FromArgb(239, 68, 68) : Color.FromArgb(254, 202, 202);
-            }
+            ApplyGenericComponentTheme(isDark);
 
             // 5. Input Panel
             if (_inputPanel != null)
@@ -625,6 +588,7 @@ namespace ZeroUI.WinForms.Documents
         {
             if (disposing)
             {
+                CancelActiveFlowRequest();
                 ZeroTheme.ThemeChanged -= OnThemeChanged;
             }
             base.Dispose(disposing);

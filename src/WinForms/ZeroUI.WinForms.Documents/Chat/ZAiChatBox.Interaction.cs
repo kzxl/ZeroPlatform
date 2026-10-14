@@ -18,37 +18,10 @@ namespace ZeroUI.WinForms.Documents
             _promptInputBox.Clear();
             AppendUserMessage(text);
             SendMessageRequested?.Invoke(this, text);
-        }
 
-        #endregion
-
-        #region Attachments & Uploads
-
-        private void TriggerImageUpload()
-        {
-            using var ofd = new OpenFileDialog
+            if (_flowProvider != null)
             {
-                Title = "Chọn ảnh chụp đơn hàng / báo giá / PO",
-                Filter = "Image Files (*.png;*.jpg;*.jpeg;*.bmp)|*.png;*.jpg;*.jpeg;*.bmp|All Files (*.*)|*.*"
-            };
-            if (ofd.ShowDialog() == DialogResult.OK)
-            {
-                AppendUserMessage($"[Tải hình ảnh]: {System.IO.Path.GetFileName(ofd.FileName)}");
-                FileAttached?.Invoke(this, (ofd.FileName, "image"));
-            }
-        }
-
-        private void TriggerPdfUpload()
-        {
-            using var ofd = new OpenFileDialog
-            {
-                Title = "Chọn tệp PDF đơn hàng / PO",
-                Filter = "PDF Files (*.pdf)|*.pdf|All Files (*.*)|*.*"
-            };
-            if (ofd.ShowDialog() == DialogResult.OK)
-            {
-                AppendUserMessage($"[Tải tệp PDF]: {System.IO.Path.GetFileName(ofd.FileName)}");
-                FileAttached?.Invoke(this, (ofd.FileName, "pdf"));
+                _ = ExecuteFlowPromptAsync(text);
             }
         }
 

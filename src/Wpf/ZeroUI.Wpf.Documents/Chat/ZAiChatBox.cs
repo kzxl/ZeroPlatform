@@ -29,8 +29,24 @@ namespace ZeroUI.Wpf.Documents
         private Button _clearButton = null!;
         private TextBlock _statusTextBlock = null!;
         private StackPanel _suggestionsPanel = null!;
+        private StackPanel _toolbarPanel = null!;
+        private Border _contextBarBorder = null!;
+        private TextBlock _contextBarTextBlock = null!;
+        private Button _clearContextButton = null!;
         private TextBlock _modelNameTextBlock = null!;
         private bool _isInternalScroll = false;
+
+        private IChatFlowProvider? _flowProvider;
+        private ChatContextState _sessionContext = new ChatContextState();
+        private ObservableCollection<ChatToolbarItem> _toolbarItems = new ObservableCollection<ChatToolbarItem>();
+        private string _workflowId = string.Empty;
+        private bool _useStreaming = true;
+        private bool _showReasoning = true;
+        private bool _showContextBar = false;
+        private string _contextBarPrefix = "📌 Context:";
+        private string _contextBarEmptyText = "Global";
+        private string _attachmentDataKey = "image_base64";
+        private System.Threading.CancellationTokenSource? _activeFlowCts;
 
         static ZAiChatBox()
         {
@@ -44,12 +60,18 @@ namespace ZeroUI.Wpf.Documents
 
             Messages.CollectionChanged += OnMessagesCollectionChanged;
             PromptSuggestions.CollectionChanged += OnPromptSuggestionsCollectionChanged;
+            _toolbarItems.CollectionChanged += (s, e) => RebuildToolbarItems();
 
             InitializeComponentHierarchy();
-            Loaded += (s, e) => RebuildAllMessages();
+            Loaded += (s, e) =>
+            {
+                RebuildAllMessages();
+                RebuildToolbarItems();
+                UpdateContextBarUI();
+            };
         }
 
-        #region Dependency Properties
+        #region Dependency & Generic Flow Properties
 
         public static readonly DependencyProperty MessagesProperty =
             DependencyProperty.Register(nameof(Messages), typeof(ObservableCollection<ChatMessage>), typeof(ZAiChatBox),
@@ -85,6 +107,95 @@ namespace ZeroUI.Wpf.Documents
         {
             get => (ObservableCollection<string>)GetValue(PromptSuggestionsProperty);
             set => SetValue(PromptSuggestionsProperty, value);
+        }
+
+        public ObservableCollection<ChatToolbarItem> ToolbarItems
+        {
+            get => _toolbarItems;
+            set
+            {
+                _toolbarItems = value ?? new ObservableCollection<ChatToolbarItem>();
+                _toolbarItems.CollectionChanged += (s, e) => RebuildToolbarItems();
+                RebuildToolbarItems();
+            }
+        }
+
+        public IChatFlowProvider? FlowProvider
+        {
+            get => _flowProvider;
+            set
+            {
+                _flowProvider = value;
+                UpdateContextBarUI();
+            }
+        }
+
+        public ChatContextState SessionContext
+        {
+            get => _sessionContext;
+            set
+            {
+                _sessionContext = value ?? new ChatContextState();
+                UpdateContextBarUI();
+            }
+        }
+
+        public string WorkflowId
+        {
+            get => _workflowId;
+            set => _workflowId = value ?? string.Empty;
+        }
+
+        public bool UseStreaming
+        {
+            get => _useStreaming;
+            set => _useStreaming = value;
+        }
+
+        public bool ShowReasoning
+        {
+            get => _showReasoning;
+            set
+            {
+                _showReasoning = value;
+                RebuildAllMessages();
+            }
+        }
+
+        public bool ShowContextBar
+        {
+            get => _showContextBar;
+            set
+            {
+                _showContextBar = value;
+                UpdateContextBarUI();
+            }
+        }
+
+        public string ContextBarPrefix
+        {
+            get => _contextBarPrefix;
+            set
+            {
+                _contextBarPrefix = value ?? string.Empty;
+                UpdateContextBarUI();
+            }
+        }
+
+        public string ContextBarEmptyText
+        {
+            get => _contextBarEmptyText;
+            set
+            {
+                _contextBarEmptyText = value ?? string.Empty;
+                UpdateContextBarUI();
+            }
+        }
+
+        public string AttachmentDataKey
+        {
+            get => _attachmentDataKey;
+            set => _attachmentDataKey = string.IsNullOrWhiteSpace(value) ? "image_base64" : value;
         }
 
         public string AssistantName
@@ -167,6 +278,10 @@ namespace ZeroUI.Wpf.Documents
         public event EventHandler<string>? SendMessageRequested;
         public event EventHandler? StopGenerationRequested;
         public event EventHandler? ClearChatRequested;
+        public event EventHandler<ChatActionItem>? ActionItemClicked;
+        public event EventHandler<ChatToolbarItem>? ToolbarItemClicked;
+        public event EventHandler<ChatFlowResult>? FlowCompleted;
+        public event EventHandler<ChatContextState>? ContextStateChanged;
 
         #endregion
 
@@ -183,10 +298,12 @@ namespace ZeroUI.Wpf.Documents
             };
 
             var mainGrid = new Grid();
-            mainGrid.RowDefinitions.Add(new RowDefinition { Height = GridLength.Auto }); // Header
-            mainGrid.RowDefinitions.Add(new RowDefinition { Height = new GridLength(1, GridUnitType.Star) }); // Messages
-            mainGrid.RowDefinitions.Add(new RowDefinition { Height = GridLength.Auto }); // Suggestions
-            mainGrid.RowDefinitions.Add(new RowDefinition { Height = GridLength.Auto }); // Input deck
+            mainGrid.RowDefinitions.Add(new RowDefinition { Height = GridLength.Auto }); // 0: Header
+            mainGrid.RowDefinitions.Add(new RowDefinition { Height = GridLength.Auto }); // 1: Context Bar
+            mainGrid.RowDefinitions.Add(new RowDefinition { Height = new GridLength(1, GridUnitType.Star) }); // 2: Messages
+            mainGrid.RowDefinitions.Add(new RowDefinition { Height = GridLength.Auto }); // 3: Suggestions
+            mainGrid.RowDefinitions.Add(new RowDefinition { Height = GridLength.Auto }); // 4: Toolbar
+            mainGrid.RowDefinitions.Add(new RowDefinition { Height = GridLength.Auto }); // 5: Input deck
 
             // 1. Header
             var headerBorder = new Border
@@ -241,13 +358,62 @@ namespace ZeroUI.Wpf.Documents
             };
             _clearButton.Click += (s, e) =>
             {
+                CancelActiveFlowRequest();
                 ClearMessages();
+                if (_flowProvider != null)
+                {
+                    _ = _flowProvider.ResetSessionAsync(_sessionContext.SessionId);
+                }
                 ClearChatRequested?.Invoke(this, EventArgs.Empty);
             };
             Grid.SetColumn(_clearButton, 1);
             headerGrid.Children.Add(_clearButton);
             headerBorder.Child = headerGrid;
             mainGrid.Children.Add(headerBorder);
+
+            // 1.5 Generic Context Bar
+            _contextBarBorder = new Border
+            {
+                Background = new SolidColorBrush(Color.FromRgb(23, 33, 53)),
+                BorderBrush = new SolidColorBrush(Color.FromRgb(51, 65, 85)),
+                BorderThickness = new Thickness(0, 0, 0, 1),
+                Padding = new Thickness(14, 4, 14, 4),
+                Visibility = Visibility.Collapsed
+            };
+            var ctxGrid = new Grid();
+            ctxGrid.ColumnDefinitions.Add(new ColumnDefinition { Width = new GridLength(1, GridUnitType.Star) });
+            ctxGrid.ColumnDefinitions.Add(new ColumnDefinition { Width = GridLength.Auto });
+
+            _contextBarTextBlock = new TextBlock
+            {
+                Text = string.Empty,
+                Foreground = new SolidColorBrush(Color.FromRgb(147, 197, 253)),
+                FontSize = 11,
+                VerticalAlignment = VerticalAlignment.Center
+            };
+            ctxGrid.Children.Add(_contextBarTextBlock);
+
+            _clearContextButton = new Button
+            {
+                Content = "× Clear",
+                Background = Brushes.Transparent,
+                Foreground = new SolidColorBrush(Color.FromRgb(248, 113, 113)),
+                BorderThickness = new Thickness(0),
+                Cursor = Cursors.Hand,
+                FontSize = 10,
+                Visibility = Visibility.Collapsed
+            };
+            _clearContextButton.Click += (s, e) =>
+            {
+                _sessionContext.ClearTagsAndParameters(preserveIdentity: true);
+                UpdateContextBarUI();
+                ContextStateChanged?.Invoke(this, _sessionContext);
+            };
+            Grid.SetColumn(_clearContextButton, 1);
+            ctxGrid.Children.Add(_clearContextButton);
+            _contextBarBorder.Child = ctxGrid;
+            Grid.SetRow(_contextBarBorder, 1);
+            mainGrid.Children.Add(_contextBarBorder);
 
             // 2. Messages Scroller
             _messagesScrollViewer = new ScrollViewer
@@ -258,7 +424,7 @@ namespace ZeroUI.Wpf.Documents
             };
             _messagesPanel = new StackPanel();
             _messagesScrollViewer.Content = _messagesPanel;
-            Grid.SetRow(_messagesScrollViewer, 1);
+            Grid.SetRow(_messagesScrollViewer, 2);
             mainGrid.Children.Add(_messagesScrollViewer);
 
             // 3. Suggestions Panel
@@ -267,8 +433,18 @@ namespace ZeroUI.Wpf.Documents
                 Orientation = Orientation.Horizontal,
                 Margin = new Thickness(14, 4, 14, 6)
             };
-            Grid.SetRow(_suggestionsPanel, 2);
+            Grid.SetRow(_suggestionsPanel, 3);
             mainGrid.Children.Add(_suggestionsPanel);
+
+            // 3.5 Generic Toolbar Panel
+            _toolbarPanel = new StackPanel
+            {
+                Orientation = Orientation.Horizontal,
+                Margin = new Thickness(14, 2, 14, 6),
+                Visibility = Visibility.Collapsed
+            };
+            Grid.SetRow(_toolbarPanel, 4);
+            mainGrid.Children.Add(_toolbarPanel);
 
             // 4. Input Deck
             var inputBorder = new Border
@@ -332,13 +508,17 @@ namespace ZeroUI.Wpf.Documents
                 Padding = new Thickness(14, 8, 14, 8),
                 Visibility = Visibility.Collapsed
             };
-            _stopButton.Click += (s, e) => StopGenerationRequested?.Invoke(this, EventArgs.Empty);
+            _stopButton.Click += (s, e) =>
+            {
+                CancelActiveFlowRequest();
+                StopGenerationRequested?.Invoke(this, EventArgs.Empty);
+            };
             buttonStack.Children.Add(_stopButton);
 
             Grid.SetColumn(buttonStack, 1);
             inputGrid.Children.Add(buttonStack);
             inputBorder.Child = inputGrid;
-            Grid.SetRow(inputBorder, 3);
+            Grid.SetRow(inputBorder, 5);
             mainGrid.Children.Add(inputBorder);
 
             _rootBorder.Child = mainGrid;
@@ -363,7 +543,59 @@ namespace ZeroUI.Wpf.Documents
 
         #endregion
 
-        #region Prompt Execution
+        #region Prompt & Generic Flow Execution
+
+        public ZAiChatBox ConfigureFlow(Action<ZFlowChatOptions> configure, IChatFlowProvider? customProvider = null)
+        {
+            if (configure == null) throw new ArgumentNullException(nameof(configure));
+            var options = new ZFlowChatOptions();
+            configure(options);
+            return ConfigureFlow(options, customProvider);
+        }
+
+        public ZAiChatBox ConfigureFlow(ZFlowChatOptions options, IChatFlowProvider? customProvider = null)
+        {
+            if (options == null) throw new ArgumentNullException(nameof(options));
+
+            _workflowId = options.WorkflowId;
+            _useStreaming = options.UseStreaming;
+            _showContextBar = options.ShowContextBar;
+            _showReasoning = options.ShowReasoning;
+            _contextBarPrefix = options.ContextBarPrefix;
+            _contextBarEmptyText = options.ContextBarEmptyText;
+            _sessionContext = options.BuildContextState();
+            _flowProvider = customProvider ?? options.BuildProvider();
+
+            if (options.ReplaceDefaultToolbarItems)
+            {
+                _toolbarItems.Clear();
+            }
+
+            foreach (var item in options.ToolbarItems)
+            {
+                _toolbarItems.Add(item);
+            }
+
+            if (options.PromptSuggestions.Count > 0)
+            {
+                PromptSuggestions.Clear();
+                foreach (var s in options.PromptSuggestions)
+                {
+                    PromptSuggestions.Add(s);
+                }
+            }
+
+            UpdateContextBarUI();
+            RebuildToolbarItems();
+            return this;
+        }
+
+        public ZAiChatBox SetFlowContextParameter(string key, object? value, string? displayTagLabel = null)
+        {
+            _sessionContext.SetParameter(key, value, displayTagLabel);
+            UpdateContextBarUI();
+            return this;
+        }
 
         private void SubmitPrompt()
         {
@@ -373,6 +605,195 @@ namespace ZeroUI.Wpf.Documents
             _promptInputBox.Clear();
             AppendUserMessage(text);
             SendMessageRequested?.Invoke(this, text);
+
+            if (_flowProvider != null)
+            {
+                _ = ExecuteFlowPromptAsync(text);
+            }
+        }
+
+        public async System.Threading.Tasks.Task<ChatFlowResult?> ExecuteFlowPromptAsync(string prompt, string? attachmentDataUri = null)
+        {
+            if (_flowProvider == null || string.IsNullOrWhiteSpace(prompt)) return null;
+
+            CancelActiveFlowRequest();
+            _activeFlowCts = new System.Threading.CancellationTokenSource();
+            var token = _activeFlowCts.Token;
+
+            var reqContext = new Dictionary<string, object?>(_sessionContext.Parameters, StringComparer.OrdinalIgnoreCase);
+            string? effectiveAttachment = !string.IsNullOrWhiteSpace(attachmentDataUri)
+                ? attachmentDataUri
+                : _sessionContext.PendingAttachmentData;
+
+            if (!string.IsNullOrWhiteSpace(effectiveAttachment))
+            {
+                reqContext[_attachmentDataKey] = effectiveAttachment;
+                _sessionContext.PendingAttachmentData = null;
+            }
+
+            var request = new ChatFlowRequest
+            {
+                WorkflowId = _workflowId,
+                InputText = prompt,
+                SessionId = _sessionContext.SessionId,
+                Context = reqContext
+            };
+
+            IsGenerating = true;
+            StreamingState = ChatStreamingState.Thinking;
+            ChatMessage? assistantMsg = null;
+
+            try
+            {
+                ChatFlowResult result;
+                if (_useStreaming)
+                {
+                    result = await _flowProvider.StreamAsync(
+                        request,
+                        chunk =>
+                        {
+                            Dispatcher.Invoke(() =>
+                            {
+                                if (chunk.EventType == "token" && !string.IsNullOrEmpty(chunk.Token))
+                                {
+                                    if (assistantMsg == null)
+                                    {
+                                        assistantMsg = AppendAssistantMessage(string.Empty);
+                                        StreamingState = ChatStreamingState.Streaming;
+                                    }
+                                    StreamToken(assistantMsg.Id, chunk.Token!);
+                                }
+                            });
+                        },
+                        token);
+                }
+                else
+                {
+                    result = await _flowProvider.ExecuteAsync(request, token);
+                }
+
+                if (assistantMsg == null)
+                {
+                    assistantMsg = AppendAssistantMessage(result.Output ?? string.Empty);
+                }
+                else if (!string.IsNullOrWhiteSpace(result.Output))
+                {
+                    assistantMsg.Content = result.Output;
+                }
+
+                assistantMsg.IsStreaming = false;
+                assistantMsg.Reasoning = result.Reasoning;
+                assistantMsg.LatencyMs = result.DurationMs > 0 ? result.DurationMs : null;
+
+                assistantMsg.Actions.Clear();
+                if (result.Actions != null && result.Actions.Count > 0)
+                {
+                    assistantMsg.Actions.AddRange(result.Actions);
+                }
+
+                assistantMsg.ContextData.Clear();
+                if (result.ContextUpdates != null && result.ContextUpdates.Count > 0)
+                {
+                    foreach (var kv in result.ContextUpdates)
+                    {
+                        assistantMsg.ContextData[kv.Key] = kv.Value;
+                    }
+                    _sessionContext.MergeContextUpdates(result.ContextUpdates);
+                    UpdateContextBarUI();
+                    ContextStateChanged?.Invoke(this, _sessionContext);
+                }
+
+                RebuildAllMessages();
+                FlowCompleted?.Invoke(this, result);
+                return result;
+            }
+            catch (Exception ex)
+            {
+                if (assistantMsg == null)
+                {
+                    AppendAssistantMessage($"⚠️ {ex.Message}");
+                }
+                StreamingState = ChatStreamingState.Error;
+                return null;
+            }
+            finally
+            {
+                IsGenerating = false;
+                if (StreamingState != ChatStreamingState.Error)
+                {
+                    StreamingState = ChatStreamingState.Idle;
+                }
+            }
+        }
+
+        public void CancelActiveFlowRequest()
+        {
+            try
+            {
+                _activeFlowCts?.Cancel();
+                _activeFlowCts?.Dispose();
+            }
+            catch { }
+            _activeFlowCts = null;
+        }
+
+        public void UpdateContextBarUI()
+        {
+            if (_contextBarBorder == null || _contextBarTextBlock == null || _clearContextButton == null) return;
+            string summary = _sessionContext.FormatDisplaySummary();
+            bool hasTags = !string.IsNullOrWhiteSpace(summary);
+
+            _contextBarBorder.Visibility = (_showContextBar || hasTags) ? Visibility.Visible : Visibility.Collapsed;
+            _contextBarTextBlock.Text = hasTags
+                ? $"{_contextBarPrefix} {summary}".Trim()
+                : $"{_contextBarPrefix} {_contextBarEmptyText}".Trim();
+            _clearContextButton.Visibility = hasTags ? Visibility.Visible : Visibility.Collapsed;
+        }
+
+        public void RebuildToolbarItems()
+        {
+            if (_toolbarPanel == null) return;
+            _toolbarPanel.Children.Clear();
+
+            foreach (var item in _toolbarItems)
+            {
+                var btn = new Button
+                {
+                    Content = item.Text,
+                    Background = new SolidColorBrush(Color.FromRgb(30, 41, 59)),
+                    Foreground = new SolidColorBrush(Color.FromRgb(147, 197, 253)),
+                    BorderBrush = new SolidColorBrush(Color.FromRgb(59, 130, 246)),
+                    BorderThickness = new Thickness(1),
+                    Padding = new Thickness(8, 4, 8, 4),
+                    Margin = new Thickness(0, 0, 8, 0),
+                    Cursor = Cursors.Hand,
+                    FontSize = 11
+                };
+                var captured = item;
+                btn.Click += (s, e) =>
+                {
+                    if (captured.CommandType == ChatToolbarCommandType.PrefillInput && !string.IsNullOrEmpty(captured.CommandValue))
+                    {
+                        _promptInputBox.Text = captured.CommandValue!;
+                        _promptInputBox.Focus();
+                        _promptInputBox.CaretIndex = _promptInputBox.Text.Length;
+                    }
+                    else if (captured.CommandType == ChatToolbarCommandType.SendPrompt && !string.IsNullOrWhiteSpace(captured.CommandValue) && !IsGenerating)
+                    {
+                        string text = captured.CommandValue!.Trim();
+                        AppendUserMessage(text);
+                        SendMessageRequested?.Invoke(this, text);
+                        if (_flowProvider != null)
+                        {
+                            _ = ExecuteFlowPromptAsync(text);
+                        }
+                    }
+                    ToolbarItemClicked?.Invoke(this, captured);
+                };
+                _toolbarPanel.Children.Add(btn);
+            }
+
+            _toolbarPanel.Visibility = _toolbarItems.Count > 0 ? Visibility.Visible : Visibility.Collapsed;
         }
 
         #endregion
@@ -457,9 +878,15 @@ namespace ZeroUI.Wpf.Documents
             };
             headerGrid.Children.Add(senderTextBlock);
 
+            string timeAndLatency = msg.Timestamp.ToLocalTime().ToString("HH:mm:ss");
+            if (!isUser && msg.LatencyMs.HasValue && msg.LatencyMs.Value > 0)
+            {
+                timeAndLatency += $"  ⚡ {msg.LatencyMs.Value:F0}ms";
+            }
+
             var timeTextBlock = new TextBlock
             {
-                Text = msg.Timestamp.ToLocalTime().ToString("HH:mm:ss"),
+                Text = timeAndLatency,
                 FontSize = 10,
                 Foreground = new SolidColorBrush(Color.FromRgb(148, 163, 184)),
                 Margin = new Thickness(8, 0, 0, 0)
@@ -467,6 +894,20 @@ namespace ZeroUI.Wpf.Documents
             Grid.SetColumn(timeTextBlock, 1);
             headerGrid.Children.Add(timeTextBlock);
             bubbleStack.Children.Add(headerGrid);
+
+            if (!isUser && _showReasoning && !string.IsNullOrWhiteSpace(msg.Reasoning))
+            {
+                var reasoningBlock = new TextBlock
+                {
+                    Text = $"🧠 {msg.Reasoning}",
+                    FontSize = 11,
+                    FontStyle = FontStyles.Italic,
+                    Foreground = new SolidColorBrush(Color.FromRgb(148, 163, 184)),
+                    Margin = new Thickness(0, 0, 0, 4),
+                    TextWrapping = TextWrapping.Wrap
+                };
+                bubbleStack.Children.Add(reasoningBlock);
+            }
 
             // Body text / Markdown rendering
             var contentBlock = new TextBox
@@ -482,6 +923,34 @@ namespace ZeroUI.Wpf.Documents
                 Cursor = Cursors.Arrow
             };
             bubbleStack.Children.Add(contentBlock);
+
+            // Generic Action Chips
+            if (!isUser && msg.Actions != null && msg.Actions.Count > 0)
+            {
+                var actionsWrap = new WrapPanel { Margin = new Thickness(0, 6, 0, 2) };
+                foreach (var act in msg.Actions)
+                {
+                    string modesBadge = act.AllowedModes != null && act.AllowedModes.Count > 0
+                        ? $" [{string.Join("|", act.AllowedModes)}]"
+                        : string.Empty;
+                    var actBtn = new Button
+                    {
+                        Content = $"🔗 {act.Label}{modesBadge}",
+                        Background = new SolidColorBrush(Color.FromRgb(23, 37, 84)),
+                        Foreground = new SolidColorBrush(Color.FromRgb(147, 197, 253)),
+                        BorderBrush = new SolidColorBrush(Color.FromRgb(59, 130, 246)),
+                        BorderThickness = new Thickness(1),
+                        Padding = new Thickness(8, 3, 8, 3),
+                        Margin = new Thickness(0, 0, 6, 4),
+                        Cursor = Cursors.Hand,
+                        FontSize = 11
+                    };
+                    var captured = act;
+                    actBtn.Click += (s, e) => ActionItemClicked?.Invoke(this, captured);
+                    actionsWrap.Children.Add(actBtn);
+                }
+                bubbleStack.Children.Add(actionsWrap);
+            }
 
             // Copy action for assistant messages
             if (!isUser)

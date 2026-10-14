@@ -208,7 +208,20 @@ namespace ZeroUI.WinForms.Documents
             };
             bubble.Controls.Add(timeLabel);
 
-            // 2. Multi-Block Content (Rich Text + Data Tables)
+            if (!isUser && msg.LatencyMs.HasValue && msg.LatencyMs.Value > 0)
+            {
+                var latencyLabel = new Label
+                {
+                    Text = $"⚡ {msg.LatencyMs.Value:F0}ms",
+                    Font = new Font("Segoe UI", 7.5f, FontStyle.Bold),
+                    ForeColor = isDark ? Color.FromArgb(56, 189, 248) : Color.FromArgb(2, 132, 199),
+                    AutoSize = true,
+                    Location = new Point(timeLabel.Right + 8, 8)
+                };
+                bubble.Controls.Add(latencyLabel);
+            }
+
+            // 2. Multi-Block Content (Reasoning + Rich Text + Data Tables + Action Chips)
             Color textFore = isUser
                 ? (isDark ? Color.FromArgb(241, 245, 249) : Color.FromArgb(30, 27, 75))
                 : (isDark ? Color.FromArgb(226, 232, 240) : Color.FromArgb(15, 23, 42));
@@ -218,9 +231,30 @@ namespace ZeroUI.WinForms.Documents
                 : (isDark ? Color.FromArgb(56, 189, 248) : Color.FromArgb(2, 132, 199));
 
             int contentWidth = Math.Max(120, maxBubbleWidth - 28);
-            var blocks = ParseMarkdownBlocks(msg.Content ?? "");
-
             int currentY = 28;
+
+            if (!isUser && _showReasoning && !string.IsNullOrWhiteSpace(msg.Reasoning))
+            {
+                string firstLine = msg.Reasoning!.Replace("\r\n", "\n").Split('\n')[0].Trim();
+                if (firstLine.Length > 90) firstLine = firstLine.Substring(0, 87) + "...";
+
+                var reasoningLabel = new Label
+                {
+                    Text = $"🧠 {firstLine}",
+                    Font = new Font("Segoe UI", 8f, FontStyle.Italic),
+                    ForeColor = isDark ? Color.FromArgb(148, 163, 184) : Color.FromArgb(100, 116, 139),
+                    BackColor = isDark ? Color.FromArgb(24, 34, 52) : Color.FromArgb(241, 245, 249),
+                    AutoSize = false,
+                    Size = new Size(contentWidth, 22),
+                    TextAlign = ContentAlignment.MiddleLeft,
+                    Padding = new Padding(6, 0, 6, 0),
+                    Location = new Point(12, currentY)
+                };
+                bubble.Controls.Add(reasoningLabel);
+                currentY += 26;
+            }
+
+            var blocks = ParseMarkdownBlocks(msg.Content ?? "");
             RichTextBox? primaryRtb = null;
 
             if (blocks.Count == 0)
@@ -257,6 +291,69 @@ namespace ZeroUI.WinForms.Documents
                         currentY += tableControl.Height + 8;
                     }
                 }
+            }
+
+            // 2.5 Interactive Action Chips (Generic ChatActionItem)
+            if (!isUser && msg.Actions != null && msg.Actions.Count > 0)
+            {
+                var actionsFlow = new FlowLayoutPanel
+                {
+                    Location = new Point(12, currentY),
+                    Width = contentWidth,
+                    AutoSize = true,
+                    AutoSizeMode = AutoSizeMode.GrowAndShrink,
+                    MaximumSize = new Size(contentWidth, 0),
+                    BackColor = Color.Transparent,
+                    WrapContents = true,
+                    Margin = Padding.Empty,
+                    Padding = new Padding(0, 2, 0, 2)
+                };
+
+                Color actBg = isDark ? Color.FromArgb(23, 37, 84) : Color.FromArgb(239, 246, 255);
+                Color actFore = isDark ? Color.FromArgb(147, 197, 253) : Color.FromArgb(29, 78, 216);
+                Color actBorder = isDark ? Color.FromArgb(59, 130, 246) : Color.FromArgb(147, 197, 253);
+
+                foreach (var action in msg.Actions)
+                {
+                    string modesBadge = action.AllowedModes != null && action.AllowedModes.Count > 0
+                        ? $" [{string.Join("|", action.AllowedModes)}]"
+                        : (!string.IsNullOrWhiteSpace(action.BadgeText) ? $" [{action.BadgeText}]" : string.Empty);
+
+                    string btnText = $"🔗 {action.Label}{modesBadge}";
+                    var actBtn = new Button
+                    {
+                        Text = btnText,
+                        Font = new Font("Segoe UI", 8.25f, FontStyle.Bold),
+                        ForeColor = actFore,
+                        BackColor = actBg,
+                        FlatStyle = FlatStyle.Flat,
+                        AutoSize = true,
+                        Height = 26,
+                        Padding = new Padding(6, 0, 6, 0),
+                        Margin = new Padding(0, 0, 6, 4),
+                        Cursor = Cursors.Hand,
+                        Tag = action
+                    };
+                    actBtn.FlatAppearance.BorderColor = actBorder;
+                    actBtn.FlatAppearance.BorderSize = 1;
+                    actBtn.MouseEnter += (s, e) =>
+                    {
+                        actBtn.BackColor = Color.FromArgb(37, 99, 235);
+                        actBtn.ForeColor = Color.White;
+                    };
+                    actBtn.MouseLeave += (s, e) =>
+                    {
+                        actBtn.BackColor = actBg;
+                        actBtn.ForeColor = actFore;
+                    };
+                    var capturedAction = action;
+                    actBtn.Click += (s, e) => ActionItemClicked?.Invoke(this, capturedAction);
+                    actionsFlow.Controls.Add(actBtn);
+                }
+
+                bubble.Controls.Add(actionsFlow);
+                var prefSize = actionsFlow.GetPreferredSize(new Size(contentWidth, 0));
+                currentY += Math.Max(30, prefSize.Height) + 6;
             }
 
             outRtb = primaryRtb ?? CreateRichTextBox(contentWidth, bubble.BackColor, textFore);

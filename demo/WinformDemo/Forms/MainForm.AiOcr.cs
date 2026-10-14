@@ -250,6 +250,33 @@ namespace ZeroUI.Samples.WinformDemo.Forms
                 Height = 28
             };
 
+            var chkLiveZFlow = new CheckBox
+            {
+                Text = "🔗 Live ZFlow (:8000)",
+                ForeColor = colors.Primary,
+                Font = new Font(this.Font.FontFamily, 8.5f, FontStyle.Bold),
+                Dock = DockStyle.Top,
+                Height = 28
+            };
+            chkLiveZFlow.CheckedChanged += (s, e) =>
+            {
+                if (_winformsChatBox == null) return;
+                if (chkLiveZFlow.Checked)
+                {
+                    _winformsChatBox.ConfigureFlow(opt => opt
+                        .WithEndpoint("http://127.0.0.1:8000", "erp-ContinuousLearning-Copilot-v1")
+                        .WithIdentity(userId: "USER_001", userRole: "SALES")
+                        .WithContextParameter("department", "SALES", "Dept")
+                        .WithFeaturePermission("SO_CREATE", canView: true, canAdd: true, canEdit: true)
+                        .WithContinuousLearningTools());
+                }
+                else
+                {
+                    _winformsChatBox.FlowProvider = null;
+                }
+            };
+
+            pnlSidebar.Controls.Add(chkLiveZFlow);
             pnlSidebar.Controls.Add(_chkWpfAiFastMode);
             pnlSidebar.Controls.Add(btnClear);
             pnlSidebar.Controls.Add(btnBatch);
