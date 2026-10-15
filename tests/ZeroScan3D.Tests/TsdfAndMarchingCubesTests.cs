@@ -123,5 +123,37 @@ namespace ZeroScan3D.Tests
                     Directory.Delete(tempDir, true);
             }
         }
+
+        [Fact]
+        public void SparseTsdfVolume_AllocatesOnlySurfaceBandBlocksAndExtractsZeroCrossingCloud()
+        {
+            var sparse = new SparseTsdfVolume(voxelSize: 0.04, truncationDistance: 0.12);
+            var cam = CameraIntrinsics.SyntheticTest(24, 24);
+
+            // Synthetic planar wall at Z = 1.20m
+            float[] depth = new float[24 * 24];
+            for (int i = 0; i < depth.Length; i++) depth[i] = 1.20f;
+
+            var frame = new RgbdFrame(24, 24, depth);
+            int touchedBlocks = sparse.Integrate(frame, cam, CameraPose.Identity);
+
+            Assert.True(touchedBlocks > 0);
+            Assert.Equal(touchedBlocks, sparse.AllocatedBlockCount);
+            // Sparse allocation should be orders of magnitude smaller than a dense 100^3 volume (1,000,000 voxels)
+            Assert.True(sparse.TotalAllocatedVoxels < 50_000, $"Expected sparse voxel count < 50,000, got {sparse.TotalAllocatedVoxels}");
+
+            var surfaceNormals = sparse.ExtractSurfaceNormals(minWeight: 1.0f);
+            var cloud = sparse.ExtractPointCloud(minWeight: 1.0f);
+
+            Assert.True(cloud.Count > 20, $"Expected > 20 zero-crossing surface points, got {cloud.Count}");
+            Assert.Equal(cloud.Count, surfaceNormals.Count);
+
+            // Verify extracted zero-crossing surface points lie accurately on the Z = 1.20m plane
+            for (int i = 0; i < cloud.Count; i++)
+            {
+                Assert.InRange(cloud[i].Z, 1.15, 1.25);
+                Assert.InRange(surfaceNormals[i].Normal.Length, 0.99, 1.01);
+            }
+        }
     }
 }
