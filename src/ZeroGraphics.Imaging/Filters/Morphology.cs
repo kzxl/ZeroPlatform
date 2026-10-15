@@ -1,4 +1,5 @@
 using System;
+using ZeroGraphics.Core.Native;
 using ZeroGraphics.Imaging.Core;
 
 namespace ZeroGraphics.Imaging.Filters
@@ -23,6 +24,16 @@ namespace ZeroGraphics.Imaging.Filters
 
             int width = src.Width;
             int height = src.Height;
+
+            if (radius == 1 &&
+                src.Format == ImageFormatMode.Gray8 &&
+                dst.Format == ImageFormatMode.Gray8 &&
+                src.Scan0 != dst.Scan0 &&
+                ZeroGraphicsNativeBridge.ShouldDispatchImage(width, height) &&
+                ZeroGraphicsNativeBridge.TryMorphology3x3(src.Scan0, src.Stride, dst.Scan0, dst.Stride, width, height, mode: 1))
+            {
+                return;
+            }
 
             for (int y = 0; y < height; y++)
             {
@@ -66,6 +77,16 @@ namespace ZeroGraphics.Imaging.Filters
 
             int width = src.Width;
             int height = src.Height;
+
+            if (radius == 1 &&
+                src.Format == ImageFormatMode.Gray8 &&
+                dst.Format == ImageFormatMode.Gray8 &&
+                src.Scan0 != dst.Scan0 &&
+                ZeroGraphicsNativeBridge.ShouldDispatchImage(width, height) &&
+                ZeroGraphicsNativeBridge.TryMorphology3x3(src.Scan0, src.Stride, dst.Scan0, dst.Stride, width, height, mode: 0))
+            {
+                return;
+            }
 
             for (int y = 0; y < height; y++)
             {

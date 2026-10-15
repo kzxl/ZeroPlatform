@@ -1,5 +1,6 @@
 using System;
-using System.Collections.Generic;
+using System.Buffers;
+using ZeroGraphics.Core.Native;
 using ZeroGraphics.Imaging.Core;
 using ZeroGraphics.Imaging.Filters;
 
@@ -8,7 +9,7 @@ namespace ZeroGraphics.Vision.Edge
     /// <summary>
     /// High-performance Canny Edge Detector with Gaussian smoothing, Sobel gradients,
     /// 4-direction non-maximum suppression, and dual-threshold hysteresis tracking.
-    /// Pure C# with zero external dependencies.
+    /// Supports zero-copy native SIMD dispatch via ZeroGraphicsNativeBridge and 0-LOH pure C# fallback.
     /// </summary>
     public static class CannyEdgeDetector
     {
@@ -47,10 +48,36 @@ namespace ZeroGraphics.Vision.Edge
                 grayImage = grayOwned;
             }
 
+            byte[]? smoothed = null;
+            float[]? magnitude = null;
+            byte[]? orientation = null;
+            byte[]? nms = null;
+            int[]? queueBuf = null;
+
             try
             {
+                var result = ImageBuffer.CreateGray8(w, h);
+
+                // Fast-path: Zero-copy native SIMD dispatch on unmanaged ImageBuffer pointers
+                if (ZeroGraphicsNativeBridge.ShouldDispatchImage(w, h) &&
+                    ZeroGraphicsNativeBridge.TryCannyEdge(
+                        grayImage.Scan0, grayImage.Stride,
+                        result.Scan0, result.Stride,
+                        w, h,
+                        (float)lowThreshold, (float)highThreshold,
+                        applyGaussian))
+                {
+                    return result;
+                }
+
+                int totalPixels = w * h;
+                if (totalPixels <= 0)
+                {
+                    return result;
+                }
+
                 // 2. Gaussian smoothing (5x5 binomial separable [1, 4, 6, 4, 1] / 16)
-                byte[] smoothed = new byte[w * h];
+                smoothed = ArrayPool<byte>.Shared.Rent(totalPixels);
                 if (applyGaussian && w >= 5 && h >= 5)
                 {
                     ApplyGaussian5x5(grayImage, smoothed, w, h);
@@ -60,16 +87,18 @@ namespace ZeroGraphics.Vision.Edge
                     for (int y = 0; y < h; y++)
                     {
                         byte* pRow = grayImage.GetRowPointer(y);
+                        int rowOffset = y * w;
                         for (int x = 0; x < w; x++)
                         {
-                            smoothed[y * w + x] = pRow[x];
+                            smoothed[rowOffset + x] = pRow[x];
                         }
                     }
                 }
 
-                // 3. Sobel Gradients (Gx, Gy) & Magnitude & Sector Orientation
-                float[] magnitude = new float[w * h];
-                byte[] orientation = new byte[w * h]; // 0: 0 deg, 1: 45 deg, 2: 90 deg, 3: 135 deg
+                // 3. Sobel Gradients (Gx, Gy) & Magnitude & Trigonometry-Free Sector Orientation
+                magnitude = ArrayPool<float>.Shared.Rent(totalPixels);
+                orientation = ArrayPool<byte>.Shared.Rent(totalPixels); // 0: 0 deg, 1: 45 deg, 2: 90 deg, 3: 135 deg
+                Array.Clear(magnitude, 0, totalPixels);
 
                 fixed (byte* pSmooth = smoothed)
                 fixed (float* pMag = magnitude)
@@ -103,28 +132,27 @@ namespace ZeroGraphics.Vision.Edge
                             int idx = yCur + x;
                             pMag[idx] = mag;
 
-                            // Angle sector calculation (-pi to pi)
-                            double angle = Math.Atan2(gy, gx) * (180.0 / Math.PI);
-                            if (angle < 0) angle += 180.0;
-
-                            // 0 deg: [0, 22.5) or [157.5, 180]
-                            // 45 deg: [22.5, 67.5)
-                            // 90 deg: [67.5, 112.5)
-                            // 135 deg: [112.5, 157.5)
-                            if (angle < 22.5 || angle >= 157.5)
-                                pOri[idx] = 0;
-                            else if (angle < 67.5)
-                                pOri[idx] = 1;
-                            else if (angle < 112.5)
-                                pOri[idx] = 2;
+                            // Exact fixed-point integer tangent comparison (tan(22.5°) ≈ 0.4142, tan(67.5°) ≈ 2.4142)
+                            long ax = Math.Abs(gx);
+                            long ay = Math.Abs(gy);
+                            byte ori;
+                            if (ay * 10000L < ax * 4142L)
+                                ori = 0;
+                            else if (ay * 10000L >= ax * 24142L)
+                                ori = 2;
+                            else if ((gx ^ gy) >= 0)
+                                ori = 1;
                             else
-                                pOri[idx] = 3;
+                                ori = 3;
+
+                            pOri[idx] = ori;
                         }
                     }
                 }
 
                 // 4. Non-Maximum Suppression (NMS)
-                byte[] nms = new byte[w * h];
+                nms = ArrayPool<byte>.Shared.Rent(totalPixels);
+                Array.Clear(nms, 0, totalPixels);
                 float lowThreshF = (float)lowThreshold;
                 float highThreshF = (float)highThreshold;
 
@@ -175,38 +203,40 @@ namespace ZeroGraphics.Vision.Edge
                     }
                 }
 
-                // 5. Hysteresis Edge Tracking (Edge Linking)
-                var result = ImageBuffer.CreateGray8(w, h);
-                var queue = new Queue<int>();
+                // 5. Hysteresis Edge Tracking (Edge Linking) using pooled BFS queue
+                queueBuf = ArrayPool<int>.Shared.Rent(totalPixels);
+                int qHead = 0;
+                int qTail = 0;
 
-                // Enqueue all strong edge pixels
                 fixed (byte* pNms = nms)
+                fixed (int* pQueue = queueBuf)
                 {
                     for (int y = 1; y < h - 1; y++)
                     {
                         int rowOffset = y * w;
+                        byte* pDstRow = result.GetRowPointer(y);
                         for (int x = 1; x < w - 1; x++)
                         {
                             int idx = rowOffset + x;
                             if (pNms[idx] == StrongEdge)
                             {
-                                queue.Enqueue(idx);
-                                *(result.GetRowPointer(y) + x) = StrongEdge;
+                                pQueue[qTail++] = idx;
+                                pDstRow[x] = StrongEdge;
                             }
                         }
                     }
 
                     // 8-way connectivity expansion for weak edges
-                    int[] neighborOffsets = new int[]
+                    int* neighborOffsets = stackalloc int[8]
                     {
                         -w - 1, -w, -w + 1,
                         -1,          1,
                          w - 1,  w,  w + 1
                     };
 
-                    while (queue.Count > 0)
+                    while (qHead < qTail)
                     {
-                        int currIdx = queue.Dequeue();
+                        int currIdx = pQueue[qHead++];
                         int cx = currIdx % w;
                         int cy = currIdx / w;
 
@@ -222,7 +252,7 @@ namespace ZeroGraphics.Vision.Edge
                                 int nx = nIdx % w;
                                 int ny = nIdx / w;
                                 *(result.GetRowPointer(ny) + nx) = StrongEdge;
-                                queue.Enqueue(nIdx);
+                                pQueue[qTail++] = nIdx;
                             }
                         }
                     }
@@ -232,6 +262,12 @@ namespace ZeroGraphics.Vision.Edge
             }
             finally
             {
+                if (smoothed != null) ArrayPool<byte>.Shared.Return(smoothed);
+                if (magnitude != null) ArrayPool<float>.Shared.Return(magnitude);
+                if (orientation != null) ArrayPool<byte>.Shared.Return(orientation);
+                if (nms != null) ArrayPool<byte>.Shared.Return(nms);
+                if (queueBuf != null) ArrayPool<int>.Shared.Return(queueBuf);
+
                 grayOwned?.Dispose();
             }
         }
@@ -239,60 +275,77 @@ namespace ZeroGraphics.Vision.Edge
         private static unsafe void ApplyGaussian5x5(ImageBuffer src, byte[] dst, int w, int h)
         {
             // Separable 1D Gaussian kernel: [1, 4, 6, 4, 1] / 16
-            int[] temp = new int[w * h];
-
-            // Horizontal pass
-            for (int y = 0; y < h; y++)
+            int[] temp = ArrayPool<int>.Shared.Rent(w * h);
+            try
             {
-                byte* pSrcRow = src.GetRowPointer(y);
-                int rowOffset = y * w;
-
-                for (int x = 2; x < w - 2; x++)
+                fixed (int* pTemp = temp)
+                fixed (byte* pDst = dst)
                 {
-                    temp[rowOffset + x] =
-                        pSrcRow[x - 2] * 1 +
-                        pSrcRow[x - 1] * 4 +
-                        pSrcRow[x]     * 6 +
-                        pSrcRow[x + 1] * 4 +
-                        pSrcRow[x + 2] * 1;
+                    // Horizontal pass
+                    for (int y = 0; y < h; y++)
+                    {
+                        byte* pSrcRow = src.GetRowPointer(y);
+                        int rowOffset = y * w;
+
+                        for (int x = 2; x < w - 2; x++)
+                        {
+                            pTemp[rowOffset + x] =
+                                pSrcRow[x - 2] * 1 +
+                                pSrcRow[x - 1] * 4 +
+                                pSrcRow[x]     * 6 +
+                                pSrcRow[x + 1] * 4 +
+                                pSrcRow[x + 2] * 1;
+                        }
+
+                        // Handle borders
+                        pTemp[rowOffset + 0] = pSrcRow[0] * 16;
+                        pTemp[rowOffset + 1] = pSrcRow[1] * 16;
+                        pTemp[rowOffset + (w - 2)] = pSrcRow[w - 2] * 16;
+                        pTemp[rowOffset + (w - 1)] = pSrcRow[w - 1] * 16;
+                    }
+
+                    // Vertical pass
+                    for (int y = 2; y < h - 2; y++)
+                    {
+                        int y0 = (y - 2) * w;
+                        int y1 = (y - 1) * w;
+                        int y2 = y * w;
+                        int y3 = (y + 1) * w;
+                        int y4 = (y + 2) * w;
+
+                        for (int x = 0; x < w; x++)
+                        {
+                            int sum =
+                                pTemp[y0 + x] * 1 +
+                                pTemp[y1 + x] * 4 +
+                                pTemp[y2 + x] * 6 +
+                                pTemp[y3 + x] * 4 +
+                                pTemp[y4 + x] * 1;
+
+                            pDst[y2 + x] = (byte)(sum >> 8); // divide by 256
+                        }
+                    }
+
+                    // Copy border rows directly
+                    byte* r0 = src.GetRowPointer(0);
+                    byte* r1 = src.GetRowPointer(1);
+                    byte* rH2 = src.GetRowPointer(h - 2);
+                    byte* rH1 = src.GetRowPointer(h - 1);
+                    int offH2 = (h - 2) * w;
+                    int offH1 = (h - 1) * w;
+
+                    for (int x = 0; x < w; x++)
+                    {
+                        pDst[x] = r0[x];
+                        pDst[w + x] = r1[x];
+                        pDst[offH2 + x] = rH2[x];
+                        pDst[offH1 + x] = rH1[x];
+                    }
                 }
-
-                // Handle borders
-                temp[rowOffset + 0] = pSrcRow[0] * 16;
-                temp[rowOffset + 1] = pSrcRow[1] * 16;
-                temp[rowOffset + (w - 2)] = pSrcRow[w - 2] * 16;
-                temp[rowOffset + (w - 1)] = pSrcRow[w - 1] * 16;
             }
-
-            // Vertical pass
-            for (int y = 2; y < h - 2; y++)
+            finally
             {
-                int y0 = (y - 2) * w;
-                int y1 = (y - 1) * w;
-                int y2 = y * w;
-                int y3 = (y + 1) * w;
-                int y4 = (y + 2) * w;
-
-                for (int x = 0; x < w; x++)
-                {
-                    int sum =
-                        temp[y0 + x] * 1 +
-                        temp[y1 + x] * 4 +
-                        temp[y2 + x] * 6 +
-                        temp[y3 + x] * 4 +
-                        temp[y4 + x] * 1;
-
-                    dst[y2 + x] = (byte)(sum >> 8); // divide by 256
-                }
-            }
-
-            // Copy border rows directly
-            for (int x = 0; x < w; x++)
-            {
-                dst[0 * w + x] = *(src.GetRowPointer(0) + x);
-                dst[1 * w + x] = *(src.GetRowPointer(1) + x);
-                dst[(h - 2) * w + x] = *(src.GetRowPointer(h - 2) + x);
-                dst[(h - 1) * w + x] = *(src.GetRowPointer(h - 1) + x);
+                ArrayPool<int>.Shared.Return(temp);
             }
         }
     }

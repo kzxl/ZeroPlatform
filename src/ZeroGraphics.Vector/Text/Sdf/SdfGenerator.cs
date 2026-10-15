@@ -1,5 +1,6 @@
 using System;
-using System.Collections.Generic;
+using System.Buffers;
+using ZeroGraphics.Core.Native;
 using ZeroGraphics.Vector.Geometry;
 using ZeroGraphics.Vector.Tessellation;
 
@@ -8,29 +9,10 @@ namespace ZeroGraphics.Vector.Text.Sdf
     /// <summary>
     /// Computes Euclidean Signed Distance Fields (SDF) from 2D vector paths.
     /// Converts continuous Bézier vector glyphs into high-resolution distance textures for GPU rendering.
+    /// Supports zero-copy native SIMD dispatch via ZeroGraphicsNativeBridge and 0-LOH SoA pure C# fallback.
     /// </summary>
     public static class SdfGenerator
     {
-        private struct Segment
-        {
-            public float Ax, Ay;
-            public float Bx, By;
-            public float MinX, MaxX;
-            public float MinY, MaxY;
-
-            public Segment(float ax, float ay, float bx, float by)
-            {
-                Ax = ax;
-                Ay = ay;
-                Bx = bx;
-                By = by;
-                MinX = Math.Min(ax, bx);
-                MaxX = Math.Max(ax, bx);
-                MinY = Math.Min(ay, by);
-                MaxY = Math.Max(ay, by);
-            }
-        }
-
         /// <summary>
         /// Generates an 8-bit unsigned distance field buffer for the specified Path2D within the given bounds.
         /// </summary>
@@ -44,7 +26,7 @@ namespace ZeroGraphics.Vector.Text.Sdf
         /// <param name="spread">Distance spread in vector coordinate units across which the field transitions from 0 to 255.</param>
         /// <param name="flattenTolerance">Tolerance for Bézier curve flattening.</param>
         /// <returns>A byte array of size (width * height) containing normalized SDF values (128 = boundary, >128 = inside, &lt;128 = outside).</returns>
-        public static byte[] GenerateSdf(
+        public static unsafe byte[] GenerateSdf(
             Path2D path,
             int width,
             int height,
@@ -64,116 +46,187 @@ namespace ZeroGraphics.Vector.Text.Sdf
             }
 
             var subpaths = AdaptiveFlattening.Flatten(path, flattenTolerance);
-            var segments = new List<Segment>(64);
-
+            int maxSegments = 0;
             for (int s = 0; s < subpaths.Count; s++)
             {
-                var pts = subpaths[s];
-                int count = pts.Count;
-                if (count < 2) continue;
-
-                for (int i = 0; i < count - 1; i++)
+                int count = subpaths[s].Count;
+                if (count >= 2)
                 {
-                    segments.Add(new Segment(pts[i].X, pts[i].Y, pts[i + 1].X, pts[i + 1].Y));
-                }
-
-                // If closed contour, add closing segment if not already closed
-                if ((pts[count - 1] - pts[0]).LengthSquared > 1e-5f)
-                {
-                    segments.Add(new Segment(pts[count - 1].X, pts[count - 1].Y, pts[0].X, pts[0].Y));
+                    maxSegments += count;
                 }
             }
 
-            int numSegments = segments.Count;
-            if (numSegments == 0)
+            if (maxSegments == 0)
             {
                 return output;
             }
 
-            float rangeX = Math.Max(boundsMaxX - boundsMinX, 1e-4f);
-            float rangeY = Math.Max(boundsMaxY - boundsMinY, 1e-4f);
+            float[]? segAx = null;
+            float[]? segAy = null;
+            float[]? segBx = null;
+            float[]? segBy = null;
+            float[]? invAbLenSq = null;
 
-            float stepX = rangeX / width;
-            float stepY = rangeY / height;
-            float invSpread = 1.0f / spread;
-
-            for (int y = 0; y < height; y++)
+            try
             {
-                float py = boundsMinY + (y + 0.5f) * stepY;
-                int rowOffset = y * width;
+                segAx = ArrayPool<float>.Shared.Rent(maxSegments);
+                segAy = ArrayPool<float>.Shared.Rent(maxSegments);
+                segBx = ArrayPool<float>.Shared.Rent(maxSegments);
+                segBy = ArrayPool<float>.Shared.Rent(maxSegments);
+                invAbLenSq = ArrayPool<float>.Shared.Rent(maxSegments);
 
-                for (int x = 0; x < width; x++)
+                int numSegments = 0;
+                for (int s = 0; s < subpaths.Count; s++)
                 {
-                    float px = boundsMinX + (x + 0.5f) * stepX;
+                    var pts = subpaths[s];
+                    int count = pts.Count;
+                    if (count < 2) continue;
 
-                    float minSqDist = float.MaxValue;
-                    int intersections = 0;
-
-                    for (int i = 0; i < numSegments; i++)
+                    for (int i = 0; i < count - 1; i++)
                     {
-                        var seg = segments[i];
+                        float ax = pts[i].X;
+                        float ay = pts[i].Y;
+                        float bx = pts[i + 1].X;
+                        float by = pts[i + 1].Y;
+                        float dx = bx - ax;
+                        float dy = by - ay;
+                        float lenSq = dx * dx + dy * dy;
 
-                        // Distance from point (px, py) to line segment
-                        float sqDist = PointToSegmentSquaredDistance(px, py, seg.Ax, seg.Ay, seg.Bx, seg.By);
-                        if (sqDist < minSqDist)
-                        {
-                            minSqDist = sqDist;
-                        }
-
-                        // Ray-casting along +X axis for inside/outside determination (Even-Odd)
-                        if ((seg.Ay <= py && seg.By > py) || (seg.By <= py && seg.Ay > py))
-                        {
-                            float t = (py - seg.Ay) / (seg.By - seg.Ay);
-                            float intersectX = seg.Ax + t * (seg.Bx - seg.Ax);
-                            if (intersectX > px)
-                            {
-                                intersections++;
-                            }
-                        }
+                        segAx[numSegments] = ax;
+                        segAy[numSegments] = ay;
+                        segBx[numSegments] = bx;
+                        segBy[numSegments] = by;
+                        invAbLenSq[numSegments] = lenSq >= 1e-8f ? (1.0f / lenSq) : 0.0f;
+                        numSegments++;
                     }
 
-                    float dist = (float)Math.Sqrt(minSqDist);
-                    bool inside = (intersections % 2) != 0;
-                    float signedDist = inside ? dist : -dist;
+                    // If closed contour, add closing segment if not already closed
+                    if ((pts[count - 1] - pts[0]).LengthSquared > 1e-5f)
+                    {
+                        float ax = pts[count - 1].X;
+                        float ay = pts[count - 1].Y;
+                        float bx = pts[0].X;
+                        float by = pts[0].Y;
+                        float dx = bx - ax;
+                        float dy = by - ay;
+                        float lenSq = dx * dx + dy * dy;
 
-                    // Normalize to [0..1] range, centered at 0.5 (128) on the glyph boundary
-                    float norm = 0.5f + (signedDist * 0.5f * invSpread);
-                    if (norm < 0.0f) norm = 0.0f;
-                    else if (norm > 1.0f) norm = 1.0f;
-
-                    output[rowOffset + x] = (byte)(norm * 255.0f);
+                        segAx[numSegments] = ax;
+                        segAy[numSegments] = ay;
+                        segBx[numSegments] = bx;
+                        segBy[numSegments] = by;
+                        invAbLenSq[numSegments] = lenSq >= 1e-8f ? (1.0f / lenSq) : 0.0f;
+                        numSegments++;
+                    }
                 }
+
+                if (numSegments == 0)
+                {
+                    return output;
+                }
+
+                fixed (float* pAx = segAx, pAy = segAy, pBx = segBx, pBy = segBy, pInvLenSq = invAbLenSq)
+                fixed (byte* pOut = output)
+                {
+                    if (ZeroGraphicsNativeBridge.DispatchMode != GraphicsNativeDispatchMode.ForcePureCSharp &&
+                        ZeroGraphicsNativeBridge.IsAvailable &&
+                        ZeroGraphicsNativeBridge.TryGenerateSdf(
+                            pAx, pAy, pBx, pBy,
+                            numSegments, width, height,
+                            boundsMinX, boundsMinY, boundsMaxX, boundsMaxY,
+                            spread, pOut))
+                    {
+                        return output;
+                    }
+
+                    float rangeX = Math.Max(boundsMaxX - boundsMinX, 1e-4f);
+                    float rangeY = Math.Max(boundsMaxY - boundsMinY, 1e-4f);
+
+                    float stepX = rangeX / width;
+                    float stepY = rangeY / height;
+                    float halfInvSpread = 0.5f / spread;
+
+                    for (int y = 0; y < height; y++)
+                    {
+                        float py = boundsMinY + (y + 0.5f) * stepY;
+                        int rowOffset = y * width;
+
+                        for (int x = 0; x < width; x++)
+                        {
+                            float px = boundsMinX + (x + 0.5f) * stepX;
+
+                            float minSqDist = float.MaxValue;
+                            int intersections = 0;
+
+                            for (int i = 0; i < numSegments; i++)
+                            {
+                                float ax = pAx[i];
+                                float ay = pAy[i];
+                                float bx = pBx[i];
+                                float by = pBy[i];
+                                float abx = bx - ax;
+                                float aby = by - ay;
+                                float apx = px - ax;
+                                float apy = py - ay;
+
+                                float invLenSq = pInvLenSq[i];
+                                float sqDist;
+                                if (invLenSq == 0.0f)
+                                {
+                                    sqDist = apx * apx + apy * apy;
+                                }
+                                else
+                                {
+                                    float t = (apx * abx + apy * aby) * invLenSq;
+                                    if (t < 0.0f) t = 0.0f;
+                                    else if (t > 1.0f) t = 1.0f;
+
+                                    float dx = apx - t * abx;
+                                    float dy = apy - t * aby;
+                                    sqDist = dx * dx + dy * dy;
+                                }
+
+                                if (sqDist < minSqDist)
+                                {
+                                    minSqDist = sqDist;
+                                }
+
+                                // Ray-casting along +X axis with Y-bounding-box check (Even-Odd rule)
+                                if ((ay <= py && by > py) || (by <= py && ay > py))
+                                {
+                                    float t = (py - ay) / aby;
+                                    float intersectX = ax + t * abx;
+                                    if (intersectX > px)
+                                    {
+                                        intersections++;
+                                    }
+                                }
+                            }
+
+                            float dist = (float)Math.Sqrt(minSqDist);
+                            bool inside = (intersections & 1) != 0;
+                            float signedDist = inside ? dist : -dist;
+
+                            // Normalize to [0..1] range, centered at 0.5 (128) on the glyph boundary
+                            float norm = 0.5f + (signedDist * halfInvSpread);
+                            if (norm < 0.0f) norm = 0.0f;
+                            else if (norm > 1.0f) norm = 1.0f;
+
+                            pOut[rowOffset + x] = (byte)(norm * 255.0f);
+                        }
+                    }
+                }
+
+                return output;
             }
-
-            return output;
-        }
-
-        private static float PointToSegmentSquaredDistance(
-            float px, float py,
-            float ax, float ay,
-            float bx, float by)
-        {
-            float abx = bx - ax;
-            float aby = by - ay;
-            float apx = px - ax;
-            float apy = py - ay;
-
-            float abLenSq = abx * abx + aby * aby;
-            if (abLenSq < 1e-8f)
+            finally
             {
-                return apx * apx + apy * apy;
+                if (segAx != null) ArrayPool<float>.Shared.Return(segAx);
+                if (segAy != null) ArrayPool<float>.Shared.Return(segAy);
+                if (segBx != null) ArrayPool<float>.Shared.Return(segBx);
+                if (segBy != null) ArrayPool<float>.Shared.Return(segBy);
+                if (invAbLenSq != null) ArrayPool<float>.Shared.Return(invAbLenSq);
             }
-
-            float t = (apx * abx + apy * aby) / abLenSq;
-            if (t < 0.0f) t = 0.0f;
-            else if (t > 1.0f) t = 1.0f;
-
-            float projX = ax + t * abx;
-            float projY = ay + t * aby;
-            float dx = px - projX;
-            float dy = py - projY;
-
-            return dx * dx + dy * dy;
         }
     }
 }

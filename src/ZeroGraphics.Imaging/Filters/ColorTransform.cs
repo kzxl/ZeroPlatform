@@ -2,6 +2,7 @@ using System;
 #if NET8_0_OR_GREATER
 using System.Runtime.Intrinsics;
 #endif
+using ZeroGraphics.Core.Native;
 using ZeroGraphics.Imaging.Core;
 
 namespace ZeroGraphics.Imaging.Filters
@@ -26,6 +27,14 @@ namespace ZeroGraphics.Imaging.Filters
 
             int width = src.Width;
             int height = src.Height;
+
+            if (src.Format == ImageFormatMode.Bgra32 &&
+                ZeroGraphicsNativeBridge.DispatchMode == GraphicsNativeDispatchMode.ForceNative &&
+                ZeroGraphicsNativeBridge.IsAvailable &&
+                ZeroGraphicsNativeBridge.TryBgra32ToGray8(src.Scan0, src.Stride, dst.Scan0, dst.Stride, width, height))
+            {
+                return;
+            }
 
             for (int y = 0; y < height; y++)
             {

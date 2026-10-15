@@ -1,5 +1,9 @@
 using System;
 using System.Buffers;
+#if NET8_0_OR_GREATER
+using System.Runtime.Intrinsics;
+#endif
+using ZeroGraphics.Core.Native;
 using ZeroGraphics.Imaging.Core;
 
 namespace ZeroGraphics.Vision.Matching
@@ -7,7 +11,7 @@ namespace ZeroGraphics.Vision.Matching
     /// <summary>
     /// Industrial Normalized Cross-Correlation (NCC) Template Matcher.
     /// Provides linear brightness/contrast invariant pattern search with sub-pixel peak interpolation.
-    /// Optimized for 0 LOH allocations using pooled working memory.
+    /// Supports zero-copy native AVX2 dispatch via ZeroGraphicsNativeBridge and 0-LOH pooled C# fallback.
     /// </summary>
     public static class NccTemplateMatcher
     {
@@ -63,6 +67,20 @@ namespace ZeroGraphics.Vision.Matching
 
             try
             {
+                // Fast-path: Zero-copy native SIMD dispatch directly on unmanaged ImageBuffer pointers
+                if (ZeroGraphicsNativeBridge.ShouldDispatchImage(sw, sh, minPixels: 1024) &&
+                    ZeroGraphicsNativeBridge.TryNccMatch(
+                        graySearch.Scan0, graySearch.Stride, sw, sh,
+                        grayTemplate.Scan0, grayTemplate.Stride, tw, th,
+                        minScore, subPixelRefinement,
+                        out double nativeX, out double nativeY, out double nativeScore))
+                {
+                    if (nativeScore < minScore || nativeX < 0.0 || nativeY < 0.0)
+                        return TemplateMatchResult.NotFound;
+
+                    return new TemplateMatchResult(nativeX, nativeY, tw, th, nativeScore);
+                }
+
                 int n = tw * th;
 
                 // 2. Precompute Template Mean and Standard Deviation using pooled array
@@ -154,44 +172,88 @@ namespace ZeroGraphics.Vision.Matching
                 }
                 double[]? scoreMap = rentedScoreMap;
 
-                for (int y = 0; y < outH; y++)
+                fixed (double* pT = tPixels)
                 {
-                    for (int x = 0; x < outW; x++)
+                    for (int y = 0; y < outH; y++)
                     {
-                        // O(1) Window variance computation
-                        double iSum = GetWindowSum(ii, x, y, tw, th);
-                        double iSum2 = GetWindowSum(ii2, x, y, tw, th);
-                        double iVar = iSum2 - (iSum * iSum) / n;
-
-                        if (iVar <= 1e-6)
+                        for (int x = 0; x < outW; x++)
                         {
-                            if (scoreMap != null) scoreMap[y * outW + x] = 0.0;
-                            continue;
-                        }
+                            // O(1) Window variance computation
+                            double iSum = GetWindowSum(ii, x, y, tw, th);
+                            double iSum2 = GetWindowSum(ii2, x, y, tw, th);
+                            double iVar = iSum2 - (iSum * iSum) / n;
 
-                        double iStdDev = Math.Sqrt(iVar);
-
-                        // Cross-product sum: sum( (T - tMean) * I )
-                        double crossSum = 0.0;
-                        int pixelIdx = 0;
-
-                        for (int ty = 0; ty < th; ty++)
-                        {
-                            byte* pSearchRow = graySearch.GetRowPointer(y + ty) + x;
-                            for (int tx = 0; tx < tw; tx++)
+                            if (iVar <= 1e-6)
                             {
-                                crossSum += tPixels[pixelIdx++] * pSearchRow[tx];
+                                if (scoreMap != null) scoreMap[y * outW + x] = 0.0;
+                                continue;
                             }
-                        }
 
-                        double score = crossSum / (tStdDev * iStdDev);
-                        if (scoreMap != null) scoreMap[y * outW + x] = score;
+                            double iStdDev = Math.Sqrt(iVar);
 
-                        if (score > bestScore)
-                        {
-                            bestScore = score;
-                            bestX = x;
-                            bestY = y;
+                            // Cross-product sum: sum( (T - tMean) * I )
+                            double crossSum = 0.0;
+
+#if NET8_0_OR_GREATER
+                            if (Vector256.IsHardwareAccelerated && tw >= 4)
+                            {
+                                Vector256<double> vAcc = Vector256<double>.Zero;
+                                int simdLimit = tw - 4;
+                                for (int ty = 0; ty < th; ty++)
+                                {
+                                    double* pTRow = pT + ty * tw;
+                                    byte* pSearchRow = graySearch.GetRowPointer(y + ty) + x;
+                                    int tx = 0;
+                                    for (; tx <= simdLimit; tx += 4)
+                                    {
+                                        var vT = Vector256.Load(pTRow + tx);
+                                        var vI = Vector256.Create(
+                                            (double)pSearchRow[tx],
+                                            (double)pSearchRow[tx + 1],
+                                            (double)pSearchRow[tx + 2],
+                                            (double)pSearchRow[tx + 3]);
+                                        vAcc += vT * vI;
+                                    }
+                                    for (; tx < tw; tx++)
+                                    {
+                                        crossSum += pTRow[tx] * pSearchRow[tx];
+                                    }
+                                }
+                                crossSum += Vector256.Sum(vAcc);
+                            }
+                            else
+#endif
+                            {
+                                int unrollLimit = tw - 4;
+                                for (int ty = 0; ty < th; ty++)
+                                {
+                                    double* pTRow = pT + ty * tw;
+                                    byte* pSearchRow = graySearch.GetRowPointer(y + ty) + x;
+                                    int tx = 0;
+                                    for (; tx <= unrollLimit; tx += 4)
+                                    {
+                                        crossSum +=
+                                            pTRow[tx]     * pSearchRow[tx] +
+                                            pTRow[tx + 1] * pSearchRow[tx + 1] +
+                                            pTRow[tx + 2] * pSearchRow[tx + 2] +
+                                            pTRow[tx + 3] * pSearchRow[tx + 3];
+                                    }
+                                    for (; tx < tw; tx++)
+                                    {
+                                        crossSum += pTRow[tx] * pSearchRow[tx];
+                                    }
+                                }
+                            }
+
+                            double score = crossSum / (tStdDev * iStdDev);
+                            if (scoreMap != null) scoreMap[y * outW + x] = score;
+
+                            if (score > bestScore)
+                            {
+                                bestScore = score;
+                                bestX = x;
+                                bestY = y;
+                            }
                         }
                     }
                 }
