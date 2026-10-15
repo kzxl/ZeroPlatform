@@ -1,4 +1,5 @@
 using System;
+using System.Buffers;
 using System.Collections.Generic;
 using System.Threading;
 using ZeroVector.Core.Metrics;
@@ -123,8 +124,8 @@ namespace ZeroVector.Core.Indices
                     var candidates = SearchLayer(vector, currObj, _efConstruction, l);
                     int maxM = (l == 0) ? _m0 : _m;
 
-                    // Select neighbors and connect mutually
-                    var selected = SelectNeighborsSimple(candidates, maxM);
+                    // Select neighbors using Algorithm 4 heuristic and connect mutually
+                    var selected = SelectNeighborsHeuristic(candidates, maxM, keepPrunedConnections: true);
                     foreach (var neighbor in selected)
                     {
                         newNode.AddNeighbor(l, neighbor.InternalId);
@@ -255,48 +256,92 @@ namespace ZeroVector.Core.Indices
 
         #region Internal HNSW Helpers
 
-        private List<Candidate> SearchLayer(ReadOnlySpan<float> query, int entryPoint, int ef, int level)
+        internal int[] GetNodeExternalNeighbors(int externalId, int level = 0)
         {
-            var visited = new HashSet<int> { entryPoint };
-            var candidateQueue = new ZeroPriorityQueue<Candidate, float>(); // Min-heap for exploration
-            var results = new List<Candidate>(ef);
-
-            float entryDist = ComputeDistance(query, _nodes[entryPoint].Vector);
-            var entryCand = new Candidate(entryPoint, entryDist);
-
-            candidateQueue.Enqueue(entryCand, entryDist);
-            results.Add(entryCand);
-
-            while (candidateQueue.Count > 0)
+            _rwLock.EnterReadLock();
+            try
             {
-                var curr = candidateQueue.Dequeue();
-                float furthestResultDist = results[results.Count - 1].Distance;
+                if (!_idToInternalIndex.TryGetValue(externalId, out int internalId))
+                    return Array.Empty<int>();
 
-                if (curr.Distance > furthestResultDist && results.Count >= ef)
-                {
-                    break;
-                }
+                var node = _nodes[internalId];
+                if (level < 0 || level > node.Level)
+                    return Array.Empty<int>();
 
-                var neighbors = _nodes[curr.InternalId].GetNeighbors(level);
+                var neighbors = node.GetNeighbors(level);
+                var extIds = new int[neighbors.Count];
                 for (int i = 0; i < neighbors.Count; i++)
                 {
-                    int neighborId = neighbors[i];
-                    if (visited.Add(neighborId))
-                    {
-                        float d = ComputeDistance(query, _nodes[neighborId].Vector);
-                        furthestResultDist = results[results.Count - 1].Distance;
+                    extIds[i] = _nodes[neighbors[i]].ExternalId;
+                }
+                return extIds;
+            }
+            finally
+            {
+                _rwLock.ExitReadLock();
+            }
+        }
 
-                        if (d < furthestResultDist || results.Count < ef)
+        private List<Candidate> SearchLayer(ReadOnlySpan<float> query, int entryPoint, int ef, int level)
+        {
+            int nodeCount = _nodes.Count;
+            int wordCount = Math.Max(1, (nodeCount + 63) >> 6);
+            ulong[] visitedBits = ArrayPool<ulong>.Shared.Rent(wordCount);
+            Array.Clear(visitedBits, 0, wordCount);
+
+            try
+            {
+                visitedBits[entryPoint >> 6] |= 1UL << (entryPoint & 63);
+
+                var candidateQueue = new ZeroPriorityQueue<Candidate, float>(); // Min-heap for exploration
+                var results = new List<Candidate>(ef);
+
+                float entryDist = ComputeDistance(query, _nodes[entryPoint].Vector);
+                var entryCand = new Candidate(entryPoint, entryDist);
+
+                candidateQueue.Enqueue(entryCand, entryDist);
+                results.Add(entryCand);
+
+                while (candidateQueue.Count > 0)
+                {
+                    var curr = candidateQueue.Dequeue();
+                    float furthestResultDist = results[results.Count - 1].Distance;
+
+                    if (curr.Distance > furthestResultDist && results.Count >= ef)
+                    {
+                        break;
+                    }
+
+                    var neighbors = _nodes[curr.InternalId].GetNeighbors(level);
+                    for (int i = 0; i < neighbors.Count; i++)
+                    {
+                        int neighborId = neighbors[i];
+                        int wordIdx = neighborId >> 6;
+                        ulong mask = 1UL << (neighborId & 63);
+
+                        if ((visitedBits[wordIdx] & mask) == 0)
                         {
-                            var cand = new Candidate(neighborId, d);
-                            candidateQueue.Enqueue(cand, d);
-                            InsertSorted(results, cand, ef);
+                            visitedBits[wordIdx] |= mask;
+
+                            float d = ComputeDistance(query, _nodes[neighborId].Vector);
+                            furthestResultDist = results[results.Count - 1].Distance;
+
+                            if (d < furthestResultDist || results.Count < ef)
+                            {
+                                var cand = new Candidate(neighborId, d);
+                                candidateQueue.Enqueue(cand, d);
+                                InsertSorted(results, cand, ef);
+                            }
                         }
                     }
                 }
-            }
 
-            return results;
+                return results;
+            }
+            finally
+            {
+                ArrayPool<ulong>.Shared.Return(visitedBits);
+            }
         }
 
         private static void InsertSorted(List<Candidate> list, Candidate item, int maxCapacity)
@@ -314,15 +359,63 @@ namespace ZeroVector.Core.Indices
             }
         }
 
-        private List<Candidate> SelectNeighborsSimple(List<Candidate> candidates, int m)
+        /// <summary>
+        /// Malkov &amp; Yashunin (TPAMI 2020) Algorithm 4: SELECT-NEIGHBORS-HEURISTIC.
+        /// Selects diverse neighbors across directions by adding candidate e to R only if e is closer to q
+        /// than to any already-selected neighbor r in R (dist(q, e) &lt; dist(e, r)), and optionally fills
+        /// remaining slots up to M from discarded candidates to preserve graph connectivity.
+        /// </summary>
+        private List<Candidate> SelectNeighborsHeuristic(List<Candidate> candidates, int m, bool keepPrunedConnections = true)
         {
-            int count = Math.Min(candidates.Count, m);
-            var res = new List<Candidate>(count);
-            for (int i = 0; i < count; i++)
+            if (candidates.Count == 0 || m <= 0)
             {
-                res.Add(candidates[i]);
+                return new List<Candidate>(0);
             }
-            return res;
+
+            int targetCount = Math.Min(candidates.Count, m);
+            var result = new List<Candidate>(targetCount);
+            List<Candidate>? discarded = keepPrunedConnections ? new List<Candidate>(candidates.Count) : null;
+
+            for (int i = 0; i < candidates.Count; i++)
+            {
+                if (result.Count >= m)
+                {
+                    break;
+                }
+
+                var cand = candidates[i];
+                bool isCloserToQuery = true;
+                ReadOnlySpan<float> candVec = _nodes[cand.InternalId].Vector;
+
+                for (int r = 0; r < result.Count; r++)
+                {
+                    float distToSelected = ComputeDistance(candVec, _nodes[result[r].InternalId].Vector);
+                    if (cand.Distance >= distToSelected)
+                    {
+                        isCloserToQuery = false;
+                        break;
+                    }
+                }
+
+                if (isCloserToQuery)
+                {
+                    result.Add(cand);
+                }
+                else if (discarded != null)
+                {
+                    discarded.Add(cand);
+                }
+            }
+
+            if (keepPrunedConnections && discarded != null && result.Count < m)
+            {
+                for (int i = 0; i < discarded.Count && result.Count < m; i++)
+                {
+                    result.Add(discarded[i]);
+                }
+            }
+
+            return result;
         }
 
         private void ShrinkConnections(HnswNode node, int level, int maxM)
@@ -330,7 +423,7 @@ namespace ZeroVector.Core.Indices
             var neighbors = node.GetNeighbors(level);
             if (neighbors.Count <= maxM) return;
 
-            // Sort neighbors by distance to node and keep closest maxM
+            // Sort neighbors by distance to node and select up to maxM via Algorithm 4 heuristic
             var scoredNeighbors = new List<Candidate>(neighbors.Count);
             for (int i = 0; i < neighbors.Count; i++)
             {
@@ -340,10 +433,11 @@ namespace ZeroVector.Core.Indices
             }
 
             scoredNeighbors.Sort(CandidateComparer.Instance);
+            var selected = SelectNeighborsHeuristic(scoredNeighbors, maxM, keepPrunedConnections: true);
             neighbors.Clear();
-            for (int i = 0; i < maxM; i++)
+            for (int i = 0; i < selected.Count; i++)
             {
-                neighbors.Add(scoredNeighbors[i].InternalId);
+                neighbors.Add(selected[i].InternalId);
             }
         }
 

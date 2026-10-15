@@ -106,5 +106,64 @@ namespace ZeroVector.Tests
             Assert.Equal(0, hnsw.Count);
             Assert.Empty(hnsw.SearchTopK(new float[16], 5));
         }
+
+        [Fact]
+        public void SelectNeighborsHeuristic_BridgesClustersAcrossDirections()
+        {
+            // Create 2D vectors with Euclidean metric:
+            // Cluster A near (1, 0): 10 very tight points at distance ~1.0 from origin
+            // Cluster B near (-1.5, 0): 1 point at distance 1.5 from origin (opposite direction)
+            // Cluster C near (0, 1.6): 1 point at distance 1.6 from origin (orthogonal direction)
+            // When origin (0, 0) is inserted with M=2 (so M0=4 on layer 0),
+            // simple selection would pick 4 redundant points from Cluster A,
+            // whereas Algorithm 4 heuristic picks 1 representative from Cluster A,
+            // 1 from Cluster B, 1 from Cluster C, and fills the 4th slot via keepPrunedConnections!
+            var hnsw = new HnswVectorIndex(dimension: 2, m: 2, efConstruction: 32, efSearch: 16, metric: VectorMetricType.Euclidean);
+
+            for (int i = 1; i <= 10; i++)
+            {
+                hnsw.Add(i, new float[] { 1.0f + i * 0.001f, 0.0f });
+            }
+            hnsw.Add(20, new float[] { -1.5f, 0.0f });
+            hnsw.Add(30, new float[] { 0.0f, 1.6f });
+
+            // Insert hub at origin
+            hnsw.Add(99, new float[] { 0.0f, 0.0f });
+
+            int[] neighbors = hnsw.GetNodeExternalNeighbors(99, level: 0);
+            Assert.Equal(4, neighbors.Length);
+            Assert.Contains(20, neighbors);
+            Assert.Contains(30, neighbors);
+
+            // Search for a query near Cluster B (-2, 0) starting from any entry point should reach node 20
+            var searchB = hnsw.SearchTopK(new float[] { -2.0f, 0.0f }, k: 1);
+            Assert.Single(searchB);
+            Assert.Equal(20, searchB[0].Id);
+        }
+
+        [Fact]
+        public void SearchLayer_PooledVisitedBitSet_HandlesMultiWordNodeCounts()
+        {
+            // > 256 nodes spans 5+ ulong words in the pooled visitedBits bitset
+            int dim = 16;
+            int count = 300;
+            var hnsw = new HnswVectorIndex(dim, m: 8, efConstruction: 64, efSearch: 64, metric: VectorMetricType.Euclidean);
+            var rng = new Random(1234);
+
+            for (int id = 0; id < count; id++)
+            {
+                var v = new float[dim];
+                for (int d = 0; d < dim; d++) v[d] = (float)rng.NextDouble();
+                hnsw.Add(id, v);
+            }
+
+            var target = new float[dim];
+            Assert.True(hnsw.TryGet(257, target));
+
+            var top = hnsw.SearchTopK(target, k: 3);
+            Assert.NotEmpty(top);
+            Assert.Equal(257, top[0].Id);
+            Assert.Equal(0.0f, top[0].Score, 4);
+        }
     }
 }
