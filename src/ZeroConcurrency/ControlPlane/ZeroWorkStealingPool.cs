@@ -78,14 +78,20 @@ namespace ZeroPlatform.Concurrency
         }
 
         /// <summary>
-        /// Dispatches a stateful work item to the pool without allocating closure objects.
+        /// Dispatches a stateful work item to the pool without allocating closure objects or delegates.
         /// </summary>
+        [System.Runtime.CompilerServices.MethodImpl(System.Runtime.CompilerServices.MethodImplOptions.AggressiveInlining)]
         public void Post<TState>(Action<TState> action, TState state)
         {
             if (action == null)
                 throw new ArgumentNullException(nameof(action));
 
-            Post(() => action(state));
+            ThrowIfDisposed();
+
+            var workItem = PooledStateWorkItem<TState>.Rent(action, state);
+            int targetIndex = (int)((uint)Interlocked.Increment(ref _roundRobinIndex) % (uint)_workerCount);
+            _queues[targetIndex].Enqueue(workItem.InvokeAction);
+            _waitHandles[targetIndex].Set();
         }
 
         /// <summary>
@@ -99,18 +105,18 @@ namespace ZeroPlatform.Concurrency
             ThrowIfDisposed();
 
             var promise = ZeroPromisePool.Rent();
-            Post(() =>
+            Post(static s =>
             {
                 try
                 {
-                    action();
-                    promise.TrySetResult();
+                    s.action();
+                    s.promise.TrySetResult();
                 }
                 catch (Exception ex)
                 {
-                    promise.TrySetException(ex);
+                    s.promise.TrySetException(ex);
                 }
-            });
+            }, (action, promise));
 
             return promise.Task;
         }
@@ -126,20 +132,124 @@ namespace ZeroPlatform.Concurrency
             ThrowIfDisposed();
 
             var promise = ZeroPromisePool<T>.Rent();
-            Post(() =>
+            Post(static s =>
             {
                 try
                 {
-                    T result = function();
-                    promise.TrySetResult(result);
+                    T result = s.function();
+                    s.promise.TrySetResult(result);
                 }
                 catch (Exception ex)
                 {
-                    promise.TrySetException(ex);
+                    s.promise.TrySetException(ex);
                 }
-            });
+            }, (function, promise));
 
             return promise.Task;
+        }
+
+        internal interface IWorkItem
+        {
+            void Execute();
+        }
+
+        private sealed class PooledStateWorkItem<TState> : IWorkItem, IZeroWorkItem
+        {
+            private const int MaxPoolSize = 1024;
+            private static PooledStateWorkItem<TState>? s_fastItem;
+            private static readonly PooledStateWorkItem<TState>?[] s_pool = new PooledStateWorkItem<TState>?[MaxPoolSize];
+            private static int s_head;
+            private static int s_lock;
+
+            public Action<TState>? Action;
+            public TState? State;
+            public readonly Action InvokeAction;
+
+            private PooledStateWorkItem()
+            {
+                InvokeAction = Execute;
+            }
+
+            [System.Runtime.CompilerServices.MethodImpl(System.Runtime.CompilerServices.MethodImplOptions.AggressiveInlining)]
+            public static PooledStateWorkItem<TState> Rent(Action<TState> action, TState state)
+            {
+                var item = Interlocked.Exchange(ref s_fastItem, null);
+                if (item == null && !TryPopPool(out item))
+                {
+                    item = new PooledStateWorkItem<TState>();
+                }
+
+                item!.Action = action;
+                item.State = state;
+                return item;
+            }
+
+            public void Execute()
+            {
+                var action = Action;
+                var state = State!;
+                Action = null;
+                State = default;
+
+                Return(this);
+                action?.Invoke(state);
+            }
+
+            [System.Runtime.CompilerServices.MethodImpl(System.Runtime.CompilerServices.MethodImplOptions.AggressiveInlining)]
+            private static void Return(PooledStateWorkItem<TState> item)
+            {
+                if (Interlocked.CompareExchange(ref s_fastItem, item, null) != null)
+                {
+                    TryPushPool(item);
+                }
+            }
+
+            private static bool TryPopPool(out PooledStateWorkItem<TState>? item)
+            {
+                if (Volatile.Read(ref s_head) == 0)
+                {
+                    item = null;
+                    return false;
+                }
+
+                var spinner = new SpinWait();
+                while (Interlocked.CompareExchange(ref s_lock, 1, 0) != 0)
+                {
+                    spinner.SpinOnce();
+                }
+
+                int head = s_head - 1;
+                if (head >= 0)
+                {
+                    item = s_pool[head];
+                    s_pool[head] = null;
+                    s_head = head;
+                    Volatile.Write(ref s_lock, 0);
+                    return true;
+                }
+
+                Volatile.Write(ref s_lock, 0);
+                item = null;
+                return false;
+            }
+
+            private static void TryPushPool(PooledStateWorkItem<TState> item)
+            {
+                var spinner = new SpinWait();
+                while (Interlocked.CompareExchange(ref s_lock, 1, 0) != 0)
+                {
+                    spinner.SpinOnce();
+                }
+
+                int head = s_head;
+                if ((uint)head < (uint)MaxPoolSize)
+                {
+                    s_pool[head] = item;
+                    s_head = head + 1;
+                }
+
+                Volatile.Write(ref s_lock, 0);
+            }
         }
 
         private void WorkerLoop(int workerIndex)

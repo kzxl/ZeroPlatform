@@ -92,7 +92,7 @@ namespace ZeroPlatform.Concurrency
         /// <summary>
         /// Gets a value indicating whether the ring buffer is empty.
         /// </summary>
-        public bool IsEmpty => Volatile.Read(ref _dequeuePos) >= Volatile.Read(ref _enqueuePos);
+        public bool IsEmpty => (Volatile.Read(ref _enqueuePos) - Volatile.Read(ref _dequeuePos)) <= 0;
 
         /// <summary>
         /// Attempts to enqueue an item into the buffer without locking.

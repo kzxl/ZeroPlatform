@@ -163,18 +163,40 @@ namespace ZeroPlatform.Concurrency
         private readonly Sequence _cursor;
         private readonly Sequence[] _dependentSequences;
         private readonly IWaitStrategy _waitStrategy;
+        private readonly Func<long, long, long>? _highestPublishedResolver;
 
-        internal SequenceBarrier(Sequence cursor, Sequence[] dependentSequences, IWaitStrategy waitStrategy)
+        internal SequenceBarrier(
+            Sequence cursor,
+            Sequence[] dependentSequences,
+            IWaitStrategy waitStrategy,
+            Func<long, long, long>? highestPublishedResolver = null)
         {
             _cursor = cursor;
             _dependentSequences = dependentSequences ?? Array.Empty<Sequence>();
             _waitStrategy = waitStrategy;
+            _highestPublishedResolver = highestPublishedResolver;
         }
 
         [MethodImpl(MethodImplOptions.AggressiveInlining)]
         public long WaitFor(long sequence, CancellationToken cancellationToken = default)
         {
-            return _waitStrategy.WaitFor(sequence, _cursor, _dependentSequences, cancellationToken);
+            long availableSequence = _waitStrategy.WaitFor(sequence, _cursor, _dependentSequences, cancellationToken);
+            if (availableSequence < sequence)
+            {
+                return availableSequence;
+            }
+
+            return _highestPublishedResolver != null
+                ? _highestPublishedResolver(sequence, availableSequence)
+                : availableSequence;
+        }
+
+        [MethodImpl(MethodImplOptions.AggressiveInlining)]
+        public long GetHighestPublishedSequence(long lowerBound, long availableSequence)
+        {
+            return _highestPublishedResolver != null
+                ? _highestPublishedResolver(lowerBound, availableSequence)
+                : availableSequence;
         }
 
         [MethodImpl(MethodImplOptions.AggressiveInlining)]
@@ -184,17 +206,22 @@ namespace ZeroPlatform.Concurrency
     /// <summary>
     /// Pure C# LMAX Disruptor-style ring buffer.
     /// Features pre-allocated slots, cache-line padded sequence counters, direct ref-return event access,
-    /// and multi-stage sequence barriers for lock-free pipelining with zero GC allocation.
+    /// multi-producer availability tracking, and multi-stage sequence barriers for lock-free pipelining with zero GC allocation.
     /// </summary>
     /// <typeparam name="T">The event type stored in the ring buffer.</typeparam>
     public sealed class DisruptorRing<T>
     {
         private readonly T[] _entries;
+        private readonly int[] _availableBuffer;
         private readonly int _mask;
+        private readonly int _indexMask;
+        private readonly int _indexShift;
         private readonly int _capacity;
         private readonly Sequence _cursor = new Sequence(-1);
         private readonly Sequence _nextSequence = new Sequence(-1);
+        private readonly Sequence _cachedGatingSequence = new Sequence(-1);
         private readonly IWaitStrategy _waitStrategy;
+        private readonly Func<long, long, long> _highestPublishedDelegate;
 
         private Sequence[] _gatingSequences = Array.Empty<Sequence>();
         private readonly object _gatingLock = new object();
@@ -222,8 +249,17 @@ namespace ZeroPlatform.Concurrency
 
             _capacity = capacityPowerOfTwo;
             _mask = capacityPowerOfTwo - 1;
+            _indexMask = _mask;
+            _indexShift = CalculateLog2(capacityPowerOfTwo);
             _entries = new T[capacityPowerOfTwo];
+            _availableBuffer = new int[capacityPowerOfTwo];
             _waitStrategy = waitStrategy ?? new YieldingWaitStrategy();
+            _highestPublishedDelegate = GetHighestPublishedSequence;
+
+            for (int i = 0; i < capacityPowerOfTwo; i++)
+            {
+                _availableBuffer[i] = -1;
+            }
 
             if (eventFactory != null)
             {
@@ -232,6 +268,16 @@ namespace ZeroPlatform.Concurrency
                     _entries[i] = eventFactory();
                 }
             }
+        }
+
+        private static int CalculateLog2(int powerOfTwo)
+        {
+            int shift = 0;
+            while ((powerOfTwo >>= 1) != 0)
+            {
+                shift++;
+            }
+            return shift;
         }
 
         /// <summary>
@@ -252,25 +298,34 @@ namespace ZeroPlatform.Concurrency
         {
             long next = _nextSequence.IncrementAndGet();
             long wrapPoint = next - _capacity;
+            long cachedGating = _cachedGatingSequence.Get();
 
-            Sequence[] gating = _gatingSequences;
-            if (gating.Length > 0)
+            if (wrapPoint > cachedGating || cachedGating > next)
             {
-                while (true)
+                Sequence[] gating = _gatingSequences;
+                if (gating.Length > 0)
                 {
-                    long minGating = long.MaxValue;
-                    for (int i = 0; i < gating.Length; i++)
+                    while (true)
                     {
-                        long seq = gating[i].Get();
-                        if (seq < minGating) minGating = seq;
-                    }
+                        long minGating = long.MaxValue;
+                        for (int i = 0; i < gating.Length; i++)
+                        {
+                            long seq = gating[i].Get();
+                            if (seq < minGating) minGating = seq;
+                        }
 
-                    if (wrapPoint <= minGating)
-                    {
-                        break;
-                    }
+                        if (wrapPoint <= minGating)
+                        {
+                            _cachedGatingSequence.Set(minGating);
+                            break;
+                        }
 
-                    Thread.Yield();
+                        Thread.Yield();
+                    }
+                }
+                else
+                {
+                    _cachedGatingSequence.Set(next);
                 }
             }
 
@@ -279,11 +334,77 @@ namespace ZeroPlatform.Concurrency
 
         /// <summary>
         /// Publishes the sequence, signaling consumers that the event at this sequence is ready.
+        /// Safely handles out-of-order multi-producer publishing without moving the cursor backward
+        /// or exposing uncommitted slots.
         /// </summary>
         [MethodImpl(MethodImplOptions.AggressiveInlining)]
         public void Publish(long sequence)
         {
-            _cursor.Set(sequence);
+            SetAvailable(sequence);
+
+            while (true)
+            {
+                long currentCursor = _cursor.Get();
+                long nextToPublish = currentCursor;
+
+                while (IsAvailable(nextToPublish + 1))
+                {
+                    nextToPublish++;
+                }
+
+                if (nextToPublish <= currentCursor)
+                {
+                    break;
+                }
+
+                if (_cursor.CompareAndSet(currentCursor, nextToPublish))
+                {
+                    if (!IsAvailable(nextToPublish + 1))
+                    {
+                        break;
+                    }
+                }
+            }
+        }
+
+        [MethodImpl(MethodImplOptions.AggressiveInlining)]
+        private void SetAvailable(long sequence)
+        {
+            int index = (int)(sequence & _indexMask);
+            int flag = (int)(sequence >>> _indexShift);
+            Interlocked.Exchange(ref _availableBuffer[index], flag);
+        }
+
+        /// <summary>
+        /// Checks whether the specified sequence slot has been published and committed.
+        /// </summary>
+        [MethodImpl(MethodImplOptions.AggressiveInlining)]
+        public bool IsAvailable(long sequence)
+        {
+            if (sequence < 0)
+                return false;
+
+            int index = (int)(sequence & _indexMask);
+            int flag = (int)(sequence >>> _indexShift);
+            return Volatile.Read(ref _availableBuffer[index]) == flag;
+        }
+
+        /// <summary>
+        /// Scans the availability buffer from <paramref name="lowerBound"/> up to <paramref name="availableSequence"/>
+        /// and returns the highest contiguous published sequence.
+        /// </summary>
+        [MethodImpl(MethodImplOptions.AggressiveInlining)]
+        public long GetHighestPublishedSequence(long lowerBound, long availableSequence)
+        {
+            for (long sequence = lowerBound; sequence <= availableSequence; sequence++)
+            {
+                if (!IsAvailable(sequence))
+                {
+                    return sequence - 1;
+                }
+            }
+
+            return availableSequence;
         }
 
         /// <summary>
@@ -291,7 +412,7 @@ namespace ZeroPlatform.Concurrency
         /// </summary>
         public SequenceBarrier NewBarrier(params Sequence[] dependentSequences)
         {
-            return new SequenceBarrier(_cursor, dependentSequences, _waitStrategy);
+            return new SequenceBarrier(_cursor, dependentSequences, _waitStrategy, _highestPublishedDelegate);
         }
 
         /// <summary>
@@ -308,6 +429,7 @@ namespace ZeroPlatform.Concurrency
                 Array.Copy(_gatingSequences, newArr, oldLen);
                 Array.Copy(sequences, 0, newArr, oldLen, sequences.Length);
                 _gatingSequences = newArr;
+                _cachedGatingSequence.Set(Sequence.InitialCursorValue);
             }
         }
     }
