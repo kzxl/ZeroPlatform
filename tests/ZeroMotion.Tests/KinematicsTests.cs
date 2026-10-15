@@ -109,5 +109,74 @@ namespace ZeroMotion.Tests
                 Assert.False(float.IsInfinity(deltaQ[i]), $"Joint delta {i} was Infinity");
             }
         }
+
+        [Fact]
+        public void SphericalWrist6Dof_AnalyticalIkMatchesFkForBothNonFlippedAndFlippedSolutions()
+        {
+            float d1 = 400f, a1 = 150f, a2 = 450f, d4 = 420f, d6 = 100f;
+
+            var groundTruthJoints = new AnalyticalInverseKinematics.SixDofJointSolution
+            {
+                Theta1Deg = 25f,
+                Theta2Deg = 35f,
+                Theta3Deg = -50f,
+                Theta4Deg = 40f,
+                Theta5Deg = 55f,
+                Theta6Deg = -30f
+            };
+
+            var (targetPos, targetRot, expectedWc) = AnalyticalInverseKinematics.Compute6DofSphericalWristFk(
+                d1, a1, a2, d4, d6, groundTruthJoints);
+
+            var ikResult = AnalyticalInverseKinematics.Solve6DofSphericalWrist(
+                d1, a1, a2, d4, d6, targetPos, targetRot, elbowUp: true);
+
+            Assert.True(ikResult.IsReachable);
+            Assert.InRange(Vec3.Distance(ikResult.WristCenter, expectedWc), 0f, 1e-2f);
+
+            // Verify Non-Flipped solution reproduces exact target position and orientation
+            var (fkNonFlipPos, fkNonFlipRot, _) = AnalyticalInverseKinematics.Compute6DofSphericalWristFk(
+                d1, a1, a2, d4, d6, ikResult.NonFlipped);
+            Assert.InRange(Vec3.Distance(fkNonFlipPos, targetPos), 0f, 0.05f);
+            Assert.InRange(System.Math.Abs(fkNonFlipRot.M13 - targetRot.M13), 0f, 1e-3f);
+            Assert.InRange(System.Math.Abs(fkNonFlipRot.M23 - targetRot.M23), 0f, 1e-3f);
+            Assert.InRange(System.Math.Abs(fkNonFlipRot.M33 - targetRot.M33), 0f, 1e-3f);
+
+            // Verify Flipped wrist solution ALSO reproduces exact target position and orientation
+            var (fkFlipPos, fkFlipRot, _) = AnalyticalInverseKinematics.Compute6DofSphericalWristFk(
+                d1, a1, a2, d4, d6, ikResult.Flipped);
+            Assert.InRange(Vec3.Distance(fkFlipPos, targetPos), 0f, 0.05f);
+            Assert.InRange(System.Math.Abs(fkFlipRot.M11 - targetRot.M11), 0f, 1e-3f);
+            Assert.InRange(System.Math.Abs(fkFlipRot.M22 - targetRot.M22), 0f, 1e-3f);
+            Assert.InRange(System.Math.Abs(fkFlipRot.M33 - targetRot.M33), 0f, 1e-3f);
+            Assert.Equal(-ikResult.NonFlipped.Theta5Deg, ikResult.Flipped.Theta5Deg, 3);
+        }
+
+        [Fact]
+        public void DeltaRobot3Dof_AnalyticalIkAndFkRoundtripAccurately()
+        {
+            float baseRadius = 200f;
+            float effectorRadius = 50f;
+            float upperArmLength = 250f;
+            float forearmLength = 550f;
+
+            var target = new Vec3(60f, -45f, -420f);
+
+            var ik = AnalyticalInverseKinematics.SolveDeltaIk(
+                baseRadius, effectorRadius, upperArmLength, forearmLength, target);
+            Assert.True(ik.IsReachable, "Target inside Delta workspace should be reachable.");
+
+            var fk = AnalyticalInverseKinematics.SolveDeltaFk(
+                baseRadius, effectorRadius, upperArmLength, forearmLength,
+                ik.Theta1Deg, ik.Theta2Deg, ik.Theta3Deg);
+
+            Assert.True(fk.IsValid, "Delta FK should find valid three-sphere intersection.");
+            Assert.InRange(Vec3.Distance(fk.Position, target), 0f, 0.05f);
+
+            // Unreachable target far outside workspace
+            var unreachable = AnalyticalInverseKinematics.SolveDeltaIk(
+                baseRadius, effectorRadius, upperArmLength, forearmLength, new Vec3(2000f, 2000f, -2000f));
+            Assert.False(unreachable.IsReachable);
+        }
     }
 }

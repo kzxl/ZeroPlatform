@@ -153,5 +153,43 @@ namespace ZeroMotion.Tests
             Assert.Equal(p1.Z, wEnd.Position.Z, 2);
             Assert.Equal(1.0, wEnd.Progress, 2);
         }
+
+        [Fact]
+        public void SCurvePlanner_PlanWithVelocity_HandlesNonZeroBoundaryVelocitiesAccurately()
+        {
+            double startPos = 50.0;
+            double endPos = 450.0;
+            double startVel = 60.0;
+            double endVel = 90.0;
+            double maxVel = 200.0;
+            double maxAcc = 500.0;
+            double maxJerk = 2000.0;
+
+            var scurve = SCurvePlanner.PlanWithVelocity(startPos, endPos, startVel, endVel, maxVel, maxAcc, maxJerk);
+            Assert.True(scurve.TotalDuration > 0.0);
+
+            var (p0, v0, a0) = scurve.Evaluate(0.0);
+            Assert.Equal(startPos, p0, 2);
+            Assert.Equal(startVel, v0, 2);
+            Assert.Equal(0.0, a0, 2);
+
+            var (pEnd, vEnd, aEnd) = scurve.Evaluate(scurve.TotalDuration);
+            Assert.Equal(endPos, pEnd, 2);
+            Assert.Equal(endVel, vEnd, 2);
+            Assert.Equal(0.0, aEnd, 2);
+
+            // Also test short distance without cruise phase (Tv == 0) and non-zero boundary velocities
+            var shortCurve = SCurvePlanner.PlanWithVelocity(0.0, 25.0, 40.0, 20.0, 200.0, 400.0, 2000.0);
+            Assert.True(shortCurve.TotalDuration > 0.0);
+            Assert.Equal(0.0, shortCurve.Tv, 4);
+
+            var (sp0, sv0, _) = shortCurve.Evaluate(0.0);
+            var (sp1, sv1, sa1) = shortCurve.Evaluate(shortCurve.TotalDuration);
+            Assert.Equal(0.0, sp0, 2);
+            Assert.Equal(40.0, sv0, 2);
+            Assert.Equal(25.0, sp1, 2);
+            Assert.Equal(20.0, sv1, 2);
+            Assert.Equal(0.0, sa1, 2);
+        }
     }
 }
