@@ -50,5 +50,51 @@ namespace ZeroGeometry.Tests
                 Assert.True(Math.Sqrt(distSq) < 0.08, $"Aligned point {p} too far from target cloud.");
             }
         }
+
+        [Fact]
+        public void RegisterPointToPlane_ConvergesRapidlyOnCurved3DSurfaceWithVector3Spans()
+        {
+            // Construct 3D paraboloid surface z = 0.15 * x^2 + 0.25 * y^2 with analytical surface normals
+            var targetVecs = new List<System.Numerics.Vector3>();
+            var normalVecs = new List<System.Numerics.Vector3>();
+
+            for (int ix = -4; ix <= 4; ix++)
+            {
+                for (int iy = -4; iy <= 4; iy++)
+                {
+                    float x = ix * 0.5f;
+                    float y = iy * 0.5f;
+                    float z = 0.15f * x * x + 0.25f * y * y;
+                    targetVecs.Add(new System.Numerics.Vector3(x, y, z));
+
+                    var n = System.Numerics.Vector3.Normalize(new System.Numerics.Vector3(-0.30f * x, -0.50f * y, 1.0f));
+                    normalVecs.Add(n);
+                }
+            }
+
+            // Apply known rigid perturbation to create source span
+            float angle = 6.0f * (float)Math.PI / 180.0f;
+            float c = (float)Math.Cos(angle), s = (float)Math.Sin(angle);
+            var sourceVecs = new System.Numerics.Vector3[targetVecs.Count];
+            for (int i = 0; i < targetVecs.Count; i++)
+            {
+                var p = targetVecs[i];
+                float rx = c * p.X - s * p.Y + 0.12f;
+                float ry = s * p.X + c * p.Y - 0.08f;
+                float rz = p.Z + 0.05f;
+                sourceVecs[i] = new System.Numerics.Vector3(rx, ry, rz);
+            }
+
+            var result = IcpRegistration.RegisterPointToPlane(
+                sourceVecs,
+                targetVecs.ToArray(),
+                normalVecs.ToArray(),
+                maxIterations: 35,
+                tolerance: 1e-5,
+                huberDelta: 0.2);
+
+            Assert.True(result.Converged);
+            Assert.True(result.FitnessRms < 0.02, $"Point-to-Plane ICP RMS error too high: {result.FitnessRms}");
+        }
     }
 }
