@@ -871,7 +871,7 @@ namespace ZeroUI.Wpf.Documents
 
             var senderTextBlock = new TextBlock
             {
-                Text = isUser ? (msg.SenderName ?? "Operator") : (msg.ModelName ?? AssistantName),
+                Text = isUser ? (string.IsNullOrWhiteSpace(msg.SenderName) || msg.SenderName == "Operator" ? "Bạn" : msg.SenderName) : (msg.ModelName ?? AssistantName),
                 FontWeight = FontWeights.SemiBold,
                 FontSize = 11,
                 Foreground = isUser ? new SolidColorBrush(Color.FromRgb(165, 180, 252)) : new SolidColorBrush(Color.FromRgb(52, 211, 153))

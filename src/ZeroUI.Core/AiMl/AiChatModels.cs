@@ -103,7 +103,7 @@ namespace ZeroUI.Core.AiMl
             Timestamp = DateTime.UtcNow;
         }
 
-        public static ChatMessage User(string content, string? senderName = "Operator") =>
+        public static ChatMessage User(string content, string? senderName = "Bạn") =>
             new(ChatRole.User, content, senderName);
 
         public static ChatMessage Assistant(string content, string? modelName = "ZeroCopilot") =>

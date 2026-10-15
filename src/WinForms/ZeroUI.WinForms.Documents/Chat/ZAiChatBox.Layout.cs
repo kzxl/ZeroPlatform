@@ -188,9 +188,13 @@ namespace ZeroUI.WinForms.Documents
 
             var timeColor = isDark ? Color.FromArgb(148, 163, 184) : Color.FromArgb(100, 116, 139);
 
+            string userDisplayName = string.IsNullOrWhiteSpace(msg.SenderName) || string.Equals(msg.SenderName, "Operator", StringComparison.OrdinalIgnoreCase)
+                ? "Bạn"
+                : msg.SenderName!;
+
             var senderLabel = new Label
             {
-                Text = isUser ? (msg.SenderName ?? "Operator") : (string.IsNullOrWhiteSpace(msg.ModelName) ? _assistantName : msg.ModelName),
+                Text = isUser ? userDisplayName : (string.IsNullOrWhiteSpace(msg.ModelName) ? _assistantName : msg.ModelName),
                 Font = new Font("Segoe UI", 8.5f, FontStyle.Bold),
                 ForeColor = senderColor,
                 AutoSize = true,
@@ -198,27 +202,30 @@ namespace ZeroUI.WinForms.Documents
             };
             bubble.Controls.Add(senderLabel);
 
-            var timeLabel = new Label
+            if (_showReasoning)
             {
-                Text = msg.Timestamp.ToLocalTime().ToString("HH:mm:ss"),
-                Font = new Font("Segoe UI", 8f),
-                ForeColor = timeColor,
-                AutoSize = true,
-                Location = new Point(senderLabel.Right + 8, 8)
-            };
-            bubble.Controls.Add(timeLabel);
-
-            if (!isUser && msg.LatencyMs.HasValue && msg.LatencyMs.Value > 0)
-            {
-                var latencyLabel = new Label
+                var timeLabel = new Label
                 {
-                    Text = $"⚡ {msg.LatencyMs.Value:F0}ms",
-                    Font = new Font("Segoe UI", 7.5f, FontStyle.Bold),
-                    ForeColor = isDark ? Color.FromArgb(56, 189, 248) : Color.FromArgb(2, 132, 199),
+                    Text = msg.Timestamp.ToLocalTime().ToString("HH:mm:ss"),
+                    Font = new Font("Segoe UI", 8f),
+                    ForeColor = timeColor,
                     AutoSize = true,
-                    Location = new Point(timeLabel.Right + 8, 8)
+                    Location = new Point(senderLabel.Right + 8, 8)
                 };
-                bubble.Controls.Add(latencyLabel);
+                bubble.Controls.Add(timeLabel);
+
+                if (!isUser && msg.LatencyMs.HasValue && msg.LatencyMs.Value > 0)
+                {
+                    var latencyLabel = new Label
+                    {
+                        Text = $"⚡ {msg.LatencyMs.Value:F0}ms",
+                        Font = new Font("Segoe UI", 7.5f, FontStyle.Bold),
+                        ForeColor = isDark ? Color.FromArgb(56, 189, 248) : Color.FromArgb(2, 132, 199),
+                        AutoSize = true,
+                        Location = new Point(timeLabel.Right + 8, 8)
+                    };
+                    bubble.Controls.Add(latencyLabel);
+                }
             }
 
             // 2. Multi-Block Content (Reasoning + Rich Text + Data Tables + Action Chips)
