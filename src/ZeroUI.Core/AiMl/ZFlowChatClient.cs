@@ -252,6 +252,7 @@ namespace ZeroUI.Core.AiMl
             var root = new Dictionary<string, object?>(StringComparer.Ordinal)
             {
                 ["workflow_id"] = workflowId ?? string.Empty,
+                ["input"] = inputText ?? string.Empty,
                 ["input_text"] = inputText ?? string.Empty
             };
 
@@ -262,6 +263,7 @@ namespace ZeroUI.Core.AiMl
 
             if (context != null && context.Count > 0)
             {
+                root["session_context"] = context;
                 root["context"] = context;
             }
 
@@ -280,8 +282,10 @@ namespace ZeroUI.Core.AiMl
 
             if (root.TryGetValue("status", out var st) && st is string stStr)
                 result.Status = stStr;
-            if (root.TryGetValue("final_output", out var fo) && fo is string foStr)
+            if (root.TryGetValue("final_output", out var fo) && fo is string foStr && !string.IsNullOrWhiteSpace(foStr))
                 result.Output = foStr;
+            else if (root.TryGetValue("reply", out var rp) && rp is string rpStr && !string.IsNullOrWhiteSpace(rpStr))
+                result.Output = rpStr;
             else if (root.TryGetValue("output", out var outObj) && outObj is string outStr)
                 result.Output = outStr;
 

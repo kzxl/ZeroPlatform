@@ -718,7 +718,7 @@ namespace ZeroUI.WinForms.Documents
             string summary = _sessionContext.FormatDisplaySummary();
             bool hasTags = !string.IsNullOrWhiteSpace(summary);
 
-            _contextBarPanel.Visible = _showContextBar || hasTags;
+            _contextBarPanel.Visible = _showContextBar;
             _contextBarLabel.Text = hasTags
                 ? $"{_contextBarPrefix} {summary}".Trim()
                 : $"{_contextBarPrefix} {_contextBarEmptyText}".Trim();
