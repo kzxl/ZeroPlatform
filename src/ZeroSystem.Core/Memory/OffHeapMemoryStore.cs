@@ -1,5 +1,4 @@
 using System;
-using System.Collections.Concurrent;
 using System.Runtime.CompilerServices;
 using System.Runtime.InteropServices;
 using System.Threading;
@@ -21,7 +20,9 @@ public sealed unsafe class OffHeapMemoryStore : IDisposable
 
     private byte* _memoryPtr;
     private readonly uint[] _slotVersions;
-    private readonly ConcurrentStack<int> _freeSlots;
+    private readonly int[] _freeSlots;
+    private int _freeHead;
+    private int _freeLock;
     private int _allocatedCount;
     private int _disposed;
 
@@ -58,27 +59,29 @@ public sealed unsafe class OffHeapMemoryStore : IDisposable
         }
 
         _slotVersions = new uint[capacity];
-        _freeSlots = new ConcurrentStack<int>();
+        _freeSlots = new int[capacity];
 
-        for (int i = capacity - 1; i >= 0; i--)
+        for (int i = 0; i < capacity; i++)
         {
             _slotVersions[i] = 1; // Generation 1
-            _freeSlots.Push(i);
+            _freeSlots[i] = capacity - 1 - i;
         }
+        _freeHead = capacity;
     }
 
     /// <summary>
     /// Allocates an off-heap block slot and returns its unique versioned handle.
     /// </summary>
     /// <returns>A valid <see cref="OffHeapHandle"/>, or <see cref="OffHeapHandle.Invalid"/> if capacity is exhausted.</returns>
+    [MethodImpl(MethodImplOptions.AggressiveInlining)]
     public OffHeapHandle Allocate()
     {
         ThrowIfDisposed();
 
-        if (_freeSlots.TryPop(out int index))
+        if (TryPopFreeSlot(out int index))
         {
             Interlocked.Increment(ref _allocatedCount);
-            uint version = _slotVersions[index];
+            uint version = Volatile.Read(ref _slotVersions[index]);
             return new OffHeapHandle(index, version);
         }
 
@@ -88,6 +91,7 @@ public sealed unsafe class OffHeapMemoryStore : IDisposable
     /// <summary>
     /// Releases an off-heap block slot back to the free pool, invalidating the handle against use-after-free.
     /// </summary>
+    [MethodImpl(MethodImplOptions.AggressiveInlining)]
     public bool Free(OffHeapHandle handle)
     {
         ThrowIfDisposed();
@@ -96,22 +100,84 @@ public sealed unsafe class OffHeapMemoryStore : IDisposable
             return false;
 
         int index = handle.Index;
-        if (_slotVersions[index] != handle.Version)
+        uint expectedVersion = handle.Version;
+        if (Volatile.Read(ref _slotVersions[index]) != expectedVersion)
             return false; // Stale handle / already freed
 
-        // Invalidate generation version and clear memory slot
-        unchecked
+        uint nextVersion = unchecked(expectedVersion + 1);
+        if (nextVersion == 0) nextVersion = 1; // avoid 0
+
+        if (Interlocked.CompareExchange(
+                ref Unsafe.As<uint, int>(ref _slotVersions[index]),
+                (int)nextVersion,
+                (int)expectedVersion) != (int)expectedVersion)
         {
-            _slotVersions[index]++;
-            if (_slotVersions[index] == 0) _slotVersions[index] = 1; // avoid 0
+            return false;
         }
 
         byte* slotPtr = GetSlotPointer(index);
         NativeMemory.Clear(slotPtr, (nuint)_slotSize);
 
         Interlocked.Decrement(ref _allocatedCount);
-        _freeSlots.Push(index);
+        PushFreeSlot(index);
         return true;
+    }
+
+    [MethodImpl(MethodImplOptions.AggressiveInlining)]
+    private bool TryPopFreeSlot(out int index)
+    {
+        if (Volatile.Read(ref _freeHead) == 0)
+        {
+            index = -1;
+            return false;
+        }
+
+        if (Interlocked.CompareExchange(ref _freeLock, 1, 0) != 0)
+        {
+            EnterLockSlow();
+        }
+
+        int head = _freeHead - 1;
+        if (head >= 0)
+        {
+            index = _freeSlots[head];
+            _freeHead = head;
+            Volatile.Write(ref _freeLock, 0);
+            return true;
+        }
+
+        Volatile.Write(ref _freeLock, 0);
+        index = -1;
+        return false;
+    }
+
+    [MethodImpl(MethodImplOptions.AggressiveInlining)]
+    private void PushFreeSlot(int index)
+    {
+        if (Interlocked.CompareExchange(ref _freeLock, 1, 0) != 0)
+        {
+            EnterLockSlow();
+        }
+
+        int head = _freeHead;
+        if ((uint)head < (uint)_freeSlots.Length)
+        {
+            _freeSlots[head] = index;
+            _freeHead = head + 1;
+        }
+
+        Volatile.Write(ref _freeLock, 0);
+    }
+
+    [MethodImpl(MethodImplOptions.NoInlining)]
+    private void EnterLockSlow()
+    {
+        var spinner = new SpinWait();
+        do
+        {
+            spinner.SpinOnce();
+        }
+        while (Interlocked.CompareExchange(ref _freeLock, 1, 0) != 0);
     }
 
     /// <summary>

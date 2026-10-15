@@ -176,4 +176,28 @@ public class OffHeapMemoryStoreTests
         Assert.Equal(1000, ring.TotalWrittenCount);
         Assert.True(ring.TryReadLatest(out _));
     }
+
+    [Fact]
+    public void OffHeapMemoryStore_SteadyStateAllocateFree_ZeroGcAllocation()
+    {
+        using var store = new OffHeapMemoryStore(slotSize: 64, capacity: 32);
+
+        // Warm-up
+        var warm = store.Allocate();
+        Assert.True(store.Free(warm));
+
+        long before = GC.GetAllocatedBytesForCurrentThread();
+        for (int i = 0; i < 1000; i++)
+        {
+            OffHeapHandle handle = store.Allocate();
+            ref long val = ref store.GetRef<long>(handle);
+            val = i;
+            store.Free(handle);
+        }
+        long after = GC.GetAllocatedBytesForCurrentThread();
+
+        Assert.Equal(0L, after - before);
+        Assert.Equal(0, store.AllocatedCount);
+        Assert.Equal(32, store.AvailableCount);
+    }
 }
