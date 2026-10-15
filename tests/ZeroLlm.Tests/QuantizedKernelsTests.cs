@@ -147,5 +147,46 @@ namespace ZeroLlm.Tests
             // Row 2: 32 * (1.0 * 0.3) = ~9.6
             Assert.InRange(y[2], 9.4f, 9.8f);
         }
+
+        [Fact]
+        public void QuantizedKernels_MultiBlockAvx2_DotProductQ8_And_Q4_MatchDequantized()
+        {
+            int blocksCount = 8;
+            int elements = blocksCount * 32;
+            float[] x = new float[elements];
+            float[] wRaw = new float[elements];
+
+            for (int i = 0; i < elements; i++)
+            {
+                x[i] = ((i % 13) - 6) * 0.15f;
+                wRaw[i] = ((i % 11) - 5) * 0.35f;
+            }
+
+            var q8Blocks = new BlockQ8_0[blocksCount];
+            var q4Blocks = new BlockQ4_0[blocksCount];
+            float expectedQ8 = 0f;
+            float expectedQ4 = 0f;
+            float[] deq8 = new float[32];
+            float[] deq4 = new float[32];
+
+            for (int b = 0; b < blocksCount; b++)
+            {
+                var slice = wRaw.AsSpan(b * 32, 32);
+                q8Blocks[b] = BlockQ8_0.Quantize(slice);
+                q4Blocks[b] = BlockQ4_0.Quantize(slice);
+
+                q8Blocks[b].Dequantize(deq8);
+                q4Blocks[b].Dequantize(deq4);
+
+                for (int j = 0; j < 32; j++)
+                {
+                    expectedQ8 += x[b * 32 + j] * deq8[j];
+                    expectedQ4 += x[b * 32 + j] * deq4[j];
+                }
+            }
+
+            Assert.Equal(expectedQ8, QuantizedKernels.DotProductQ8_0(x, q8Blocks), precision: 2);
+            Assert.Equal(expectedQ4, QuantizedKernels.DotProductQ4_0(x, q4Blocks), precision: 2);
+        }
     }
 }

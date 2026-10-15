@@ -103,13 +103,9 @@ namespace ZeroLlm.Core.Engine
 
             try
             {
-                // 1. Prefill Phase
-                for (int pos = 0; pos < promptTokens.Length; pos++)
-                {
-                    cancellationToken.ThrowIfCancellationRequested();
-                    int tok = promptTokens[pos];
-                    ForwardToken(tok, pos, seqId, x, xNorm, q, k, v, attnOut, gate, up, swiglu, logits);
-                }
+                // 1. Batched / Parallelized Prefill Phase
+                cancellationToken.ThrowIfCancellationRequested();
+                PrefillPrompt(promptTokens, seqId, logits, startPos: 0);
 
                 // 2. Autoregressive Generation Loop
                 int currentPos = promptTokens.Length;
@@ -153,29 +149,177 @@ namespace ZeroLlm.Core.Engine
             }
         }
 
-        private void ForwardToken(
-            int tokenId,
-            int pos,
-            int seqId,
-            Span<float> x,
-            Span<float> xNorm,
-            Span<float> q,
-            Span<float> k,
-            Span<float> v,
-            Span<float> attnOut,
-            Span<float> gate,
-            Span<float> up,
-            Span<float> swiglu,
-            Span<float> logits)
+        /// <summary>
+        /// Executes batched and parallelized prompt prefill across all tokens in <paramref name="promptTokens"/>,
+        /// parallelizing per-token Q/K/V, RoPE, attention, and FFN across tokens and computing the final LM Head
+        /// logits projection only once for the final prompt token.
+        /// </summary>
+        public void PrefillPrompt(ReadOnlySpan<int> promptTokens, int seqId, Span<float> logits, int startPos = 0)
         {
+            if (promptTokens.IsEmpty) return;
+
             var cfg = _model.Config;
             int embDim = cfg.EmbeddingDim;
             int qDim = cfg.HeadCount * cfg.HeadDim;
             int kvDim = cfg.HeadCountKv * cfg.HeadDim;
             int headDim = cfg.HeadDim;
+            int ffnDim = cfg.FeedForwardDim;
+            int tokenCount = promptTokens.Length;
 
-            // 1. Token Embedding lookup
+            if (tokenCount == 1)
+            {
+                float[] x1 = new float[embDim];
+                float[] xNorm1 = new float[embDim];
+                float[] q1 = new float[qDim];
+                float[] k1 = new float[kvDim];
+                float[] v1 = new float[kvDim];
+                float[] attnOut1 = new float[qDim];
+                float[] gate1 = new float[ffnDim];
+                float[] up1 = new float[ffnDim];
+                float[] swiglu1 = new float[ffnDim];
+                ForwardToken(promptTokens[0], startPos, seqId, x1, xNorm1, q1, k1, v1, attnOut1, gate1, up1, swiglu1, logits);
+                return;
+            }
+
+            int[] tokensArr = promptTokens.ToArray();
+            float[] xBatch = new float[tokenCount * embDim];
+            float[] xNormBatch = new float[tokenCount * embDim];
+            float[] qBatch = new float[tokenCount * qDim];
+            float[] kBatch = new float[tokenCount * kvDim];
+            float[] vBatch = new float[tokenCount * kvDim];
+            float[] attnOutBatch = new float[tokenCount * qDim];
+            float[] gateBatch = new float[tokenCount * ffnDim];
+            float[] upBatch = new float[tokenCount * ffnDim];
+            float[] swigluBatch = new float[tokenCount * ffnDim];
+
+            // 1. Parallel Token Embedding Lookup
+            Parallel.For(0, tokenCount, t =>
+            {
+                LookupTokenEmbedding(tokensArr[t], new Span<float>(xBatch, t * embDim, embDim));
+            });
+
+            // 2. Batched Transformer Layers
+            for (int l = 0; l < cfg.LayerCount; l++)
+            {
+                var layer = _model.Layers[l];
+                int layerIdx = l;
+
+                // 2a. Parallel RMSNorm + Q/K/V Projections + RoPE across all prompt tokens
+                Parallel.For(0, tokenCount, t =>
+                {
+                    int pos = startPos + t;
+                    var xSpan = new Span<float>(xBatch, t * embDim, embDim);
+                    var xNormSpan = new Span<float>(xNormBatch, t * embDim, embDim);
+                    var qSpan = new Span<float>(qBatch, t * qDim, qDim);
+                    var kSpan = new Span<float>(kBatch, t * kvDim, kvDim);
+                    var vSpan = new Span<float>(vBatch, t * kvDim, kvDim);
+
+                    RmsNorm.Forward(xSpan, layer.AttnNorm, xNormSpan, cfg.RmsNormEps);
+
+                    if (layer.Wq_Q8 != null) QuantizedKernels.MatVecMulQ8_0(layer.Wq_Q8, xNormSpan, qSpan, qDim, embDim);
+                    else if (layer.Wq_Q4 != null) QuantizedKernels.MatVecMulQ4_0(layer.Wq_Q4, xNormSpan, qSpan, qDim, embDim);
+                    else MatVec(xNormSpan, layer.Wq, embDim, qDim, qSpan);
+
+                    if (layer.Wk_Q8 != null) QuantizedKernels.MatVecMulQ8_0(layer.Wk_Q8, xNormSpan, kSpan, kvDim, embDim);
+                    else if (layer.Wk_Q4 != null) QuantizedKernels.MatVecMulQ4_0(layer.Wk_Q4, xNormSpan, kSpan, kvDim, embDim);
+                    else MatVec(xNormSpan, layer.Wk, embDim, kvDim, kSpan);
+
+                    if (layer.Wv_Q8 != null) QuantizedKernels.MatVecMulQ8_0(layer.Wv_Q8, xNormSpan, vSpan, kvDim, embDim);
+                    else if (layer.Wv_Q4 != null) QuantizedKernels.MatVecMulQ4_0(layer.Wv_Q4, xNormSpan, vSpan, kvDim, embDim);
+                    else MatVec(xNormSpan, layer.Wv, embDim, kvDim, vSpan);
+
+                    for (int h = 0; h < cfg.HeadCount; h++)
+                    {
+                        RoPE.ApplyInplace(qSpan.Slice(h * headDim, headDim), pos, headDim, cfg.RopeFreqBase);
+                    }
+                    for (int h = 0; h < cfg.HeadCountKv; h++)
+                    {
+                        RoPE.ApplyInplace(kSpan.Slice(h * headDim, headDim), pos, headDim, cfg.RopeFreqBase);
+                    }
+                });
+
+                // 2b. Append all prompt K and V vectors for this layer into Paged KV-Cache
+                for (int t = 0; t < tokenCount; t++)
+                {
+                    var kSpan = new ReadOnlySpan<float>(kBatch, t * kvDim, kvDim);
+                    var vSpan = new ReadOnlySpan<float>(vBatch, t * kvDim, kvDim);
+                    _kvCache.AppendTokenAt(seqId, layerIdx, startPos + t, kSpan, vSpan);
+                }
+
+                var kvView = _kvCache.GetSequenceView(seqId, layerIdx, startPos + tokenCount);
+
+                // 2c. Parallel Causal GQA Attention + Output Projection + FFN across all prompt tokens
+                Parallel.For(0, tokenCount, t =>
+                {
+                    int causalLen = (layerIdx == cfg.LayerCount - 1) ? (startPos + t + 1) : (startPos + t);
+                    var xSpan = new Span<float>(xBatch, t * embDim, embDim);
+                    var xNormSpan = new Span<float>(xNormBatch, t * embDim, embDim);
+                    var qSpan = new ReadOnlySpan<float>(qBatch, t * qDim, qDim);
+                    var attnOutSpan = new Span<float>(attnOutBatch, t * qDim, qDim);
+                    var gateSpan = new Span<float>(gateBatch, t * ffnDim, ffnDim);
+                    var upSpan = new Span<float>(upBatch, t * ffnDim, ffnDim);
+                    var swigluSpan = new Span<float>(swigluBatch, t * ffnDim, ffnDim);
+
+                    GqaAttention.Forward(qSpan, kvView, causalLen, cfg.HeadCount, cfg.HeadCountKv, headDim, attnOutSpan);
+
+                    if (layer.Wo_Q8 != null) QuantizedKernels.MatVecAddQ8_0(layer.Wo_Q8, attnOutSpan, xSpan, embDim, qDim);
+                    else if (layer.Wo_Q4 != null) QuantizedKernels.MatVecAddQ4_0(layer.Wo_Q4, attnOutSpan, xSpan, embDim, qDim);
+                    else MatVecAdd(attnOutSpan, layer.Wo, qDim, embDim, xSpan);
+
+                    RmsNorm.Forward(xSpan, layer.FfnNorm, xNormSpan, cfg.RmsNormEps);
+
+                    if (layer.IsMoE)
+                    {
+                        SparseMoeLayer.Forward(
+                            xNormSpan,
+                            layer.Wrouter,
+                            layer.Wrouter_Q8,
+                            layer.Wrouter_Q4,
+                            layer.Experts,
+                            cfg.ExpertUsedCount > 0 ? cfg.ExpertUsedCount : 2,
+                            embDim,
+                            ffnDim,
+                            gateSpan,
+                            upSpan,
+                            swigluSpan,
+                            xSpan,
+                            layer.SharedExperts);
+                    }
+                    else
+                    {
+                        if (layer.Wgate_Q8 != null) QuantizedKernels.MatVecMulQ8_0(layer.Wgate_Q8, xNormSpan, gateSpan, ffnDim, embDim);
+                        else if (layer.Wgate_Q4 != null) QuantizedKernels.MatVecMulQ4_0(layer.Wgate_Q4, xNormSpan, gateSpan, ffnDim, embDim);
+                        else MatVec(xNormSpan, layer.Wgate, embDim, ffnDim, gateSpan);
+
+                        if (layer.Wup_Q8 != null) QuantizedKernels.MatVecMulQ8_0(layer.Wup_Q8, xNormSpan, upSpan, ffnDim, embDim);
+                        else if (layer.Wup_Q4 != null) QuantizedKernels.MatVecMulQ4_0(layer.Wup_Q4, xNormSpan, upSpan, ffnDim, embDim);
+                        else MatVec(xNormSpan, layer.Wup, embDim, ffnDim, upSpan);
+
+                        SwiGLU.Forward(gateSpan, upSpan, swigluSpan);
+
+                        if (layer.Wdown_Q8 != null) QuantizedKernels.MatVecAddQ8_0(layer.Wdown_Q8, swigluSpan, xSpan, embDim, ffnDim);
+                        else if (layer.Wdown_Q4 != null) QuantizedKernels.MatVecAddQ4_0(layer.Wdown_Q4, swigluSpan, xSpan, embDim, ffnDim);
+                        else MatVecAdd(swigluSpan, layer.Wdown, ffnDim, embDim, xSpan);
+                    }
+                });
+            }
+
+            // 3. Final RMSNorm & LM Head ONLY for the last prompt token (saves T - 1 vocab projections!)
+            var lastX = new ReadOnlySpan<float>(xBatch, (tokenCount - 1) * embDim, embDim);
+            var lastXNorm = new Span<float>(xNormBatch, (tokenCount - 1) * embDim, embDim);
+            RmsNorm.Forward(lastX, _model.FinalNorm, lastXNorm, cfg.RmsNormEps);
+
+            if (_model.LmHead_Q8 != null) QuantizedKernels.MatVecMulQ8_0(_model.LmHead_Q8, lastXNorm, logits, cfg.VocabSize, embDim);
+            else if (_model.LmHead_Q4 != null) QuantizedKernels.MatVecMulQ4_0(_model.LmHead_Q4, lastXNorm, logits, cfg.VocabSize, embDim);
+            else MatVec(lastXNorm, _model.LmHead, embDim, cfg.VocabSize, logits);
+        }
+
+        private void LookupTokenEmbedding(int tokenId, Span<float> x)
+        {
+            var cfg = _model.Config;
+            int embDim = cfg.EmbeddingDim;
             int safeTokenId = (tokenId >= 0 && tokenId < cfg.VocabSize) ? tokenId : 0;
+
             if (_model.TokenEmbeddings_Q8 != null)
             {
                 int blocksPerToken = embDim / BlockQ8_0.BlockSize;
@@ -198,6 +342,31 @@ namespace ZeroLlm.Core.Engine
             {
                 new ReadOnlySpan<float>(_model.TokenEmbeddings, safeTokenId * embDim, embDim).CopyTo(x);
             }
+        }
+
+        private void ForwardToken(
+            int tokenId,
+            int pos,
+            int seqId,
+            Span<float> x,
+            Span<float> xNorm,
+            Span<float> q,
+            Span<float> k,
+            Span<float> v,
+            Span<float> attnOut,
+            Span<float> gate,
+            Span<float> up,
+            Span<float> swiglu,
+            Span<float> logits)
+        {
+            var cfg = _model.Config;
+            int embDim = cfg.EmbeddingDim;
+            int qDim = cfg.HeadCount * cfg.HeadDim;
+            int kvDim = cfg.HeadCountKv * cfg.HeadDim;
+            int headDim = cfg.HeadDim;
+
+            // 1. Token Embedding lookup
+            LookupTokenEmbedding(tokenId, x);
 
             // 2. Transformer Layers
             for (int l = 0; l < cfg.LayerCount; l++)

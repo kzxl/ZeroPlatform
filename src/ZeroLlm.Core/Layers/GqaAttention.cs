@@ -23,9 +23,19 @@ namespace ZeroLlm.Core.Layers
             Span<float> output)
         {
             var kvView = kvCache.GetSequenceView(seqId, layer);
-            int seqLen = kvView.SequenceLength;
+            Forward(q, kvView, kvView.SequenceLength, qHeadCount, kvHeadCount, headDim, output);
+        }
 
-            if (seqLen == 0)
+        public static void Forward(
+            ReadOnlySpan<float> q,
+            KvSequenceView kvView,
+            int seqLen,
+            int qHeadCount,
+            int kvHeadCount,
+            int headDim,
+            Span<float> output)
+        {
+            if (seqLen <= 0)
             {
                 output.Clear();
                 return;

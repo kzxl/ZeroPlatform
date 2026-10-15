@@ -1,6 +1,10 @@
 using System;
 using System.Runtime.CompilerServices;
 using System.Threading.Tasks;
+#if NET8_0_OR_GREATER
+using System.Runtime.Intrinsics;
+using System.Runtime.Intrinsics.X86;
+#endif
 
 namespace ZeroLlm.Core.Quantization
 {
@@ -17,6 +21,38 @@ namespace ZeroLlm.Core.Quantization
         public static float DotProductQ8_0(float* pX, BlockQ8_0* pW, int blockCount)
         {
             float totalSum = 0.0f;
+
+#if NET8_0_OR_GREATER
+            if (Avx2.IsSupported)
+            {
+                for (int b = 0; b < blockCount; b++)
+                {
+                    BlockQ8_0* block = pW + b;
+                    float scale = block->GetScale();
+                    float* bX = pX + (b * BlockQ8_0.BlockSize);
+                    sbyte* qs = block->Qs;
+
+                    var vW0 = Avx.ConvertToVector256Single(Avx2.ConvertToVector256Int32(qs));
+                    var vW1 = Avx.ConvertToVector256Single(Avx2.ConvertToVector256Int32(qs + 8));
+                    var vW2 = Avx.ConvertToVector256Single(Avx2.ConvertToVector256Int32(qs + 16));
+                    var vW3 = Avx.ConvertToVector256Single(Avx2.ConvertToVector256Int32(qs + 24));
+
+                    var vAct0 = Vector256.Load(bX);
+                    var vAct1 = Vector256.Load(bX + 8);
+                    var vAct2 = Vector256.Load(bX + 16);
+                    var vAct3 = Vector256.Load(bX + 24);
+
+                    var vDot0 = Avx.Multiply(vW0, vAct0);
+                    var vDot1 = Avx.Multiply(vW1, vAct1);
+                    var vDot2 = Fma.IsSupported ? Fma.MultiplyAdd(vW2, vAct2, vDot0) : Avx.Add(Avx.Multiply(vW2, vAct2), vDot0);
+                    var vDot3 = Fma.IsSupported ? Fma.MultiplyAdd(vW3, vAct3, vDot1) : Avx.Add(Avx.Multiply(vW3, vAct3), vDot1);
+
+                    totalSum += Vector256.Sum(vDot2 + vDot3) * scale;
+                }
+                return totalSum;
+            }
+#endif
+
             for (int b = 0; b < blockCount; b++)
             {
                 BlockQ8_0* block = pW + b;
@@ -65,6 +101,40 @@ namespace ZeroLlm.Core.Quantization
         public static float DotProductQ4_0(float* pX, BlockQ4_0* pW, int blockCount)
         {
             float totalSum = 0.0f;
+
+#if NET8_0_OR_GREATER
+            if (Avx2.IsSupported)
+            {
+                var vMask = Vector256.Create(0x0F);
+                var vOffset = Vector256.Create(8);
+
+                for (int b = 0; b < blockCount; b++)
+                {
+                    BlockQ4_0* block = pW + b;
+                    float scale = block->GetScale();
+                    float* bX = pX + (b * BlockQ4_0.BlockSize);
+                    byte* qs = block->Qs;
+
+                    var raw0 = Avx2.ConvertToVector256Int32(qs);
+                    var raw1 = Avx2.ConvertToVector256Int32(qs + 8);
+
+                    var vW0_0 = Avx.ConvertToVector256Single(Avx2.Subtract(Avx2.And(raw0, vMask), vOffset));
+                    var vW1_0 = Avx.ConvertToVector256Single(Avx2.Subtract(Avx2.And(Avx2.ShiftRightLogical(raw0, 4), vMask), vOffset));
+
+                    var vW0_1 = Avx.ConvertToVector256Single(Avx2.Subtract(Avx2.And(raw1, vMask), vOffset));
+                    var vW1_1 = Avx.ConvertToVector256Single(Avx2.Subtract(Avx2.And(Avx2.ShiftRightLogical(raw1, 4), vMask), vOffset));
+
+                    var vDot0 = Avx.Multiply(vW0_0, Vector256.Load(bX));
+                    var vDot1 = Avx.Multiply(vW0_1, Vector256.Load(bX + 8));
+                    var vDot2 = Fma.IsSupported ? Fma.MultiplyAdd(vW1_0, Vector256.Load(bX + 16), vDot0) : Avx.Add(Avx.Multiply(vW1_0, Vector256.Load(bX + 16)), vDot0);
+                    var vDot3 = Fma.IsSupported ? Fma.MultiplyAdd(vW1_1, Vector256.Load(bX + 24), vDot1) : Avx.Add(Avx.Multiply(vW1_1, Vector256.Load(bX + 24)), vDot1);
+
+                    totalSum += Vector256.Sum(vDot2 + vDot3) * scale;
+                }
+                return totalSum;
+            }
+#endif
+
             for (int b = 0; b < blockCount; b++)
             {
                 BlockQ4_0* block = pW + b;

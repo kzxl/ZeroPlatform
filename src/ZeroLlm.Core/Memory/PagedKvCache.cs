@@ -143,6 +143,46 @@ namespace ZeroLlm.Core.Memory
             }
         }
 
+        /// <summary>
+        /// Writes key and value states for a specific layer at an explicit token position during batched prompt prefill.
+        /// </summary>
+        public void AppendTokenAt(int seqId, int layer, int tokenIdx, ReadOnlySpan<float> key, ReadOnlySpan<float> val)
+        {
+            lock (_lock)
+            {
+                if (!_blockTables.TryGetValue(seqId, out var table))
+                {
+                    table = new List<int>();
+                    _blockTables[seqId] = table;
+                    _seqLengths[seqId] = 0;
+                }
+
+                int blockIndexInSeq = tokenIdx / BlockSize;
+                int slotIndex = tokenIdx % BlockSize;
+
+                while (table.Count <= blockIndexInSeq)
+                {
+                    if (_freeBlocks.Count == 0)
+                    {
+                        throw new InvalidOperationException($"Paged KV-cache exhausted! (All {TotalBlocks} blocks in use)");
+                    }
+
+                    int newBlockId = _freeBlocks.Pop();
+                    _allBlocks[newBlockId].RefCount = 1;
+                    table.Add(newBlockId);
+                }
+
+                var block = _allBlocks[table[blockIndexInSeq]];
+                key.CopyTo(block.GetKeySpan(layer, slotIndex));
+                val.CopyTo(block.GetValueSpan(layer, slotIndex));
+
+                if (layer == LayerCount - 1 && tokenIdx + 1 > _seqLengths[seqId])
+                {
+                    _seqLengths[seqId] = tokenIdx + 1;
+                }
+            }
+        }
+
         public ReadOnlySpan<float> GetKey(int seqId, int layer, int tokenPos)
         {
             lock (_lock)
@@ -187,6 +227,23 @@ namespace ZeroLlm.Core.Memory
 
                 int[] indices = table.ToArray();
                 return new KvSequenceView(_allBlocks, indices, BlockSize, layer, seqLen);
+            }
+        }
+
+        /// <summary>
+        /// Obtains a zero-lock, direct-indexed view of Key and Value vectors with an explicit causal sequence length.
+        /// </summary>
+        public KvSequenceView GetSequenceView(int seqId, int layer, int causalSequenceLength)
+        {
+            lock (_lock)
+            {
+                if (!_blockTables.TryGetValue(seqId, out var table))
+                {
+                    return new KvSequenceView(_allBlocks, Array.Empty<int>(), BlockSize, layer, 0);
+                }
+
+                int[] indices = table.ToArray();
+                return new KvSequenceView(_allBlocks, indices, BlockSize, layer, causalSequenceLength);
             }
         }
 
