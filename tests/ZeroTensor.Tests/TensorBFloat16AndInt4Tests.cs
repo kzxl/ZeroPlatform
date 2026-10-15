@@ -104,5 +104,99 @@ namespace ZeroTensor.Tests
             Assert.Equal(1, res.Shape[1]);
             Assert.Equal(12.0f, res[0, 0], precision: 3);
         }
+
+        [Fact]
+        public void GemmInt8_And_ScaledGemmInt8_SimdMatchesScalarReference()
+        {
+            int m = 5, k = 19, n = 27; // Exercises 16-wide AVX2, 8-wide AVX2, and 3-element scalar tail
+            var a = new Tensor<sbyte>(m, k);
+            var b = new Tensor<sbyte>(k, n);
+
+            for (int i = 0; i < m; i++)
+                for (int p = 0; p < k; p++)
+                    a[i, p] = (sbyte)(((i * 7 + p * 3) % 21) - 10);
+
+            for (int p = 0; p < k; p++)
+                for (int j = 0; j < n; j++)
+                    b[p, j] = (sbyte)(((p * 5 + j * 11) % 31) - 15);
+
+            var cInt = TensorBlas.MatMul(a, b);
+            var cFloat = new Tensor<float>(m, n);
+            float scaleA = 0.25f, scaleB = 0.5f;
+            int zpA = -2, zpB = 3;
+            TensorBlas.GemmInt8(a, b, cFloat, scaleA, scaleB, zpA, zpB);
+
+            for (int i = 0; i < m; i++)
+            {
+                for (int j = 0; j < n; j++)
+                {
+                    int expectedInt = 0;
+                    int expectedOffsetInt = 0;
+                    for (int p = 0; p < k; p++)
+                    {
+                        expectedInt += a[i, p] * b[p, j];
+                        expectedOffsetInt += (a[i, p] - zpA) * (b[p, j] - zpB);
+                    }
+
+                    Assert.Equal(expectedInt, cInt[i, j]);
+                    Assert.Equal(expectedOffsetInt * scaleA * scaleB, cFloat[i, j], precision: 4);
+                }
+            }
+        }
+
+        [Fact]
+        public void GemmInt4_WideSimdColumnsAndKReduction_MatchesReference()
+        {
+            int m = 3, k = 21, n = 19; // Odd K=21 -> packedK=11; N=19 -> 2x8 AVX2 column blocks + 3 tail columns using K-reduction AVX2
+            int packedK = (k + 1) / 2;
+
+            var act = new Tensor<float>(m, k);
+            var packed = new Tensor<byte>(packedK, n);
+            var scales = new Tensor<float>(n);
+            var zps = new Tensor<float>(n);
+
+            for (int i = 0; i < m; i++)
+                for (int p = 0; p < k; p++)
+                    act[i, p] = (i + 1) * 0.1f + (p % 5) * 0.2f;
+
+            for (int l = 0; l < packedK; l++)
+            {
+                for (int j = 0; j < n; j++)
+                {
+                    int nib0 = (l * 3 + j) & 0x0F;
+                    int nib1 = (l * 5 + j * 2) & 0x0F;
+                    packed[l, j] = (byte)(nib0 | (nib1 << 4));
+                }
+            }
+
+            for (int j = 0; j < n; j++)
+            {
+                scales[j] = 0.125f * ((j % 4) + 1);
+                zps[j] = 8.0f;
+            }
+
+            var res = TensorBlas.GemmInt4(act, packed, scales, zps);
+
+            for (int i = 0; i < m; i++)
+            {
+                for (int j = 0; j < n; j++)
+                {
+                    float expected = 0f;
+                    for (int l = 0; l < packedK; l++)
+                    {
+                        byte b = packed[l, j];
+                        int n0 = b & 0x0F;
+                        int n1 = (b >> 4) & 0x0F;
+                        expected += act[i, l * 2] * ((n0 - zps[j]) * scales[j]);
+                        if (l * 2 + 1 < k)
+                        {
+                            expected += act[i, l * 2 + 1] * ((n1 - zps[j]) * scales[j]);
+                        }
+                    }
+
+                    Assert.Equal(expected, res[i, j], precision: 3);
+                }
+            }
+        }
     }
 }

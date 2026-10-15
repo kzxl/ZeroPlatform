@@ -1,5 +1,9 @@
 using System;
 using System.Threading.Tasks;
+#if NET8_0_OR_GREATER
+using System.Runtime.Intrinsics;
+using System.Runtime.Intrinsics.X86;
+#endif
 
 namespace ZeroTensor.Core
 {
@@ -30,8 +34,9 @@ namespace ZeroTensor.Core
 
         /// <summary>
         /// Cache-blocked INT8 General Matrix Multiply with INT32 accumulation: C = A @ B.
+        /// Uses AVX2 8/16-element SIMD vectorization on .NET 8+.
         /// </summary>
-        public static void GemmInt8(Tensor<sbyte> a, Tensor<sbyte> b, Tensor<int> c)
+        public static unsafe void GemmInt8(Tensor<sbyte> a, Tensor<sbyte> b, Tensor<int> c)
         {
             if (a == null) throw new ArgumentNullException(nameof(a));
             if (b == null) throw new ArgumentNullException(nameof(b));
@@ -64,39 +69,66 @@ namespace ZeroTensor.Core
             {
                 int mEnd = Math.Min(m0 + BlockM, m);
 
-                for (int k0 = 0; k0 < k; k0 += BlockK)
+                fixed (sbyte* pB = bufB)
+                fixed (int* pC = bufC)
                 {
-                    int kEnd = Math.Min(k0 + BlockK, k);
-
-                    for (int n0 = 0; n0 < n; n0 += BlockN)
+                    for (int k0 = 0; k0 < k; k0 += BlockK)
                     {
-                        int nEnd = Math.Min(n0 + BlockN, n);
+                        int kEnd = Math.Min(k0 + BlockK, k);
 
-                        for (int i = m0; i < mEnd; i++)
+                        for (int n0 = 0; n0 < n; n0 += BlockN)
                         {
-                            int rowOffA = offA + i * sA0;
-                            int rowOffC = offC + i * sC0;
+                            int nEnd = Math.Min(n0 + BlockN, n);
 
-                            for (int p = k0; p < kEnd; p++)
+                            for (int i = m0; i < mEnd; i++)
                             {
-                                int aVal = bufA[rowOffA + p * sA1];
-                                if (aVal == 0) continue;
+                                int rowOffA = offA + i * sA0;
+                                int rowOffC = offC + i * sC0;
 
-                                int rowOffB = offB + p * sB0;
-                                int j = n0;
-
-                                // 4-way unrolled inner loop
-                                for (; j <= nEnd - 4; j += 4)
+                                for (int p = k0; p < kEnd; p++)
                                 {
-                                    bufC[rowOffC + j * sC1] += aVal * bufB[rowOffB + j * sB1];
-                                    bufC[rowOffC + (j + 1) * sC1] += aVal * bufB[rowOffB + (j + 1) * sB1];
-                                    bufC[rowOffC + (j + 2) * sC1] += aVal * bufB[rowOffB + (j + 2) * sB1];
-                                    bufC[rowOffC + (j + 3) * sC1] += aVal * bufB[rowOffB + (j + 3) * sB1];
-                                }
+                                    int aVal = bufA[rowOffA + p * sA1];
+                                    if (aVal == 0) continue;
 
-                                for (; j < nEnd; j++)
-                                {
-                                    bufC[rowOffC + j * sC1] += aVal * bufB[rowOffB + j * sB1];
+                                    int rowOffB = offB + p * sB0;
+                                    int j = n0;
+
+#if NET8_0_OR_GREATER
+                                    if (Avx2.IsSupported && sB1 == 1 && sC1 == 1)
+                                    {
+                                        var vA = Vector256.Create(aVal);
+                                        for (; j <= nEnd - 16; j += 16)
+                                        {
+                                            var vB0 = Avx2.ConvertToVector256Int32(pB + rowOffB + j);
+                                            var vB1 = Avx2.ConvertToVector256Int32(pB + rowOffB + j + 8);
+                                            var vC0 = Avx.LoadVector256(pC + rowOffC + j);
+                                            var vC1 = Avx.LoadVector256(pC + rowOffC + j + 8);
+                                            Avx.Store(pC + rowOffC + j, Avx2.Add(vC0, Avx2.MultiplyLow(vA, vB0)));
+                                            Avx.Store(pC + rowOffC + j + 8, Avx2.Add(vC1, Avx2.MultiplyLow(vA, vB1)));
+                                        }
+
+                                        for (; j <= nEnd - 8; j += 8)
+                                        {
+                                            var vB0 = Avx2.ConvertToVector256Int32(pB + rowOffB + j);
+                                            var vC0 = Avx.LoadVector256(pC + rowOffC + j);
+                                            Avx.Store(pC + rowOffC + j, Avx2.Add(vC0, Avx2.MultiplyLow(vA, vB0)));
+                                        }
+                                    }
+#endif
+
+                                    // 4-way unrolled scalar loop
+                                    for (; j <= nEnd - 4; j += 4)
+                                    {
+                                        bufC[rowOffC + j * sC1] += aVal * bufB[rowOffB + j * sB1];
+                                        bufC[rowOffC + (j + 1) * sC1] += aVal * bufB[rowOffB + (j + 1) * sB1];
+                                        bufC[rowOffC + (j + 2) * sC1] += aVal * bufB[rowOffB + (j + 2) * sB1];
+                                        bufC[rowOffC + (j + 3) * sC1] += aVal * bufB[rowOffB + (j + 3) * sB1];
+                                    }
+
+                                    for (; j < nEnd; j++)
+                                    {
+                                        bufC[rowOffC + j * sC1] += aVal * bufB[rowOffB + j * sB1];
+                                    }
                                 }
                             }
                         }
@@ -124,8 +156,9 @@ namespace ZeroTensor.Core
         /// <summary>
         /// Quantized INT8 GEMM with zero-point offset and FP32 scale output:
         /// C_float[i, j] = scaleA * scaleB * sum((A[i, p] - zeroPointA) * (B[p, j] - zeroPointB)).
+        /// Accumulates INT32 dot products in registers/scalars and writes scaled FP32 directly into C with zero intermediate Tensor allocations.
         /// </summary>
-        public static void GemmInt8(
+        public static unsafe void GemmInt8(
             Tensor<sbyte> a,
             Tensor<sbyte> b,
             Tensor<float> c,
@@ -144,50 +177,93 @@ namespace ZeroTensor.Core
 
             float combinedScale = scaleA * scaleB;
 
-            // First compute integer accumulation: C_int = sum((A - zA) * (B - zB))
-            var intC = new Tensor<int>(m, n);
-
             var aContig = a.ToContiguous();
             var bContig = b.ToContiguous();
 
             var bufA = aContig.Buffer;
             var bufB = bContig.Buffer;
-            var bufIntC = intC.Buffer;
+            var bufC = c.Buffer;
 
             int offA = aContig.Offset;
             int offB = bContig.Offset;
-            int offC = intC.Offset;
+            int offC = c.Offset;
 
             int sA0 = aContig.Strides[0], sA1 = aContig.Strides[1];
             int sB0 = bContig.Strides[0], sB1 = bContig.Strides[1];
-            int sC0 = intC.Strides[0], sC1 = intC.Strides[1];
+            int sC0 = c.Strides[0], sC1 = c.Strides[1];
 
-            for (int i = 0; i < m; i++)
+            fixed (sbyte* pB = bufB)
+            fixed (float* pC = bufC)
             {
-                int rowOffA = offA + i * sA0;
-                int rowOffC = offC + i * sC0;
-
-                for (int p = 0; p < k; p++)
+                for (int i = 0; i < m; i++)
                 {
-                    int aVal = bufA[rowOffA + p * sA1] - zeroPointA;
-                    if (aVal == 0) continue;
+                    int rowOffA = offA + i * sA0;
+                    int rowOffC = offC + i * sC0;
+                    int j = 0;
 
-                    int rowOffB = offB + p * sB0;
-
-                    for (int j = 0; j < n; j++)
+#if NET8_0_OR_GREATER
+                    if (Avx2.IsSupported && sB1 == 1 && sC1 == 1)
                     {
-                        int bVal = bufB[rowOffB + j * sB1] - zeroPointB;
-                        bufIntC[rowOffC + j * sC1] += aVal * bVal;
+                        var vZpB = Vector256.Create(zeroPointB);
+                        var vScale = Vector256.Create(combinedScale);
+
+                        for (; j <= n - 16; j += 16)
+                        {
+                            var vAcc0 = Vector256<int>.Zero;
+                            var vAcc1 = Vector256<int>.Zero;
+
+                            for (int p = 0; p < k; p++)
+                            {
+                                int aVal = bufA[rowOffA + p * sA1] - zeroPointA;
+                                if (aVal == 0) continue;
+
+                                var vA = Vector256.Create(aVal);
+                                int rowOffB = offB + p * sB0 + j;
+                                var vB0 = Avx2.Subtract(Avx2.ConvertToVector256Int32(pB + rowOffB), vZpB);
+                                var vB1 = Avx2.Subtract(Avx2.ConvertToVector256Int32(pB + rowOffB + 8), vZpB);
+                                vAcc0 = Avx2.Add(vAcc0, Avx2.MultiplyLow(vA, vB0));
+                                vAcc1 = Avx2.Add(vAcc1, Avx2.MultiplyLow(vA, vB1));
+                            }
+
+                            Avx.Store(pC + rowOffC + j, Avx.Multiply(Avx.ConvertToVector256Single(vAcc0), vScale));
+                            Avx.Store(pC + rowOffC + j + 8, Avx.Multiply(Avx.ConvertToVector256Single(vAcc1), vScale));
+                        }
+
+                        for (; j <= n - 8; j += 8)
+                        {
+                            var vAcc0 = Vector256<int>.Zero;
+
+                            for (int p = 0; p < k; p++)
+                            {
+                                int aVal = bufA[rowOffA + p * sA1] - zeroPointA;
+                                if (aVal == 0) continue;
+
+                                var vA = Vector256.Create(aVal);
+                                int rowOffB = offB + p * sB0 + j;
+                                var vB0 = Avx2.Subtract(Avx2.ConvertToVector256Int32(pB + rowOffB), vZpB);
+                                vAcc0 = Avx2.Add(vAcc0, Avx2.MultiplyLow(vA, vB0));
+                            }
+
+                            Avx.Store(pC + rowOffC + j, Avx.Multiply(Avx.ConvertToVector256Single(vAcc0), vScale));
+                        }
+                    }
+#endif
+
+                    for (; j < n; j++)
+                    {
+                        int acc = 0;
+                        for (int p = 0; p < k; p++)
+                        {
+                            int aVal = bufA[rowOffA + p * sA1] - zeroPointA;
+                            if (aVal == 0) continue;
+
+                            int bVal = bufB[offB + p * sB0 + j * sB1] - zeroPointB;
+                            acc += aVal * bVal;
+                        }
+
+                        bufC[rowOffC + j * sC1] = acc * combinedScale;
                     }
                 }
-            }
-
-            // Dequantize to float output
-            var spanC = c.AsSpan();
-            var spanIntC = intC.AsSpan();
-            for (int i = 0; i < spanC.Length; i++)
-            {
-                spanC[i] = spanIntC[i] * combinedScale;
             }
         }
 
@@ -197,7 +273,7 @@ namespace ZeroTensor.Core
         /// Real weights are computed via: weight = (nibble - zeroPoint) * scale.
         /// Delivers 4x memory compression for edge LLM and vision model inference.
         /// </summary>
-        public static Tensor<float> GemmInt4(
+        public static unsafe Tensor<float> GemmInt4(
             Tensor<float> activation,
             Tensor<byte> packedWeights,
             Tensor<float> scales,
@@ -249,14 +325,96 @@ namespace ZeroTensor.Core
             {
                 int actRowBase = actOff + i * sAct0;
                 int cRowBase = cOff + i * sC0;
+                int j = 0;
 
-                for (int j = 0; j < n; j++)
+#if NET8_0_OR_GREATER
+                if (Avx2.IsSupported && sW1 == 1 && sC1 == 1 && n >= 8)
+                {
+                    fixed (byte* pW = wBuf)
+                    fixed (float* pC = cBuf)
+                    fixed (float* pS = sBuf)
+                    fixed (float* pZp = zpBuf)
+                    {
+                        var vMask0F = Vector256.Create(0x0F);
+
+                        for (; j <= n - 8; j += 8)
+                        {
+                            var vScale = Avx.LoadVector256(pS + sOff + j);
+                            var vZp = pZp != null ? Avx.LoadVector256(pZp + zpOff + j) : Vector256<float>.Zero;
+                            var vAcc = Vector256<float>.Zero;
+
+                            for (int l = 0; l < packedK; l++)
+                            {
+                                var vPacked = Avx2.ConvertToVector256Int32(pW + wOff + l * sW0 + j);
+                                var vNib0 = Avx.ConvertToVector256Single(Avx2.And(vPacked, vMask0F));
+                                var vW0 = Avx.Multiply(Avx.Subtract(vNib0, vZp), vScale);
+
+                                int k0 = l * 2;
+                                var vAct0 = Vector256.Create(actBuf[actRowBase + k0 * sAct1]);
+                                vAcc = Fma.IsSupported
+                                    ? Fma.MultiplyAdd(vAct0, vW0, vAcc)
+                                    : Avx.Add(vAcc, Avx.Multiply(vAct0, vW0));
+
+                                int k1 = k0 + 1;
+                                if (k1 < k)
+                                {
+                                    var vNib1 = Avx.ConvertToVector256Single(Avx2.And(Avx2.ShiftRightLogical(vPacked, 4), vMask0F));
+                                    var vW1 = Avx.Multiply(Avx.Subtract(vNib1, vZp), vScale);
+                                    var vAct1 = Vector256.Create(actBuf[actRowBase + k1 * sAct1]);
+                                    vAcc = Fma.IsSupported
+                                        ? Fma.MultiplyAdd(vAct1, vW1, vAcc)
+                                        : Avx.Add(vAcc, Avx.Multiply(vAct1, vW1));
+                                }
+                            }
+
+                            Avx.Store(pC + cRowBase + j, vAcc);
+                        }
+                    }
+                }
+#endif
+
+                for (; j < n; j++)
                 {
                     float scale = sBuf[sOff + j];
                     float zp = zpBuf != null ? zpBuf[zpOff + j] : 0f;
                     float acc = 0f;
+                    int l = 0;
 
-                    for (int l = 0; l < packedK; l++)
+#if NET8_0_OR_GREATER
+                    if (Avx2.IsSupported && sAct1 == 1 && k >= 8)
+                    {
+                        fixed (float* pAct = actBuf)
+                        {
+                            var vZp = Vector256.Create(zp);
+                            var vAcc = Vector256<float>.Zero;
+                            int fullQuadLimit = (k / 8) * 4;
+
+                            for (; l < fullQuadLimit; l += 4)
+                            {
+                                byte p0 = wBuf[wOff + l * sW0 + j * sW1];
+                                byte p1 = wBuf[wOff + (l + 1) * sW0 + j * sW1];
+                                byte p2 = wBuf[wOff + (l + 2) * sW0 + j * sW1];
+                                byte p3 = wBuf[wOff + (l + 3) * sW0 + j * sW1];
+
+                                var vNib = Vector256.Create(
+                                    (float)(p0 & 0x0F), (float)((p0 >> 4) & 0x0F),
+                                    (float)(p1 & 0x0F), (float)((p1 >> 4) & 0x0F),
+                                    (float)(p2 & 0x0F), (float)((p2 >> 4) & 0x0F),
+                                    (float)(p3 & 0x0F), (float)((p3 >> 4) & 0x0F));
+
+                                var vAct = Avx.LoadVector256(pAct + actRowBase + l * 2);
+                                var vDiff = Avx.Subtract(vNib, vZp);
+                                vAcc = Fma.IsSupported
+                                    ? Fma.MultiplyAdd(vAct, vDiff, vAcc)
+                                    : Avx.Add(vAcc, Avx.Multiply(vAct, vDiff));
+                            }
+
+                            acc = Vector256.Sum(vAcc) * scale;
+                        }
+                    }
+#endif
+
+                    for (; l < packedK; l++)
                     {
                         byte packed = wBuf[wOff + l * sW0 + j * sW1];
                         int nibble0 = packed & 0x0F;
