@@ -74,5 +74,27 @@ namespace ZeroText.Tests
         {
             Assert.Equal(0.0, FastFuzzyMatch.JaroWinklerSimilarity("ABCD".AsSpan(), "WXYZ".AsSpan()));
         }
+
+        [Fact]
+        public void LevenshteinDistance_MyersBitParallel_Boundary64AndUnicode_MatchesExactDistance()
+        {
+            // Reduced pattern M = 64 boundary
+            string p64 = new string('a', 31) + "X" + new string('b', 31) + "Y"; // 64 chars
+            string t64 = "Z" + new string('a', 31) + "W" + new string('b', 31) + "Q"; // 65 chars
+            int dist64 = FastFuzzyMatch.LevenshteinDistance(t64.AsSpan(), p64.AsSpan());
+            Assert.Equal(3, dist64);
+
+            // Reduced pattern M = 65 (exercises > 64 DP fallback)
+            string p65 = "M" + p64;
+            string t65 = "N" + t64;
+            int dist65 = FastFuzzyMatch.LevenshteinDistance(t65.AsSpan(), p65.AsSpan());
+            Assert.Equal(4, dist65);
+
+            // High Unicode characters (Vietnamese) with ignoreCase
+            int vnDistCaseSensitive = FastFuzzyMatch.LevenshteinDistance("Nguyễn Văn Ánh".AsSpan(), "nguyễn văn ánh".AsSpan(), ignoreCase: false);
+            int vnDistIgnoreCase = FastFuzzyMatch.LevenshteinDistance("Nguyễn Văn Ánh".AsSpan(), "nguyễn văn ánh".AsSpan(), ignoreCase: true);
+            Assert.Equal(3, vnDistCaseSensitive);
+            Assert.Equal(0, vnDistIgnoreCase);
+        }
     }
 }

@@ -11,8 +11,98 @@ namespace ZeroText.Normalization
     public static class VietnameseSearchNormalizer
     {
         /// <summary>
+        /// Normalizes Vietnamese text (both precomposed NFC and decomposed NFD) into unaccented, lowercase characters
+        /// directly into the output span, preserving original whitespace/punctuation while stripping combining diacritical marks.
+        /// Returns the actual number of characters written (which may be less than input.Length when NFD combining marks are stripped).
+        /// </summary>
+        public static int NormalizeToSpan(ReadOnlySpan<char> input, Span<char> output)
+        {
+            if (input.IsEmpty || output.IsEmpty) return 0;
+
+            int written = 0;
+            int i = 0;
+            int len = input.Length;
+            int outLen = output.Length;
+
+            while (i < len && written < outLen)
+            {
+                char c = input[i++];
+                if (c < 0x80)
+                {
+                    output[written++] = (uint)(c - 'A') <= ('Z' - 'A') ? (char)(c | 0x20) : c;
+                    while (i < len && written < outLen)
+                    {
+                        char ac = input[i];
+                        if (ac >= 0x80) break;
+                        output[written++] = (uint)(ac - 'A') <= ('Z' - 'A') ? (char)(ac | 0x20) : ac;
+                        i++;
+                    }
+                    continue;
+                }
+
+                // Skip Unicode Combining Diacritical Marks (NFD)
+                if (c >= '\u0300' && c <= '\u036F')
+                {
+                    continue;
+                }
+
+                if (c == 'Đ' || c == 'đ')
+                {
+                    output[written++] = 'd';
+                }
+                else
+                {
+                    char stripped = StripDiacritic(c);
+                    output[written++] = (uint)(stripped - 'A') <= ('Z' - 'A') ? (char)(stripped | 0x20) : stripped;
+                }
+            }
+
+            return written;
+        }
+
+        /// <summary>
+        /// Normalizes Vietnamese text (both NFC and NFD) into unaccented, lowercase characters in the output span.
+        /// </summary>
+        public static void Normalize(ReadOnlySpan<char> input, Span<char> output)
+        {
+            int written = NormalizeToSpan(input, output);
+            if (written < output.Length)
+            {
+                output.Slice(written).Clear();
+            }
+        }
+
+        /// <summary>
+        /// Normalizes Vietnamese text (both NFC and NFD) into an unaccented, lowercase string,
+        /// slicing to the exact normalized length when NFD combining marks are stripped.
+        /// </summary>
+        public static string Normalize(string? input)
+        {
+            if (string.IsNullOrEmpty(input)) return string.Empty;
+
+            var span = input.AsSpan();
+            if (span.Length <= 256)
+            {
+                Span<char> buffer = stackalloc char[span.Length];
+                int written = NormalizeToSpan(span, buffer);
+                return buffer.Slice(0, written).ToString();
+            }
+
+            char[] rented = ArrayPool<char>.Shared.Rent(span.Length);
+            try
+            {
+                int written = NormalizeToSpan(span, rented);
+                return new string(rented, 0, written);
+            }
+            finally
+            {
+                ArrayPool<char>.Shared.Return(rented);
+            }
+        }
+
+        /// <summary>
         /// Normalizes Vietnamese text into unaccented, lowercase search tokens directly into destination span.
-        /// Replaces 'Đ'/'đ' with 'd', strips tone marks, removes special symbols, and condenses spaces.
+        /// Replaces 'Đ'/'đ' with 'd', strips NFC &amp; NFD tone marks, removes special symbols, and condenses spaces.
         /// Zero heap allocation.
         /// </summary>
         /// <param name="source">Raw input text span.</param>
@@ -28,6 +118,33 @@ namespace ZeroText.Normalization
             for (int i = 0; i < source.Length && written < destination.Length; i++)
             {
                 char c = source[i];
+
+                // Fast path for ASCII characters
+                if (c < 0x80)
+                {
+                    if ((c >= 'a' && c <= 'z') || (c >= '0' && c <= '9'))
+                    {
+                        destination[written++] = c;
+                        lastWasSpace = false;
+                    }
+                    else if (c >= 'A' && c <= 'Z')
+                    {
+                        destination[written++] = (char)(c | 0x20);
+                        lastWasSpace = false;
+                    }
+                    else if ((c == ' ' || c == '\t' || c == '\r' || c == '\n' || c == '_' || c == '-') && !lastWasSpace && written > 0)
+                    {
+                        destination[written++] = ' ';
+                        lastWasSpace = true;
+                    }
+                    continue;
+                }
+
+                // Skip Unicode Combining Diacritical Marks (U+0300..U+036F) in NFD strings
+                if (c >= '\u0300' && c <= '\u036F')
+                {
+                    continue;
+                }
 
                 if (c == 'Đ' || c == 'đ')
                 {
@@ -130,6 +247,32 @@ namespace ZeroText.Normalization
             {
                 char c = source[i];
 
+                if (c < 0x80)
+                {
+                    if ((c >= 'a' && c <= 'z') || (c >= '0' && c <= '9'))
+                    {
+                        destination[written++] = c;
+                        lastWasHyphen = false;
+                    }
+                    else if (c >= 'A' && c <= 'Z')
+                    {
+                        destination[written++] = (char)(c | 0x20);
+                        lastWasHyphen = false;
+                    }
+                    else if ((c == ' ' || c == '\t' || c == '\r' || c == '\n' || c == '-' || c == '_' || c == '/') && !lastWasHyphen && written > 0)
+                    {
+                        destination[written++] = '-';
+                        lastWasHyphen = true;
+                    }
+                    continue;
+                }
+
+                // Skip Unicode Combining Diacritical Marks (NFD)
+                if (c >= '\u0300' && c <= '\u036F')
+                {
+                    continue;
+                }
+
                 if (c == 'Đ' || c == 'đ')
                 {
                     c = 'd';
@@ -193,8 +336,49 @@ namespace ZeroText.Normalization
         }
 
         /// <summary>
+        /// Removes diacritics (both NFC precomposed and NFD combining marks) from Vietnamese text into a destination span
+        /// while preserving letter casing and special symbols. Returns the number of characters written.
+        /// </summary>
+        public static int RemoveDiacriticsToSpan(ReadOnlySpan<char> source, Span<char> destination)
+        {
+            if (source.IsEmpty || destination.IsEmpty) return 0;
+
+            int written = 0;
+            int i = 0;
+            int len = source.Length;
+            int destLen = destination.Length;
+
+            while (i < len && written < destLen)
+            {
+                char c = source[i++];
+                if (c < 0x80)
+                {
+                    destination[written++] = c;
+                    while (i < len && written < destLen)
+                    {
+                        char ac = source[i];
+                        if (ac >= 0x80) break;
+                        destination[written++] = ac;
+                        i++;
+                    }
+                    continue;
+                }
+
+                // Skip Unicode Combining Diacritical Marks (NFD)
+                if (c >= '\u0300' && c <= '\u036F')
+                {
+                    continue;
+                }
+
+                destination[written++] = StripDiacriticPreserveCase(c);
+            }
+
+            return written;
+        }
+
+        /// <summary>
         /// Removes diacritics from Vietnamese string while preserving letter casing and special symbols.
-        /// Zero-allocation on small strings (&lt;= 256 chars via stackalloc).
+        /// Supports both Unicode NFC and NFD. Zero-allocation on small strings (&lt;= 256 chars via stackalloc).
         /// </summary>
         public static string RemoveDiacritics(string? source)
         {
@@ -204,21 +388,15 @@ namespace ZeroText.Normalization
             if (span.Length <= 256)
             {
                 Span<char> buffer = stackalloc char[span.Length];
-                for (int i = 0; i < span.Length; i++)
-                {
-                    buffer[i] = StripDiacriticPreserveCase(span[i]);
-                }
-                return buffer.ToString();
+                int written = RemoveDiacriticsToSpan(span, buffer);
+                return buffer.Slice(0, written).ToString();
             }
 
             char[] rented = ArrayPool<char>.Shared.Rent(span.Length);
             try
             {
-                for (int i = 0; i < span.Length; i++)
-                {
-                    rented[i] = StripDiacriticPreserveCase(span[i]);
-                }
-                return new string(rented, 0, span.Length);
+                int written = RemoveDiacriticsToSpan(span, rented);
+                return new string(rented, 0, written);
             }
             finally
             {
@@ -228,7 +406,7 @@ namespace ZeroText.Normalization
 
         /// <summary>
         /// Converts Vietnamese string into unaccented, URL-safe transfer string:
-        /// Replaces special characters [~`!@#$%^&amp;*()+=''] with '-', spaces with '_', and strips diacritics.
+        /// Replaces special characters [~`!@#$%^&amp;*()+=''] with '-', spaces with '_', and strips NFC &amp; NFD diacritics.
         /// Zero-allocation on small strings (&lt;= 256 chars via stackalloc).
         /// </summary>
         public static string UnSignedTransfer(string? source)
@@ -239,29 +417,33 @@ namespace ZeroText.Normalization
             if (span.Length <= 256)
             {
                 Span<char> buffer = stackalloc char[span.Length];
+                int written = 0;
                 for (int i = 0; i < span.Length; i++)
                 {
                     char c = span[i];
+                    if (c >= '\u0300' && c <= '\u036F') continue;
                     if (c == ' ') c = '_';
                     else if (IsSpecialTransferChar(c)) c = '-';
-                    else c = StripDiacriticPreserveCase(c);
-                    buffer[i] = c;
+                    else if (c >= 0x80) c = StripDiacriticPreserveCase(c);
+                    buffer[written++] = c;
                 }
-                return buffer.ToString();
+                return buffer.Slice(0, written).ToString();
             }
 
             char[] rented = ArrayPool<char>.Shared.Rent(span.Length);
             try
             {
+                int written = 0;
                 for (int i = 0; i < span.Length; i++)
                 {
                     char c = span[i];
+                    if (c >= '\u0300' && c <= '\u036F') continue;
                     if (c == ' ') c = '_';
                     else if (IsSpecialTransferChar(c)) c = '-';
-                    else c = StripDiacriticPreserveCase(c);
-                    rented[i] = c;
+                    else if (c >= 0x80) c = StripDiacriticPreserveCase(c);
+                    rented[written++] = c;
                 }
-                return new string(rented, 0, span.Length);
+                return new string(rented, 0, written);
             }
             finally
             {

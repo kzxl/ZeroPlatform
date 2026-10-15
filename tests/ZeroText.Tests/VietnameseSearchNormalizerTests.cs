@@ -143,5 +143,40 @@ namespace ZeroText.Tests
             Assert.Equal('d', VietnameseSearchNormalizer.StripDiacriticPreserveCase('đ'));
             Assert.Equal('Z', VietnameseSearchNormalizer.StripDiacriticPreserveCase('Z'));
         }
+
+        [Fact]
+        public void UnicodeNfd_DecomposedVietnamese_NormalizesIdenticallyToNfc()
+        {
+            string nfc = "Cộng Hòa Xã Hội Chủ Nghĩa Việt Nam - Độc Lập - Tự Do - Hạnh Phúc";
+            string nfd = nfc.Normalize(NormalizationForm.FormD);
+
+            // NFD is longer than NFC because tone/vowel marks are decomposed into U+0300..U+036F
+            Assert.True(nfd.Length > nfc.Length);
+
+            Assert.Equal(
+                VietnameseSearchNormalizer.ToSearchKeyword(nfc),
+                VietnameseSearchNormalizer.ToSearchKeyword(nfd));
+
+            Assert.Equal(
+                VietnameseSearchNormalizer.ToSlug(nfc),
+                VietnameseSearchNormalizer.ToSlug(nfd));
+
+            Assert.Equal(
+                VietnameseSearchNormalizer.RemoveDiacritics(nfc),
+                VietnameseSearchNormalizer.RemoveDiacritics(nfd));
+
+            Assert.Equal(
+                VietnameseSearchNormalizer.UnSignedTransfer(nfc),
+                VietnameseSearchNormalizer.UnSignedTransfer(nfd));
+
+            Assert.Equal(
+                VietnameseSearchNormalizer.Normalize(nfc),
+                VietnameseSearchNormalizer.Normalize(nfd));
+
+            Span<char> spanOut = stackalloc char[nfd.Length];
+            int written = VietnameseSearchNormalizer.NormalizeToSpan(nfd.AsSpan(), spanOut);
+            Assert.Equal(nfc.Length, written);
+            Assert.Equal("cong hoa xa hoi chu nghia viet nam - doc lap - tu do - hanh phuc", spanOut.Slice(0, written).ToString());
+        }
     }
 }

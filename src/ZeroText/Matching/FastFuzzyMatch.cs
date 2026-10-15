@@ -15,6 +15,8 @@ namespace ZeroText.Matching
 
         /// <summary>
         /// Computes the Levenshtein edit distance between two character spans.
+        /// Trims common prefixes/suffixes, executes Myers' (1999) 64-bit bit-parallel algorithm in O(N) time for M &lt;= 64,
+        /// and falls back to pre-normalized single-row DP for M &gt; 64.
         /// Zero managed allocation for strings up to 256 characters.
         /// </summary>
         /// <param name="s1">First character sequence.</param>
@@ -26,7 +28,50 @@ namespace ZeroText.Matching
             if (s1.IsEmpty) return s2.Length;
             if (s2.IsEmpty) return s1.Length;
 
-            // Ensure s2 is the shorter sequence to minimize buffer requirements
+            // 1. Trim common prefix
+            int prefixLen = 0;
+            int minInitialLen = Math.Min(s1.Length, s2.Length);
+            if (!ignoreCase)
+            {
+                while (prefixLen < minInitialLen && s1[prefixLen] == s2[prefixLen])
+                    prefixLen++;
+            }
+            else
+            {
+                while (prefixLen < minInitialLen && ToUpperFast(s1[prefixLen]) == ToUpperFast(s2[prefixLen]))
+                    prefixLen++;
+            }
+
+            if (prefixLen > 0)
+            {
+                s1 = s1.Slice(prefixLen);
+                s2 = s2.Slice(prefixLen);
+            }
+
+            // 2. Trim common suffix
+            int suffixLen = 0;
+            int minRemLen = Math.Min(s1.Length, s2.Length);
+            if (!ignoreCase)
+            {
+                while (suffixLen < minRemLen && s1[s1.Length - 1 - suffixLen] == s2[s2.Length - 1 - suffixLen])
+                    suffixLen++;
+            }
+            else
+            {
+                while (suffixLen < minRemLen && ToUpperFast(s1[s1.Length - 1 - suffixLen]) == ToUpperFast(s2[s2.Length - 1 - suffixLen]))
+                    suffixLen++;
+            }
+
+            if (suffixLen > 0)
+            {
+                s1 = s1.Slice(0, s1.Length - suffixLen);
+                s2 = s2.Slice(0, s2.Length - suffixLen);
+            }
+
+            if (s1.IsEmpty) return s2.Length;
+            if (s2.IsEmpty) return s1.Length;
+
+            // Ensure s2 is the shorter pattern (length M <= N)
             if (s1.Length < s2.Length)
             {
                 var temp = s1;
@@ -34,35 +79,46 @@ namespace ZeroText.Matching
                 s2 = temp;
             }
 
-            int minLen = s2.Length;
-            int bufferSize = minLen + 1;
+            int m = s2.Length;
+            int n = s1.Length;
 
-            int[]? rented = null;
+            // 3. Myers' (1999) 64-bit Bit-Parallel Levenshtein Algorithm for M <= 64
+            if (m <= 64)
+            {
+                return MyersBitParallelLevenshtein(s1, s2, n, m, ignoreCase);
+            }
+
+            // 4. Fallback to pre-normalized single-row DP for M > 64
+            int bufferSize = m + 1;
+            int[]? rentedRow = null;
+            char[]? rentedPat = null;
+
             Span<int> row = bufferSize <= MaxStackallocThreshold
                 ? stackalloc int[bufferSize]
-                : (rented = ArrayPool<int>.Shared.Rent(bufferSize)).AsSpan(0, bufferSize);
+                : (rentedRow = ArrayPool<int>.Shared.Rent(bufferSize)).AsSpan(0, bufferSize);
+
+            Span<char> pat = m <= MaxStackallocThreshold
+                ? stackalloc char[m]
+                : (rentedPat = ArrayPool<char>.Shared.Rent(m)).AsSpan(0, m);
 
             try
             {
-                for (int j = 0; j <= minLen; j++)
+                for (int j = 0; j < m; j++)
                 {
                     row[j] = j;
+                    pat[j] = ignoreCase ? ToUpperFast(s2[j]) : s2[j];
                 }
+                row[m] = m;
 
-                for (int i = 1; i <= s1.Length; i++)
+                for (int i = 1; i <= n; i++)
                 {
-                    char c1 = s1[i - 1];
+                    char c1 = ignoreCase ? ToUpperFast(s1[i - 1]) : s1[i - 1];
                     int prevDiagonal = row[0];
                     row[0] = i;
 
-                    for (int j = 1; j <= minLen; j++)
+                    for (int j = 1; j <= m; j++)
                     {
-                        char c2 = s2[j - 1];
-                        bool match = ignoreCase
-                            ? char.ToUpperInvariant(c1) == char.ToUpperInvariant(c2)
-                            : c1 == c2;
-
-                        int cost = match ? 0 : 1;
+                        int cost = c1 == pat[j - 1] ? 0 : 1;
                         int insertion = row[j] + 1;
                         int deletion = row[j - 1] + 1;
                         int substitution = prevDiagonal + cost;
@@ -72,15 +128,93 @@ namespace ZeroText.Matching
                     }
                 }
 
-                return row[minLen];
+                return row[m];
             }
             finally
             {
-                if (rented != null)
+                if (rentedRow != null) ArrayPool<int>.Shared.Return(rentedRow);
+                if (rentedPat != null) ArrayPool<char>.Shared.Return(rentedPat);
+            }
+        }
+
+        [MethodImpl(MethodImplOptions.AggressiveInlining)]
+        private static int MyersBitParallelLevenshtein(ReadOnlySpan<char> text, ReadOnlySpan<char> pattern, int n, int m, bool ignoreCase)
+        {
+            Span<ulong> peq = stackalloc ulong[256];
+            peq.Clear();
+            Span<char> pat = stackalloc char[m];
+            bool hasHighChar = false;
+
+            for (int j = 0; j < m; j++)
+            {
+                char pc = ignoreCase ? ToUpperFast(pattern[j]) : pattern[j];
+                pat[j] = pc;
+                if (pc < 256)
                 {
-                    ArrayPool<int>.Shared.Return(rented);
+                    peq[pc] |= 1UL << j;
+                }
+                else
+                {
+                    hasHighChar = true;
                 }
             }
+
+            ulong pv = ~0UL;
+            ulong mv = 0UL;
+            int score = m;
+            ulong lastBitMask = 1UL << (m - 1);
+
+            unchecked
+            {
+                for (int i = 0; i < n; i++)
+                {
+                    char tc = ignoreCase ? ToUpperFast(text[i]) : text[i];
+                    ulong eq;
+                    if (tc < 256)
+                    {
+                        eq = peq[tc];
+                    }
+                    else if (hasHighChar)
+                    {
+                        eq = 0UL;
+                        for (int j = 0; j < m; j++)
+                        {
+                            if (pat[j] == tc) eq |= 1UL << j;
+                        }
+                    }
+                    else
+                    {
+                        eq = 0UL;
+                    }
+
+                    ulong xv = eq | mv;
+                    ulong xh = (((eq & pv) + pv) ^ pv) | eq;
+
+                    ulong ph = mv | ~(xh | pv);
+                    ulong mh = pv & xh;
+
+                    if ((ph & lastBitMask) != 0)
+                        score++;
+                    else if ((mh & lastBitMask) != 0)
+                        score--;
+
+                    ph = (ph << 1) | 1UL;
+                    mh <<= 1;
+
+                    pv = mh | ~(xv | ph);
+                    mv = ph & xv;
+                }
+            }
+
+            return score;
+        }
+
+        [MethodImpl(MethodImplOptions.AggressiveInlining)]
+        private static char ToUpperFast(char c)
+        {
+            if ((uint)(c - 'a') <= ('z' - 'a'))
+                return (char)(c & ~0x20);
+            return c < 0x80 ? c : char.ToUpperInvariant(c);
         }
 
         /// <summary>
