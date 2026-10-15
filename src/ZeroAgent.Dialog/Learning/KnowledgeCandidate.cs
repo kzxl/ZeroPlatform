@@ -58,6 +58,9 @@ namespace ZeroAgent.Dialog.Learning
     /// </summary>
     public sealed class KnowledgeCandidate
     {
+        private readonly System.Collections.Generic.HashSet<string> _contributors =
+            new System.Collections.Generic.HashSet<string>(StringComparer.OrdinalIgnoreCase);
+
         public string Id { get; }
         public CandidateType Type { get; }
         public string Key { get; }
@@ -72,6 +75,16 @@ namespace ZeroAgent.Dialog.Learning
         public DateTime LastUpdatedUtc { get; set; }
         public string? ConflictDetails { get; set; }
         public string? VerifiedByUserId { get; set; }
+
+        /// <summary>
+        /// Number of distinct operator user IDs that have independently proposed or corroborated this candidate.
+        /// </summary>
+        public int DistinctContributorCount => _contributors.Count;
+
+        /// <summary>
+        /// Distinct operator user IDs that contributed to this candidate.
+        /// </summary>
+        public System.Collections.Generic.IReadOnlyCollection<string> Contributors => _contributors;
 
         public KnowledgeCandidate(
             string id,
@@ -96,15 +109,20 @@ namespace ZeroAgent.Dialog.Learning
             Status = initialStatus;
             TimestampUtc = DateTime.UtcNow;
             LastUpdatedUtc = TimestampUtc;
+            _contributors.Add(LearnedByUserId);
         }
 
         /// <summary>
         /// Reinforces the candidate with new corroborating observation from another turn/session.
-        /// Increases evidence count and mathematically boosts confidence.
+        /// Increases evidence count, tracks distinct contributor identity, and boosts confidence.
         /// </summary>
-        public void Reinforce(float boost = 0.20f)
+        public void Reinforce(float boost = 0.20f, string? contributorUserId = null)
         {
             EvidenceCount++;
+            if (!string.IsNullOrWhiteSpace(contributorUserId))
+            {
+                _contributors.Add(contributorUserId!.Trim());
+            }
             Confidence = Math.Min(1.0f, Confidence + boost);
             LastUpdatedUtc = DateTime.UtcNow;
         }

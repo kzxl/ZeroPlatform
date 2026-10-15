@@ -171,5 +171,65 @@ namespace ZeroAgent.Tests
             Assert.True(reloadedArbiter.TryResolveAlias("day mang", "Product", out var code));
             Assert.Equal("CBL-ETH-05M", code);
         }
+
+        [Fact]
+        public void SybilResistance_BlocksSingleOperatorSpamAndPromotesOnlyOnMultiUserQuorum()
+        {
+            var validator = new TestMasterCatalogValidator();
+            var arbiter = new VerifiedKnowledgeArbiter(validator)
+            {
+                MinEvidenceCount = 3,
+                MinDistinctUsersForConsensus = 3,
+                ConsensusConfidenceThreshold = 0.80f
+            };
+
+            // Single rogue user spams the same alias 5 times
+            KnowledgeCandidate candidate = null!;
+            for (int i = 0; i < 5; i++)
+            {
+                candidate = arbiter.ProposeAlias("nguồn công nghiệp", "PWR-24V-01", "Product", "SybilUser1", "Operator", initialConfidence: 0.50f);
+            }
+
+            Assert.Equal(5, candidate.EvidenceCount);
+            Assert.Equal(1, candidate.DistinctContributorCount);
+            // Must remain Staged because DistinctContributorCount (1) < MinDistinctUsersForConsensus (3)
+            Assert.Equal(VerificationStatus.Staged, candidate.Status);
+
+            // Second distinct user corroborates -> still 2 < 3
+            arbiter.ProposeAlias("nguồn công nghiệp", "PWR-24V-01", "Product", "OperatorTwo", "Operator");
+            Assert.Equal(2, candidate.DistinctContributorCount);
+            Assert.Equal(VerificationStatus.Staged, candidate.Status);
+
+            // Third distinct user corroborates -> reaches quorum of 3 distinct operators!
+            arbiter.ProposeAlias("nguồn công nghiệp", "PWR-24V-01", "Product", "OperatorThree", "Operator");
+            Assert.Equal(3, candidate.DistinctContributorCount);
+            Assert.Equal(VerificationStatus.Verified, candidate.Status);
+            Assert.Equal("SYSTEM_CONSENSUS", candidate.VerifiedByUserId);
+        }
+
+        [Fact]
+        public void ReportCausalOutcome_DemotesConsensusRuleOnNegativeCounterfactualReward()
+        {
+            var validator = new TestMasterCatalogValidator();
+            var arbiter = new VerifiedKnowledgeArbiter(validator)
+            {
+                MinEvidenceCount = 3,
+                MinDistinctUsersForConsensus = 2
+            };
+
+            arbiter.ProposeRule("SafetyStockBuffer", "15", "Inventory", "Op1", "Operator", initialConfidence: 0.50f);
+            arbiter.ProposeRule("SafetyStockBuffer", "15", "Inventory", "Op2", "Operator");
+            var promoted = arbiter.ProposeRule("SafetyStockBuffer", "15", "Inventory", "Op3", "Operator");
+
+            Assert.Equal(VerificationStatus.Verified, promoted.Status);
+            Assert.Equal("SYSTEM_CONSENSUS", promoted.VerifiedByUserId);
+
+            // Report severe negative causal outcome (e.g. stockout anomaly triggered downstream)
+            bool updated = arbiter.ReportCausalOutcome("Inventory", "SafetyStockBuffer", observedReward: -0.75f, quarantineThreshold: -0.50f);
+
+            Assert.True(updated);
+            Assert.Equal(VerificationStatus.Quarantined, promoted.Status);
+            Assert.Contains("Causal counterfactual demotion", promoted.ConflictDetails);
+        }
     }
 }

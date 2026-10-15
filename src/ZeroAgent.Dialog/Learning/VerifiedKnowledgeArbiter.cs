@@ -27,6 +27,12 @@ namespace ZeroAgent.Dialog.Learning
         /// </summary>
         public int MinEvidenceCount { get; set; } = 3;
 
+        /// <summary>
+        /// Minimum number of distinct operator user IDs required before auto-promoting a staged candidate via consensus.
+        /// Default is 1 for backward compatibility; set &gt;= 2 or 3 for strict Sybil-resistant multi-operator consensus.
+        /// </summary>
+        public int MinDistinctUsersForConsensus { get; set; } = 1;
+
         public int TotalCandidates => _candidates.Count;
         public int VerifiedCount => _candidates.Values.Count(c => c.Status == VerificationStatus.Verified);
         public int StagedCount => _candidates.Values.Count(c => c.Status == VerificationStatus.Staged);
@@ -92,7 +98,7 @@ namespace ZeroAgent.Dialog.Learning
                     {
                         if (existing.Status != VerificationStatus.Quarantined && existing.Status != VerificationStatus.Revoked)
                         {
-                            existing.Reinforce(0.20f);
+                            existing.Reinforce(0.20f, userId);
                             CheckAutoPromotion(existing);
                             return existing;
                         }
@@ -197,7 +203,7 @@ namespace ZeroAgent.Dialog.Learning
                 {
                     if (existing.Value.Equals(cleanVal, StringComparison.OrdinalIgnoreCase))
                     {
-                        existing.Reinforce(0.20f);
+                        existing.Reinforce(0.20f, userId);
                         CheckAutoPromotion(existing);
                         return existing;
                     }
@@ -226,13 +232,71 @@ namespace ZeroAgent.Dialog.Learning
 
         private void CheckAutoPromotion(KnowledgeCandidate candidate)
         {
+            int requiredDistinctUsers = Math.Max(1, MinDistinctUsersForConsensus);
             if (candidate.Status == VerificationStatus.Staged &&
                 candidate.Confidence >= ConsensusConfidenceThreshold &&
-                candidate.EvidenceCount >= MinEvidenceCount)
+                candidate.EvidenceCount >= MinEvidenceCount &&
+                candidate.DistinctContributorCount >= requiredDistinctUsers)
             {
                 candidate.Status = VerificationStatus.Verified;
                 candidate.VerifiedByUserId = "SYSTEM_CONSENSUS";
                 candidate.LastUpdatedUtc = DateTime.UtcNow;
+            }
+        }
+
+        /// <summary>
+        /// Causal Counterfactual Demotion: Evaluates observed downstream causal reward for a learned candidate
+        /// and automatically demotes staged or consensus-promoted rules to Quarantined when reward falls at or below threshold.
+        /// </summary>
+        public bool ReportCausalOutcome(
+            string domain,
+            string rawKey,
+            float observedReward,
+            float quarantineThreshold = -0.50f)
+        {
+            if (string.IsNullOrWhiteSpace(domain) || string.IsNullOrWhiteSpace(rawKey))
+                return false;
+
+            string cleanDomain = domain.Trim();
+            string cleanKey = rawKey.Trim();
+
+            lock (_syncLock)
+            {
+                KnowledgeCandidate? candidate = null;
+                string ruleLookup = BuildKey(CandidateType.HeuristicRule, cleanDomain, cleanKey);
+                string aliasLookup = BuildKey(CandidateType.Alias, cleanDomain, cleanKey);
+
+                if (!_candidates.TryGetValue(ruleLookup, out candidate) &&
+                    !_candidates.TryGetValue(aliasLookup, out candidate))
+                {
+                    candidate = _candidates.Values.FirstOrDefault(c =>
+                        c.Category.Equals(cleanDomain, StringComparison.OrdinalIgnoreCase) &&
+                        c.Key.Equals(cleanKey, StringComparison.OrdinalIgnoreCase));
+                }
+
+                if (candidate == null)
+                    return false;
+
+                candidate.Confidence = Math.Max(0.0f, Math.Min(1.0f, candidate.Confidence + observedReward * 0.50f));
+                candidate.LastUpdatedUtc = DateTime.UtcNow;
+
+                bool isEligibleForAutoDemotion =
+                    candidate.Status == VerificationStatus.Staged ||
+                    (candidate.Status == VerificationStatus.Verified &&
+                     string.Equals(candidate.VerifiedByUserId, "SYSTEM_CONSENSUS", StringComparison.OrdinalIgnoreCase));
+
+                if (isEligibleForAutoDemotion && (observedReward <= quarantineThreshold || candidate.Confidence <= 0.15f))
+                {
+                    candidate.Status = VerificationStatus.Quarantined;
+                    candidate.ConflictDetails =
+                        $"Causal counterfactual demotion: observedReward={observedReward:F2} (threshold={quarantineThreshold:F2}).";
+                }
+                else if (candidate.Status == VerificationStatus.Staged && observedReward > 0f)
+                {
+                    CheckAutoPromotion(candidate);
+                }
+
+                return true;
             }
         }
 

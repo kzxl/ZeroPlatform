@@ -150,5 +150,54 @@ namespace ZeroAgent.Tests
             Assert.Equal("ActionAlpha", choice);
             Assert.True(confidence > 0.70f);
         }
+
+        [Fact]
+        public void ZabFederatedAveraging_AggregateByzantineRobust_RejectsMaliciousPoisonedNodes()
+        {
+            const int dim = 32;
+            var classes = new[] { "SafeRoute", "HazardousOverride" };
+
+            // 4 honest nodes agree on weight +60 for SafeRoute and -40 for HazardousOverride
+            var honestNodes = new ZabNeuralPolicy[4];
+            for (int i = 0; i < 4; i++)
+            {
+                honestNodes[i] = new ZabNeuralPolicy($"HonestNode{i}", dim, classes) { Scale = 0.05f };
+                honestNodes[i].WeightsInt8[0] = 60;
+                honestNodes[i].WeightsInt8[dim] = -40;
+                honestNodes[i].Biases[0] = 0.5f;
+                honestNodes[i].Biases[1] = -0.2f;
+            }
+
+            // 1 compromised Byzantine node injects maximal inverted weights (-127 / +127) and huge bias
+            var byzantineNode = new ZabNeuralPolicy("ByzantineAttacker", dim, classes) { Scale = 999.0f };
+            byzantineNode.WeightsInt8[0] = -127;
+            byzantineNode.WeightsInt8[dim] = 127;
+            byzantineNode.Biases[0] = -500.0f;
+            byzantineNode.Biases[1] = 500.0f;
+
+            var allPolicies = new[]
+            {
+                honestNodes[0],
+                honestNodes[1],
+                byzantineNode,
+                honestNodes[2],
+                honestNodes[3]
+            };
+
+            var robustGlobal = ZabFederatedAveraging.AggregateByzantineRobust(allPolicies, trimFraction: 0.2f);
+
+            // Trimmed mean over 5 nodes (trimCount = 1) discards the Byzantine outlier completely!
+            Assert.Equal((sbyte)60, robustGlobal.WeightsInt8[0]);
+            Assert.Equal((sbyte)(-40), robustGlobal.WeightsInt8[dim]);
+            Assert.Equal(0.5f, robustGlobal.Biases[0], precision: 3);
+            Assert.Equal(-0.2f, robustGlobal.Biases[1], precision: 3);
+            Assert.Equal(0.05f, robustGlobal.Scale, precision: 4);
+
+            float[] query = new float[dim];
+            query[0] = 1.0f;
+            string predicted = robustGlobal.PredictChoice(query, out float conf);
+            Assert.Equal("SafeRoute", predicted);
+            Assert.True(conf > 0.6f);
+        }
     }
 }
