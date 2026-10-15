@@ -27,9 +27,13 @@ namespace ZeroUI.WinForms.Documents
         /// </summary>
         public void StreamToken(string messageId, string token)
         {
+            if (IsDisposed) return;
             if (InvokeRequired)
             {
-                BeginInvoke(new Action(() => StreamToken(messageId, token)));
+                if (IsHandleCreated)
+                {
+                    BeginInvoke(new Action(() => StreamToken(messageId, token)));
+                }
                 return;
             }
 
@@ -83,6 +87,7 @@ namespace ZeroUI.WinForms.Documents
                                     after = true;
                                 }
                             }
+                            bubble.Invalidate();
                         }
                     }
                 }
@@ -106,9 +111,13 @@ namespace ZeroUI.WinForms.Documents
         /// </summary>
         public void CompleteStreaming(string messageId)
         {
+            if (IsDisposed) return;
             if (InvokeRequired)
             {
-                Invoke(new Action(() => CompleteStreaming(messageId)));
+                if (IsHandleCreated)
+                {
+                    BeginInvoke(new Action(() => CompleteStreaming(messageId)));
+                }
                 return;
             }
 
@@ -158,6 +167,7 @@ namespace ZeroUI.WinForms.Documents
                                 if (after) c.Top += delta;
                                 else if (c == bubble) after = true;
                             }
+                            bubble.Invalidate();
                         }
                     }
                     finally
@@ -186,9 +196,13 @@ namespace ZeroUI.WinForms.Documents
 
         public void ShowThinkingIndicator(string text = "Đang phân tích...")
         {
+            if (IsDisposed) return;
             if (InvokeRequired)
             {
-                Invoke(new Action(() => ShowThinkingIndicator(text)));
+                if (IsHandleCreated)
+                {
+                    BeginInvoke(new Action(() => ShowThinkingIndicator(text)));
+                }
                 return;
             }
 
@@ -260,9 +274,13 @@ namespace ZeroUI.WinForms.Documents
 
         public void HideThinkingIndicator()
         {
+            if (IsDisposed) return;
             if (InvokeRequired)
             {
-                Invoke(new Action(HideThinkingIndicator));
+                if (IsHandleCreated)
+                {
+                    BeginInvoke(new Action(HideThinkingIndicator));
+                }
                 return;
             }
 

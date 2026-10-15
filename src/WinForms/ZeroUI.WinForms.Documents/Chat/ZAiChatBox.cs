@@ -268,7 +268,8 @@ namespace ZeroUI.WinForms.Documents
                 BackColor = Color.FromArgb(17, 24, 39),
                 Padding = new Padding(10, 6, 10, 0),
                 WrapContents = true,
-                AutoScroll = false
+                AutoScroll = false,
+                Visible = false
             };
 
             // 4. Messages Container (Dock Fill with Double Buffering & WS_CLIPCHILDREN)
@@ -417,9 +418,17 @@ namespace ZeroUI.WinForms.Documents
             get => _isGenerating;
             set
             {
+                if (IsDisposed) return;
                 if (InvokeRequired)
                 {
-                    Invoke(new Action(() => IsGenerating = value));
+                    if (IsHandleCreated)
+                    {
+                        BeginInvoke(new Action(() => IsGenerating = value));
+                    }
+                    else
+                    {
+                        _isGenerating = value;
+                    }
                     return;
                 }
                 _isGenerating = value;
@@ -440,9 +449,17 @@ namespace ZeroUI.WinForms.Documents
             get => _streamingState;
             set
             {
+                if (IsDisposed) return;
                 if (InvokeRequired)
                 {
-                    Invoke(new Action(() => StreamingState = value));
+                    if (IsHandleCreated)
+                    {
+                        BeginInvoke(new Action(() => StreamingState = value));
+                    }
+                    else
+                    {
+                        _streamingState = value;
+                    }
                     return;
                 }
                 _streamingState = value;

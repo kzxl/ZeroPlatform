@@ -226,14 +226,12 @@ namespace ZeroUI.WinForms.Documents
                 _toolbarItems.Add(item);
             }
 
-            if (options.PromptSuggestions.Count > 0)
+            _promptSuggestions.Clear();
+            foreach (var s in options.PromptSuggestions)
             {
-                _promptSuggestions.Clear();
-                foreach (var s in options.PromptSuggestions)
-                {
-                    _promptSuggestions.Add(s);
-                }
+                _promptSuggestions.Add(s);
             }
+            RebuildPromptSuggestions();
 
             UpdateContextBarUI();
             return this;
@@ -244,6 +242,15 @@ namespace ZeroUI.WinForms.Documents
             _sessionContext.SetParameter(key, value, displayTagLabel);
             UpdateContextBarUI();
             return this;
+        }
+
+        private sealed class FlowStreamState
+        {
+            public readonly object SyncRoot = new object();
+            public readonly System.Text.StringBuilder PendingTokens = new System.Text.StringBuilder();
+            public string? PendingStatusText;
+            public bool UiFlushScheduled;
+            public ChatMessage? AssistantMessage;
         }
 
         /// <summary>
@@ -280,7 +287,7 @@ namespace ZeroUI.WinForms.Documents
             IsGenerating = true;
             ShowThinkingIndicator("Đang xử lý...");
 
-            ChatMessage? assistantMsg = null;
+            var streamState = new FlowStreamState();
 
             try
             {
@@ -289,7 +296,7 @@ namespace ZeroUI.WinForms.Documents
                 {
                     result = await _flowProvider.StreamAsync(
                         request,
-                        chunk => OnFlowStreamChunkReceived(chunk, ref assistantMsg),
+                        chunk => OnFlowStreamChunkReceived(chunk, streamState),
                         token);
                 }
                 else
@@ -299,53 +306,57 @@ namespace ZeroUI.WinForms.Documents
 
                 if (IsDisposed) return result;
 
-                HideThinkingIndicator();
-
-                if (assistantMsg == null)
+                if (InvokeRequired)
                 {
-                    assistantMsg = AppendAssistantMessage(result.Output ?? string.Empty);
-                }
-                else if (!string.IsNullOrWhiteSpace(result.Output))
-                {
-                    assistantMsg.Content = result.Output;
-                }
-
-                assistantMsg.IsStreaming = false;
-                assistantMsg.Reasoning = result.Reasoning;
-                assistantMsg.LatencyMs = result.DurationMs > 0 ? result.DurationMs : null;
-
-                assistantMsg.Actions.Clear();
-                if (result.Actions != null && result.Actions.Count > 0)
-                {
-                    assistantMsg.Actions.AddRange(result.Actions);
-                }
-
-                assistantMsg.ContextData.Clear();
-                if (result.ContextUpdates != null && result.ContextUpdates.Count > 0)
-                {
-                    foreach (var kv in result.ContextUpdates)
+                    if (IsHandleCreated)
                     {
-                        assistantMsg.ContextData[kv.Key] = kv.Value;
+                        var tcs = new TaskCompletionSource<bool>();
+                        BeginInvoke(new Action(() =>
+                        {
+                            try
+                            {
+                                FinalizeFlowExecutionOnUiThread(result, streamState);
+                                tcs.TrySetResult(true);
+                            }
+                            catch (Exception ex)
+                            {
+                                tcs.TrySetException(ex);
+                            }
+                        }));
+                        await tcs.Task;
                     }
-                    _sessionContext.MergeContextUpdates(result.ContextUpdates);
-                    UpdateContextBarUI();
-                    ContextStateChanged?.Invoke(this, _sessionContext);
+                }
+                else
+                {
+                    FinalizeFlowExecutionOnUiThread(result, streamState);
                 }
 
-                RebuildSingleBubble(assistantMsg.Id);
-                FlowCompleted?.Invoke(this, result);
                 return result;
             }
             catch (Exception ex)
             {
                 if (!IsDisposed)
                 {
-                    HideThinkingIndicator();
-                    if (assistantMsg == null)
+                    Action handleErr = () =>
                     {
-                        AppendAssistantMessage($"⚠️ {ex.Message}");
+                        if (IsDisposed) return;
+                        FlushFlowStreamStateOnUiThread(streamState);
+                        HideThinkingIndicator();
+                        if (streamState.AssistantMessage == null)
+                        {
+                            AppendAssistantMessage($"⚠️ {ex.Message}");
+                        }
+                        StreamingState = ChatStreamingState.Error;
+                    };
+
+                    if (InvokeRequired)
+                    {
+                        if (IsHandleCreated) BeginInvoke(handleErr);
                     }
-                    StreamingState = ChatStreamingState.Error;
+                    else
+                    {
+                        handleErr();
+                    }
                 }
                 return null;
             }
@@ -362,42 +373,123 @@ namespace ZeroUI.WinForms.Documents
             }
         }
 
-        private void OnFlowStreamChunkReceived(ChatStreamChunk chunk, ref ChatMessage? assistantMsg)
+        private void OnFlowStreamChunkReceived(ChatStreamChunk chunk, FlowStreamState state)
+        {
+            if (IsDisposed || chunk == null) return;
+
+            lock (state.SyncRoot)
+            {
+                switch (chunk.EventType)
+                {
+                    case "status":
+                        if (!string.IsNullOrWhiteSpace(chunk.StatusText))
+                        {
+                            state.PendingStatusText = chunk.StatusText;
+                        }
+                        break;
+
+                    case "token":
+                        if (!string.IsNullOrEmpty(chunk.Token))
+                        {
+                            state.PendingTokens.Append(chunk.Token);
+                        }
+                        break;
+                }
+
+                if (InvokeRequired)
+                {
+                    if (!state.UiFlushScheduled && IsHandleCreated && !IsDisposed)
+                    {
+                        state.UiFlushScheduled = true;
+                        BeginInvoke(new Action(() => FlushFlowStreamStateOnUiThread(state)));
+                    }
+                    return;
+                }
+            }
+
+            FlushFlowStreamStateOnUiThread(state);
+        }
+
+        private void FlushFlowStreamStateOnUiThread(FlowStreamState state)
         {
             if (IsDisposed) return;
 
-            if (InvokeRequired)
+            string? statusText;
+            string tokenBatch;
+
+            lock (state.SyncRoot)
             {
-                ChatMessage? captured = assistantMsg;
-                BeginInvoke(new Action(() =>
+                statusText = state.PendingStatusText;
+                state.PendingStatusText = null;
+
+                tokenBatch = state.PendingTokens.Length > 0
+                    ? state.PendingTokens.ToString()
+                    : string.Empty;
+                state.PendingTokens.Clear();
+
+                state.UiFlushScheduled = false;
+            }
+
+            if (state.AssistantMessage == null && !string.IsNullOrWhiteSpace(statusText) && string.IsNullOrEmpty(tokenBatch))
+            {
+                ShowThinkingIndicator($"{statusText}...");
+            }
+
+            if (!string.IsNullOrEmpty(tokenBatch))
+            {
+                if (state.AssistantMessage == null)
                 {
-                    OnFlowStreamChunkReceived(chunk, ref captured);
-                }));
-                return;
+                    HideThinkingIndicator();
+                    state.AssistantMessage = AppendAssistantMessage(string.Empty);
+                    StreamingState = ChatStreamingState.Streaming;
+                }
+                StreamToken(state.AssistantMessage.Id, tokenBatch);
             }
+        }
 
-            switch (chunk.EventType)
+        private void FinalizeFlowExecutionOnUiThread(ChatFlowResult result, FlowStreamState streamState)
+        {
+            if (IsDisposed) return;
+
+            // Ensure any buffered tokens are flushed into the single message bubble first
+            FlushFlowStreamStateOnUiThread(streamState);
+            HideThinkingIndicator();
+
+            var assistantMsg = streamState.AssistantMessage;
+            if (assistantMsg == null)
             {
-                case "status":
-                    if (assistantMsg == null && !string.IsNullOrWhiteSpace(chunk.StatusText))
-                    {
-                        ShowThinkingIndicator($"{chunk.StatusText}...");
-                    }
-                    break;
-
-                case "token":
-                    if (!string.IsNullOrEmpty(chunk.Token))
-                    {
-                        if (assistantMsg == null)
-                        {
-                            HideThinkingIndicator();
-                            assistantMsg = AppendAssistantMessage(string.Empty);
-                            StreamingState = ChatStreamingState.Streaming;
-                        }
-                        StreamToken(assistantMsg.Id, chunk.Token!);
-                    }
-                    break;
+                assistantMsg = AppendAssistantMessage(result.Output ?? string.Empty);
+                streamState.AssistantMessage = assistantMsg;
             }
+            else if (!string.IsNullOrWhiteSpace(result.Output))
+            {
+                assistantMsg.Content = result.Output;
+            }
+
+            assistantMsg.IsStreaming = false;
+            assistantMsg.Reasoning = result.Reasoning;
+            assistantMsg.LatencyMs = result.DurationMs > 0 ? result.DurationMs : null;
+
+            assistantMsg.Actions.Clear();
+            if (result.Actions != null && result.Actions.Count > 0)
+            {
+                assistantMsg.Actions.AddRange(result.Actions);
+            }
+
+            assistantMsg.ContextData.Clear();
+            if (result.ContextUpdates != null && result.ContextUpdates.Count > 0)
+            {
+                foreach (var kv in result.ContextUpdates)
+                {
+                    assistantMsg.ContextData[kv.Key] = kv.Value;
+                }
+                _sessionContext.MergeContextUpdates(result.ContextUpdates);
+                UpdateContextBarUI();
+                ContextStateChanged?.Invoke(this, _sessionContext);
+            }
+
+            RebuildSingleBubble(assistantMsg.Id);
+            FlowCompleted?.Invoke(this, result);
         }
 
         public void CancelActiveFlowRequest()

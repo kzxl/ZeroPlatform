@@ -33,8 +33,25 @@ namespace ZeroUI.WinForms.Documents
 
         public void RebuildPromptSuggestions()
         {
+            if (IsDisposed) return;
+            if (InvokeRequired)
+            {
+                if (IsHandleCreated)
+                {
+                    BeginInvoke(new Action(RebuildPromptSuggestions));
+                }
+                return;
+            }
+
             _suggestionsPanel.SuspendLayout();
             _suggestionsPanel.Controls.Clear();
+
+            if (_promptSuggestions == null || _promptSuggestions.Count == 0)
+            {
+                _suggestionsPanel.Visible = false;
+                _suggestionsPanel.ResumeLayout();
+                return;
+            }
 
             bool isDark = ZeroTheme.IsDark;
             var chipBg = isDark ? Color.FromArgb(28, 38, 56) : Color.FromArgb(255, 255, 255);
@@ -82,6 +99,7 @@ namespace ZeroUI.WinForms.Documents
                 _suggestionsPanel.Controls.Add(chip);
             }
 
+            _suggestionsPanel.Visible = _suggestionsPanel.Controls.Count > 0;
             _suggestionsPanel.ResumeLayout();
         }
 
