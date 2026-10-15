@@ -370,6 +370,521 @@ namespace ZeroData.Core
             return result;
         }
 
+        /// <summary>
+        /// Performs an O(N + M) two-pointer monotonic Time-Series As-Of Join (<c>ASOF JOIN</c>).
+        /// Matches each row in this DataFrame at timestamp <c>t_L</c> with the most recent row in <paramref name="right"/>
+        /// at timestamp <c>t_R &lt;= t_L</c> within <paramref name="maxToleranceTicks"/>, optionally partitioned by <paramref name="byKeyColumn"/>.
+        /// Copies all left columns and non-duplicate right columns into the resulting DataFrame.
+        /// </summary>
+        public DataFrame JoinAsOf(
+            DataFrame right,
+            string timeColumn,
+            long maxToleranceTicks = long.MaxValue,
+            string? byKeyColumn = null)
+        {
+            if (right == null) throw new ArgumentNullException(nameof(right));
+            if (string.IsNullOrEmpty(timeColumn)) throw new ArgumentNullException(nameof(timeColumn));
+            if (maxToleranceTicks < 0) throw new ArgumentOutOfRangeException(nameof(maxToleranceTicks), "maxToleranceTicks must be non-negative.");
+
+            var lTimeCol = GetColumn(timeColumn);
+            var rTimeCol = right.GetColumn(timeColumn);
+
+            List<int> rightIndices;
+            bool isFloatingTime = lTimeCol.DataType == typeof(double) || lTimeCol.DataType == typeof(float) ||
+                                  rTimeCol.DataType == typeof(double) || rTimeCol.DataType == typeof(float);
+
+            if (isFloatingTime)
+            {
+                double[] lTimes = ExtractDoubleTimestamps(lTimeCol, _rowCount);
+                double[] rTimes = ExtractDoubleTimestamps(rTimeCol, right._rowCount);
+                double maxTol = maxToleranceTicks == long.MaxValue ? double.PositiveInfinity : (double)maxToleranceTicks;
+
+                if (string.IsNullOrEmpty(byKeyColumn))
+                {
+                    rightIndices = JoinAsOfLinearDouble(lTimeCol, rTimeCol, lTimes, rTimes, _rowCount, right._rowCount, maxTol);
+                }
+                else
+                {
+                    var lKeyCol = GetColumn(byKeyColumn!);
+                    var rKeyCol = right.GetColumn(byKeyColumn!);
+                    rightIndices = JoinAsOfByKeyDouble(lTimeCol, rTimeCol, lTimes, rTimes, lKeyCol, rKeyCol, _rowCount, right._rowCount, maxTol);
+                }
+            }
+            else
+            {
+                long[] lTimes = ExtractLongTimestamps(lTimeCol, _rowCount);
+                long[] rTimes = ExtractLongTimestamps(rTimeCol, right._rowCount);
+
+                if (string.IsNullOrEmpty(byKeyColumn))
+                {
+                    rightIndices = JoinAsOfLinearLong(lTimeCol, rTimeCol, lTimes, rTimes, _rowCount, right._rowCount, maxToleranceTicks);
+                }
+                else
+                {
+                    var lKeyCol = GetColumn(byKeyColumn!);
+                    var rKeyCol = right.GetColumn(byKeyColumn!);
+                    rightIndices = JoinAsOfByKeyLong(lTimeCol, rTimeCol, lTimes, rTimes, lKeyCol, rKeyCol, _rowCount, right._rowCount, maxToleranceTicks);
+                }
+            }
+
+            var resultCols = new List<IDataColumn>(ColumnCount + right.ColumnCount);
+            for (int i = 0; i < _columnOrder.Count; i++)
+            {
+                string colName = _columnOrder[i];
+                resultCols.Add(_columns[colName].Clone());
+            }
+
+            for (int i = 0; i < right._columnOrder.Count; i++)
+            {
+                string rColName = right._columnOrder[i];
+                if (_columns.ContainsKey(rColName))
+                {
+                    continue;
+                }
+
+                resultCols.Add(GatherColumn(right._columns[rColName], rColName, rightIndices));
+            }
+
+            return new DataFrame(resultCols.ToArray());
+        }
+
+        /// <summary>
+        /// Performs an O(N + M) two-pointer monotonic Time-Series As-Of Join with a <see cref="TimeSpan"/> tolerance.
+        /// </summary>
+        public DataFrame JoinAsOf(
+            DataFrame right,
+            string timeColumn,
+            TimeSpan maxTolerance,
+            string? byKeyColumn = null)
+            => JoinAsOf(right, timeColumn, maxTolerance.Ticks, byKeyColumn);
+
+        private sealed class AsOfKeyCursor
+        {
+            public readonly List<int> RightRows = new List<int>(4);
+            public int Cursor;
+            public int BestRightRow = -1;
+        }
+
+        private static long[] ExtractLongTimestamps(IDataColumn col, int count)
+        {
+            var res = new long[count];
+            if (col is DataColumn<long> cLng)
+            {
+                Array.Copy(cLng.RawData, res, count);
+                return res;
+            }
+            if (col is DataColumn<DateTime> cDt)
+            {
+                var raw = cDt.RawData;
+                for (int i = 0; i < count; i++) res[i] = raw[i].Ticks;
+                return res;
+            }
+            if (col is DataColumn<int> cInt)
+            {
+                var raw = cInt.RawData;
+                for (int i = 0; i < count; i++) res[i] = raw[i];
+                return res;
+            }
+
+            for (int i = 0; i < count; i++)
+            {
+                if (col.IsNull(i)) continue;
+                var val = col.GetValue(i);
+                if (val is DateTime dt) res[i] = dt.Ticks;
+                else if (val != null) res[i] = Convert.ToInt64(val, CultureInfo.InvariantCulture);
+            }
+            return res;
+        }
+
+        private static double[] ExtractDoubleTimestamps(IDataColumn col, int count)
+        {
+            var res = new double[count];
+            if (col is DataColumn<double> cDbl)
+            {
+                Array.Copy(cDbl.RawData, res, count);
+                return res;
+            }
+            if (col is DataColumn<float> cFlt)
+            {
+                var raw = cFlt.RawData;
+                for (int i = 0; i < count; i++) res[i] = raw[i];
+                return res;
+            }
+            if (col is DataColumn<long> cLng)
+            {
+                var raw = cLng.RawData;
+                for (int i = 0; i < count; i++) res[i] = raw[i];
+                return res;
+            }
+            if (col is DataColumn<DateTime> cDt)
+            {
+                var raw = cDt.RawData;
+                for (int i = 0; i < count; i++) res[i] = raw[i].Ticks;
+                return res;
+            }
+
+            for (int i = 0; i < count; i++)
+            {
+                if (col.IsNull(i)) continue;
+                var val = col.GetValue(i);
+                if (val is DateTime dt) res[i] = dt.Ticks;
+                else if (val != null) res[i] = Convert.ToDouble(val, CultureInfo.InvariantCulture);
+            }
+            return res;
+        }
+
+        private static List<int> JoinAsOfLinearLong(
+            IDataColumn lTimeCol,
+            IDataColumn rTimeCol,
+            long[] lTimes,
+            long[] rTimes,
+            int leftCount,
+            int rightCount,
+            long maxToleranceTicks)
+        {
+            var rightIndices = new List<int>(leftCount);
+            bool lHasNulls = lTimeCol.HasNulls;
+            bool rHasNulls = rTimeCol.HasNulls;
+            int rCursor = 0;
+            int bestR = -1;
+
+            for (int l = 0; l < leftCount; l++)
+            {
+                if (lHasNulls && lTimeCol.IsNull(l))
+                {
+                    rightIndices.Add(-1);
+                    continue;
+                }
+
+                long tL = lTimes[l];
+                while (rCursor < rightCount)
+                {
+                    if (rHasNulls && rTimeCol.IsNull(rCursor))
+                    {
+                        rCursor++;
+                        continue;
+                    }
+
+                    if (rTimes[rCursor] <= tL)
+                    {
+                        bestR = rCursor;
+                        rCursor++;
+                    }
+                    else
+                    {
+                        break;
+                    }
+                }
+
+                if (bestR >= 0 && (ulong)(tL - rTimes[bestR]) <= (ulong)maxToleranceTicks)
+                {
+                    rightIndices.Add(bestR);
+                }
+                else
+                {
+                    rightIndices.Add(-1);
+                }
+            }
+
+            return rightIndices;
+        }
+
+        private static List<int> JoinAsOfLinearDouble(
+            IDataColumn lTimeCol,
+            IDataColumn rTimeCol,
+            double[] lTimes,
+            double[] rTimes,
+            int leftCount,
+            int rightCount,
+            double maxTolerance)
+        {
+            var rightIndices = new List<int>(leftCount);
+            bool lHasNulls = lTimeCol.HasNulls;
+            bool rHasNulls = rTimeCol.HasNulls;
+            int rCursor = 0;
+            int bestR = -1;
+
+            for (int l = 0; l < leftCount; l++)
+            {
+                if (lHasNulls && lTimeCol.IsNull(l))
+                {
+                    rightIndices.Add(-1);
+                    continue;
+                }
+
+                double tL = lTimes[l];
+                while (rCursor < rightCount)
+                {
+                    if (rHasNulls && rTimeCol.IsNull(rCursor))
+                    {
+                        rCursor++;
+                        continue;
+                    }
+
+                    if (rTimes[rCursor] <= tL)
+                    {
+                        bestR = rCursor;
+                        rCursor++;
+                    }
+                    else
+                    {
+                        break;
+                    }
+                }
+
+                if (bestR >= 0 && (tL - rTimes[bestR]) <= maxTolerance)
+                {
+                    rightIndices.Add(bestR);
+                }
+                else
+                {
+                    rightIndices.Add(-1);
+                }
+            }
+
+            return rightIndices;
+        }
+
+        private static List<int> JoinAsOfByKeyLong(
+            IDataColumn lTimeCol,
+            IDataColumn rTimeCol,
+            long[] lTimes,
+            long[] rTimes,
+            IDataColumn lKeyCol,
+            IDataColumn rKeyCol,
+            int leftCount,
+            int rightCount,
+            long maxToleranceTicks)
+        {
+            if (lKeyCol is DataColumn<string> lStr && rKeyCol is DataColumn<string> rStr)
+                return JoinAsOfByKeyLongTyped(lTimeCol, rTimeCol, lTimes, rTimes, lStr, rStr, leftCount, rightCount, maxToleranceTicks, StringComparer.Ordinal);
+            if (lKeyCol is DataColumn<int> lInt && rKeyCol is DataColumn<int> rInt)
+                return JoinAsOfByKeyLongTyped(lTimeCol, rTimeCol, lTimes, rTimes, lInt, rInt, leftCount, rightCount, maxToleranceTicks, null);
+            if (lKeyCol is DataColumn<long> lLng && rKeyCol is DataColumn<long> rLng)
+                return JoinAsOfByKeyLongTyped(lTimeCol, rTimeCol, lTimes, rTimes, lLng, rLng, leftCount, rightCount, maxToleranceTicks, null);
+
+            var groups = new Dictionary<object, AsOfKeyCursor>();
+            bool rTimeNulls = rTimeCol.HasNulls;
+            for (int r = 0; r < rightCount; r++)
+            {
+                if ((rTimeNulls && rTimeCol.IsNull(r)) || rKeyCol.IsNull(r)) continue;
+                var key = rKeyCol.GetValue(r);
+                if (key == null) continue;
+
+                if (!groups.TryGetValue(key, out var bucket))
+                {
+                    bucket = new AsOfKeyCursor();
+                    groups[key] = bucket;
+                }
+                bucket.RightRows.Add(r);
+            }
+
+            var rightIndices = new List<int>(leftCount);
+            bool lTimeNulls = lTimeCol.HasNulls;
+            for (int l = 0; l < leftCount; l++)
+            {
+                if ((lTimeNulls && lTimeCol.IsNull(l)) || lKeyCol.IsNull(l))
+                {
+                    rightIndices.Add(-1);
+                    continue;
+                }
+
+                var key = lKeyCol.GetValue(l);
+                if (key == null || !groups.TryGetValue(key, out var bucket))
+                {
+                    rightIndices.Add(-1);
+                    continue;
+                }
+
+                long tL = lTimes[l];
+                var rows = bucket.RightRows;
+                while (bucket.Cursor < rows.Count)
+                {
+                    int rIdx = rows[bucket.Cursor];
+                    if (rTimes[rIdx] <= tL)
+                    {
+                        bucket.BestRightRow = rIdx;
+                        bucket.Cursor++;
+                    }
+                    else
+                    {
+                        break;
+                    }
+                }
+
+                int bestR = bucket.BestRightRow;
+                if (bestR >= 0 && (ulong)(tL - rTimes[bestR]) <= (ulong)maxToleranceTicks)
+                {
+                    rightIndices.Add(bestR);
+                }
+                else
+                {
+                    rightIndices.Add(-1);
+                }
+            }
+
+            return rightIndices;
+        }
+
+        private static List<int> JoinAsOfByKeyLongTyped<TKey>(
+            IDataColumn lTimeCol,
+            IDataColumn rTimeCol,
+            long[] lTimes,
+            long[] rTimes,
+            DataColumn<TKey> lKeyCol,
+            DataColumn<TKey> rKeyCol,
+            int leftCount,
+            int rightCount,
+            long maxToleranceTicks,
+            IEqualityComparer<TKey>? comparer)
+            where TKey : notnull
+        {
+            var groups = comparer != null
+                ? new Dictionary<TKey, AsOfKeyCursor>(comparer)
+                : new Dictionary<TKey, AsOfKeyCursor>();
+
+            var rKeys = rKeyCol.RawData;
+            bool rTimeNulls = rTimeCol.HasNulls;
+            bool rKeyNulls = rKeyCol.HasNulls;
+
+            for (int r = 0; r < rightCount; r++)
+            {
+                if ((rTimeNulls && rTimeCol.IsNull(r)) || (rKeyNulls && rKeyCol.IsNull(r))) continue;
+                TKey key = rKeys[r];
+                if (key == null) continue;
+
+                if (!groups.TryGetValue(key, out var bucket))
+                {
+                    bucket = new AsOfKeyCursor();
+                    groups[key] = bucket;
+                }
+                bucket.RightRows.Add(r);
+            }
+
+            var rightIndices = new List<int>(leftCount);
+            var lKeys = lKeyCol.RawData;
+            bool lTimeNulls = lTimeCol.HasNulls;
+            bool lKeyNulls = lKeyCol.HasNulls;
+
+            for (int l = 0; l < leftCount; l++)
+            {
+                if ((lTimeNulls && lTimeCol.IsNull(l)) || (lKeyNulls && lKeyCol.IsNull(l)))
+                {
+                    rightIndices.Add(-1);
+                    continue;
+                }
+
+                TKey key = lKeys[l];
+                if (key == null || !groups.TryGetValue(key, out var bucket))
+                {
+                    rightIndices.Add(-1);
+                    continue;
+                }
+
+                long tL = lTimes[l];
+                var rows = bucket.RightRows;
+                while (bucket.Cursor < rows.Count)
+                {
+                    int rIdx = rows[bucket.Cursor];
+                    if (rTimes[rIdx] <= tL)
+                    {
+                        bucket.BestRightRow = rIdx;
+                        bucket.Cursor++;
+                    }
+                    else
+                    {
+                        break;
+                    }
+                }
+
+                int bestR = bucket.BestRightRow;
+                if (bestR >= 0 && (ulong)(tL - rTimes[bestR]) <= (ulong)maxToleranceTicks)
+                {
+                    rightIndices.Add(bestR);
+                }
+                else
+                {
+                    rightIndices.Add(-1);
+                }
+            }
+
+            return rightIndices;
+        }
+
+        private static List<int> JoinAsOfByKeyDouble(
+            IDataColumn lTimeCol,
+            IDataColumn rTimeCol,
+            double[] lTimes,
+            double[] rTimes,
+            IDataColumn lKeyCol,
+            IDataColumn rKeyCol,
+            int leftCount,
+            int rightCount,
+            double maxTolerance)
+        {
+            var groups = new Dictionary<object, AsOfKeyCursor>();
+            bool rTimeNulls = rTimeCol.HasNulls;
+            for (int r = 0; r < rightCount; r++)
+            {
+                if ((rTimeNulls && rTimeCol.IsNull(r)) || rKeyCol.IsNull(r)) continue;
+                var key = rKeyCol.GetValue(r);
+                if (key == null) continue;
+
+                if (!groups.TryGetValue(key, out var bucket))
+                {
+                    bucket = new AsOfKeyCursor();
+                    groups[key] = bucket;
+                }
+                bucket.RightRows.Add(r);
+            }
+
+            var rightIndices = new List<int>(leftCount);
+            bool lTimeNulls = lTimeCol.HasNulls;
+            for (int l = 0; l < leftCount; l++)
+            {
+                if ((lTimeNulls && lTimeCol.IsNull(l)) || lKeyCol.IsNull(l))
+                {
+                    rightIndices.Add(-1);
+                    continue;
+                }
+
+                var key = lKeyCol.GetValue(l);
+                if (key == null || !groups.TryGetValue(key, out var bucket))
+                {
+                    rightIndices.Add(-1);
+                    continue;
+                }
+
+                double tL = lTimes[l];
+                var rows = bucket.RightRows;
+                while (bucket.Cursor < rows.Count)
+                {
+                    int rIdx = rows[bucket.Cursor];
+                    if (rTimes[rIdx] <= tL)
+                    {
+                        bucket.BestRightRow = rIdx;
+                        bucket.Cursor++;
+                    }
+                    else
+                    {
+                        break;
+                    }
+                }
+
+                int bestR = bucket.BestRightRow;
+                if (bestR >= 0 && (tL - rTimes[bestR]) <= maxTolerance)
+                {
+                    rightIndices.Add(bestR);
+                }
+                else
+                {
+                    rightIndices.Add(-1);
+                }
+            }
+
+            return rightIndices;
+        }
+
         #endregion
 
         #region CSV Export & Import
