@@ -1,5 +1,4 @@
 using System;
-using System.Collections.Concurrent;
 using System.Collections.Generic;
 using System.Runtime.CompilerServices;
 using System.Runtime.InteropServices;
@@ -19,7 +18,7 @@ namespace ZeroPrimitives.Memory
         private readonly int _blocksPerSlab;
         private readonly int _alignment;
         private readonly bool _canGrow;
-        private readonly ConcurrentStack<IntPtr> _freePointers = new();
+        private readonly ZeroPoolStack<IntPtr> _freePointers;
         private readonly List<IntPtr> _rawSlabPointers = new();
         private readonly List<int> _rawSlabSizes = new();
         private readonly object _growLock = new();
@@ -100,6 +99,7 @@ namespace ZeroPrimitives.Memory
             _alignment = alignment;
             _blocksPerSlab = Math.Max(1, Math.Min(initialSlabs > 0 ? initialSlabs : 16, maxSlabs));
             _canGrow = maxSlabs > initialSlabs;
+            _freePointers = new ZeroPoolStack<IntPtr>(Math.Max(16, maxSlabs), canGrow: true);
 
             // Compute block size rounded up to the required alignment boundary
             _alignedBlockSize = (slabSize + (alignment - 1)) & ~(alignment - 1);

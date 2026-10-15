@@ -151,6 +151,21 @@ namespace ZeroPrimitives.Memory
             Length = activeLength;
         }
 
+        internal void Reset(byte* pointer, int activeLength)
+        {
+            _pointer = pointer;
+            Volatile.Write(ref _disposed, 0);
+            Length = activeLength;
+        }
+
+        [MethodImpl(MethodImplOptions.AggressiveInlining)]
+        internal byte* DetachPointer()
+        {
+            byte* ptr = _pointer;
+            _pointer = null;
+            return ptr;
+        }
+
         [MethodImpl(MethodImplOptions.AggressiveInlining)]
         internal byte* DangerousGetPointer() => _pointer;
 

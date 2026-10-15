@@ -1,5 +1,4 @@
 using System;
-using System.Collections.Concurrent;
 using System.Runtime.CompilerServices;
 using System.Runtime.InteropServices;
 using System.Threading;
@@ -27,7 +26,8 @@ namespace ZeroPrimitives.Memory
         /// </summary>
         public static NativeMemoryPool Shared => _shared;
 
-        private readonly ConcurrentStack<NativeMemoryBlock>[] _buckets;
+        private readonly ZeroPoolStack<IntPtr>[] _buckets;
+        private readonly ZeroPoolStack<NativeMemoryBlock>[] _blockShells;
         private readonly int[] _bucketSizes;
         private readonly int _maxPerBucket;
         private int _disposed;
@@ -47,12 +47,14 @@ namespace ZeroPrimitives.Memory
                 throw new ArgumentOutOfRangeException(nameof(maxPerBucket), "Max per bucket must be positive.");
 
             _maxPerBucket = maxPerBucket;
-            _buckets = new ConcurrentStack<NativeMemoryBlock>[NumBuckets];
+            _buckets = new ZeroPoolStack<IntPtr>[NumBuckets];
+            _blockShells = new ZeroPoolStack<NativeMemoryBlock>[NumBuckets];
             _bucketSizes = new int[NumBuckets];
 
             for (int i = 0; i < NumBuckets; i++)
             {
-                _buckets[i] = new ConcurrentStack<NativeMemoryBlock>();
+                _buckets[i] = new ZeroPoolStack<IntPtr>(maxPerBucket, canGrow: false, maxCapacity: maxPerBucket);
+                _blockShells[i] = new ZeroPoolStack<NativeMemoryBlock>(maxPerBucket, canGrow: false, maxCapacity: maxPerBucket);
                 _bucketSizes[i] = 1 << (MinBucketShift + i);
             }
         }
@@ -104,6 +106,39 @@ namespace ZeroPrimitives.Memory
         }
 
         /// <summary>
+        /// Rents a zero-allocation value-type <see cref="NativeMemoryLease"/> with at least the specified minimum byte capacity.
+        /// When disposed, the unmanaged memory returns directly to this pool with zero GC heap allocations.
+        /// </summary>
+        /// <param name="minSize">Minimum required payload size in bytes.</param>
+        /// <returns>A value-type <see cref="NativeMemoryLease"/> wrapping the unmanaged buffer.</returns>
+        [MethodImpl(MethodImplOptions.AggressiveInlining)]
+        public NativeMemoryLease RentLease(int minSize)
+        {
+            ThrowIfDisposed();
+
+            if (minSize <= 0)
+                throw new ArgumentOutOfRangeException(nameof(minSize), "Minimum bytes must be positive.");
+
+            if (minSize > MaxBucketSize)
+            {
+                NativeMemoryTracker.TrackAlloc(minSize);
+                IntPtr unpooledPtr = AllocateRaw(minSize);
+                return new NativeMemoryLease(this, unpooledPtr, minSize, minSize);
+            }
+
+            int bucketIndex = SelectBucketIndex(minSize);
+            int capacity = _bucketSizes[bucketIndex];
+
+            if (!_buckets[bucketIndex].TryPop(out IntPtr ptr))
+            {
+                NativeMemoryTracker.TrackAlloc(capacity);
+                ptr = AllocateRaw(capacity);
+            }
+
+            return new NativeMemoryLease(this, ptr, minSize, capacity);
+        }
+
+        /// <summary>
         /// Rents an off-heap memory block with at least the specified minimum byte capacity.
         /// When disposed, the block automatically returns to this pool.
         /// </summary>
@@ -127,56 +162,85 @@ namespace ZeroPrimitives.Memory
             int bucketIndex = SelectBucketIndex(minimumBytes);
             int capacity = _bucketSizes[bucketIndex];
 
-            if (_buckets[bucketIndex].TryPop(out var block))
+            if (!_buckets[bucketIndex].TryPop(out IntPtr ptr))
             {
-                block.Reset(minimumBytes);
+                NativeMemoryTracker.TrackAlloc(capacity);
+                ptr = AllocateRaw(capacity);
+            }
+
+            if (_blockShells[bucketIndex].TryPop(out var block))
+            {
+                block.Reset((byte*)ptr, minimumBytes);
                 return block;
             }
 
-            // Allocate new native unmanaged block
-            NativeMemoryTracker.TrackAlloc(capacity);
-
-#if NET8_0_OR_GREATER
-            byte* ptr = (byte*)NativeMemory.Alloc((nuint)capacity);
-#else
-            byte* ptr = (byte*)Marshal.AllocHGlobal(capacity).ToPointer();
-#endif
-            var newBlock = new NativeMemoryBlock(
-                pointer: ptr,
+            return new NativeMemoryBlock(
+                pointer: (byte*)ptr,
                 capacity: capacity,
                 length: minimumBytes,
                 recycleCallback: ReturnBlock,
                 ownsMemory: false
             );
+        }
 
-            return newBlock;
+        [MethodImpl(MethodImplOptions.AggressiveInlining)]
+        internal void ReturnLease(IntPtr pointer, int capacity)
+        {
+            if (pointer == IntPtr.Zero)
+                return;
+
+            if (IsDisposed || capacity > MaxBucketSize)
+            {
+                FreeRaw(pointer, capacity);
+                return;
+            }
+
+            int bucketIndex = SelectBucketIndex(capacity);
+            if (!_buckets[bucketIndex].TryPush(pointer))
+            {
+                FreeRaw(pointer, capacity);
+            }
         }
 
         private void ReturnBlock(NativeMemoryBlock block)
         {
-            if (IsDisposed)
+            byte* rawPtr = block.DetachPointer();
+            int capacity = block.Capacity;
+
+            if (rawPtr != null)
             {
-                FreeBlockMemory(block);
-                return;
+                ReturnLease((IntPtr)rawPtr, capacity);
             }
 
-            int bucketIndex = SelectBucketIndex(block.Capacity);
-
-            // If bucket is already full, release the native memory back to OS to prevent unmanaged memory bloat
-            if (_buckets[bucketIndex].Count >= _maxPerBucket)
+            if (!IsDisposed && capacity <= MaxBucketSize)
             {
-                FreeBlockMemory(block);
-            }
-            else
-            {
-                _buckets[bucketIndex].Push(block);
+                int bucketIndex = SelectBucketIndex(capacity);
+                _blockShells[bucketIndex].TryPush(block);
             }
         }
 
-        private static void FreeBlockMemory(NativeMemoryBlock block)
+        [MethodImpl(MethodImplOptions.AggressiveInlining)]
+        private static IntPtr AllocateRaw(int capacity)
         {
-            NativeMemoryTracker.TrackFree(block.Capacity);
-            block.DestroyMemory();
+#if NET8_0_OR_GREATER
+            return (IntPtr)NativeMemory.Alloc((nuint)capacity);
+#else
+            return Marshal.AllocHGlobal(capacity);
+#endif
+        }
+
+        [MethodImpl(MethodImplOptions.AggressiveInlining)]
+        private static void FreeRaw(IntPtr pointer, int capacity)
+        {
+            if (pointer == IntPtr.Zero)
+                return;
+
+            NativeMemoryTracker.TrackFree(capacity);
+#if NET8_0_OR_GREATER
+            NativeMemory.Free((void*)pointer);
+#else
+            Marshal.FreeHGlobal(pointer);
+#endif
         }
 
         [MethodImpl(MethodImplOptions.AggressiveInlining)]
@@ -196,10 +260,12 @@ namespace ZeroPrimitives.Memory
 
             for (int i = 0; i < NumBuckets; i++)
             {
-                while (_buckets[i].TryPop(out var block))
+                int capacity = _bucketSizes[i];
+                while (_buckets[i].TryPop(out IntPtr ptr))
                 {
-                    FreeBlockMemory(block);
+                    FreeRaw(ptr, capacity);
                 }
+                _blockShells[i].Clear();
             }
         }
     }

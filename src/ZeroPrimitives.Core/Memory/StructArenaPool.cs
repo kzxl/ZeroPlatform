@@ -1,5 +1,4 @@
 using System;
-using System.Collections.Concurrent;
 using System.Collections.Generic;
 using System.Runtime.CompilerServices;
 using System.Runtime.InteropServices;
@@ -18,7 +17,7 @@ namespace ZeroPrimitives.Memory
         private static readonly int[] DefaultBucketSizes = { 32, 64, 128, 256, 512, 1024 };
 
         private readonly int[] _bucketSizes;
-        private readonly ConcurrentStack<IntPtr>[] _freeSlots;
+        private readonly ZeroPoolStack<IntPtr>[] _freeSlots;
         private readonly List<IntPtr> _rawAllocations = new();
         private readonly int _slotsPerBlock;
         private readonly object _growLock = new();
@@ -54,11 +53,11 @@ namespace ZeroPrimitives.Memory
             Array.Sort(_bucketSizes);
 
             _slotsPerBlock = slotsPerBlock;
-            _freeSlots = new ConcurrentStack<IntPtr>[_bucketSizes.Length];
+            _freeSlots = new ZeroPoolStack<IntPtr>[_bucketSizes.Length];
 
             for (int i = 0; i < _bucketSizes.Length; i++)
             {
-                _freeSlots[i] = new ConcurrentStack<IntPtr>();
+                _freeSlots[i] = new ZeroPoolStack<IntPtr>(slotsPerBlock * 2, canGrow: true);
                 AllocateBlock(i);
             }
         }

@@ -73,6 +73,72 @@ namespace ZeroPrimitives.Tests
         }
 
         [Fact]
+        public unsafe void NativeMemoryPool_RentLease_And_ZeroGcSteadyState_Succeeds()
+        {
+            using var pool = new NativeMemoryPool(maxPerBucket: 32);
+            using var slab = new SlabAllocator(slabSize: 1024, initialSlabs: 16, maxSlabs: 64);
+            using var structPool = new StructArenaPool(slotsPerBlock: 32);
+
+            // Warm up all pools
+            using (NativeMemoryLease warmLease = pool.RentLease(2048))
+            {
+                Assert.True(warmLease.IsValid);
+                Assert.True(warmLease.Pointer != IntPtr.Zero);
+                Assert.Equal(2048, warmLease.Length);
+                Assert.Equal(4096, warmLease.Capacity);
+                warmLease.Span.Fill(0x5A);
+                Assert.Equal(0x5A, warmLease.ReadOnlySpan[0]);
+                warmLease.Clear();
+                Assert.Equal(0, warmLease.ReadOnlySpan[0]);
+            }
+
+            using (NativeMemoryBlock warmBlock = pool.Rent(2048))
+            {
+                warmBlock.Span[0] = 1;
+            }
+
+            using (var warmSlab = slab.RentScoped())
+            {
+                warmSlab.Span[0] = 2;
+            }
+
+            using (var warmStruct = structPool.Rent<long>())
+            {
+                warmStruct.Value = 123L;
+            }
+
+#if NET8_0_OR_GREATER
+            long before = GC.GetAllocatedBytesForCurrentThread();
+#endif
+            for (int i = 0; i < 1000; i++)
+            {
+                using (NativeMemoryLease lease = pool.RentLease(2048))
+                {
+                    lease.RawPointer[0] = (byte)i;
+                }
+
+                using (NativeMemoryBlock block = pool.Rent(2048))
+                {
+                    block.Pointer[0] = (byte)i;
+                }
+
+                using (var slabScope = slab.RentScoped())
+                {
+                    slabScope.Pointer[0] = (byte)i;
+                }
+
+                using (var structLease = structPool.Rent<long>())
+                {
+                    structLease.Value = i;
+                }
+            }
+#if NET8_0_OR_GREATER
+            long after = GC.GetAllocatedBytesForCurrentThread();
+            Assert.Equal(0L, after - before);
+#endif
+        }
+
+        [Fact]
         public void PagingArenaAllocator_AutoExpandsAcrossChunks_AndResets()
         {
             // Chunk size = 64KB for test purposes
