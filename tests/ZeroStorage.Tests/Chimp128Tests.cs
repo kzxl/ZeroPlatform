@@ -118,5 +118,63 @@ namespace ZeroStorage.Tests
                 Assert.Equal(original[i], decoded[i], 15);
             }
         }
+
+        [Fact]
+        public void EncodeDecode_LsbHashTableTrailingZerosHit_CompressesAndRoundtripsLosslessly()
+        {
+            // 4 interleaved telemetry channels with distinct 14-bit LSB signatures (bits 0..13)
+            // and small variations in upper mantissa bits (bit 32..36), so consecutive samples
+            // differ across all 64 bits, while samples 4 steps apart share the same 14-bit LSB key
+            // and have >= 32 trailing zeros (> 14) and >= 24 leading zeros.
+            ulong[] baseChannelBits = new ulong[]
+            {
+                (ulong)BitConverter.DoubleToInt64Bits(10.1234567890123),
+                (ulong)BitConverter.DoubleToInt64Bits(1000.9876543210987),
+                (ulong)BitConverter.DoubleToInt64Bits(-500.5555555555555),
+                (ulong)BitConverter.DoubleToInt64Bits(42.3333333333333)
+            };
+
+            double[] original = new double[1024];
+            for (int i = 0; i < original.Length; i++)
+            {
+                ulong chBits = baseChannelBits[i & 3];
+                ulong delta = (ulong)((i >> 2) & 0x1F) << 32;
+                original[i] = BitConverter.Int64BitsToDouble((long)(chBits ^ delta));
+            }
+
+            byte[] encoded = Chimp128Codec.Compress(original);
+            Assert.NotEmpty(encoded);
+            Assert.True(encoded.Length < original.Length * sizeof(double) / 2,
+                $"Expected high compression from O(1) LSB cache hits, got {encoded.Length} bytes for {original.Length * 8} raw bytes.");
+
+            double[] decoded = new double[original.Length];
+            Chimp128Codec.Decompress(encoded, decoded);
+
+            for (int i = 0; i < original.Length; i++)
+            {
+                Assert.Equal(original[i], decoded[i]);
+            }
+        }
+
+        [Fact]
+        public void EncodeDecode_LargeStreamWrapAround_ZeroLohAndLossless()
+        {
+            // > 65536 samples to exercise ushort index wrap-around in the 16,384-entry LSB hash table
+            int count = 70000;
+            double[] original = new double[count];
+            for (int i = 0; i < count; i++)
+            {
+                original[i] = ((i % 16) * 1.25) + ((i % 128) * 0.0625);
+            }
+
+            byte[] encoded = Chimp128Codec.Encode(original);
+            double[] decoded = new double[count];
+            Chimp128Codec.Decode(encoded, decoded);
+
+            for (int i = 0; i < count; i++)
+            {
+                Assert.Equal(original[i], decoded[i]);
+            }
+        }
     }
 }
