@@ -498,5 +498,65 @@ public class SecurityTests
             Assert.Equal('\0', password[i]);
         }
     }
+
+    [Fact]
+    public void X25519_Agree_RejectsLowOrderPoints_PerRfc7748()
+    {
+        byte[] privateKey = new byte[32];
+        for (int i = 0; i < 32; i++) privateKey[i] = (byte)(i + 1);
+
+        // All-zero low-order public key
+        byte[] zeroPoint = new byte[32];
+        byte[] sharedSecret = new byte[32];
+
+        Assert.Throws<System.Security.Cryptography.CryptographicException>(() =>
+            X25519.Agree(privateKey, zeroPoint, sharedSecret));
+
+        // Order-2 point (1, 0, 0, ...) also produces all-zero shared secret after clamping
+        byte[] order2Point = new byte[32];
+        order2Point[0] = 1;
+        Assert.Throws<System.Security.Cryptography.CryptographicException>(() =>
+            X25519.Agree(privateKey, order2Point, sharedSecret));
+    }
+
+    [Fact]
+    public void CuckooFilter_HighLoadEviction_UsesStatelessXorShiftAndSerializes()
+    {
+        var filter = new CuckooFilter(expectedElements: 128);
+        int inserted = 0;
+        for (int i = 0; i < 120; i++)
+        {
+            if (filter.Add($"ioc-threat-indicator-{i}"))
+            {
+                inserted++;
+            }
+        }
+
+        Assert.True(inserted >= 100);
+        Assert.Equal(inserted, filter.Count);
+
+        byte[] bytes = filter.ToByteArray();
+        var restored = CuckooFilter.FromByteArray(bytes.AsSpan());
+        Assert.Equal(filter.Count, restored.Count);
+        Assert.Equal(filter.Capacity, restored.Capacity);
+
+        for (int i = 0; i < 20; i++)
+        {
+            Assert.True(restored.Contains($"ioc-threat-indicator-{i}"));
+        }
+    }
+
+    [Fact]
+    public void SecureMemoryScope_AttemptsOsPageLock_AndUnlocksOnDispose()
+    {
+        using var scope = new SecureMemoryScope(64);
+        if (Environment.OSVersion.Platform == PlatformID.Win32NT)
+        {
+            Assert.True(scope.IsPageLocked);
+        }
+
+        scope.Dispose();
+        Assert.False(scope.IsPageLocked);
+    }
 }
 

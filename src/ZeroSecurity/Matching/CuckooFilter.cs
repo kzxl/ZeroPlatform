@@ -1,4 +1,5 @@
 using System;
+using System.Buffers.Binary;
 using System.IO;
 using System.Text;
 
@@ -102,14 +103,18 @@ public sealed class CuckooFilter
             return true;
         }
 
-        // Cuckoo eviction
+        // Cuckoo eviction using inline zero-allocation XorShift32 PRNG
         int curIndex = (hash & 1) == 0 ? i1 : i2;
         ushort curFp = fp;
-        var rng = new Random((int)hash);
+        uint state = (uint)hash;
+        if (state == 0) state = 0x9E3779B9u;
 
         for (int k = 0; k < MaxKicks; k++)
         {
-            int slot = rng.Next(SlotsPerBucket);
+            state ^= state << 13;
+            state ^= state >> 17;
+            state ^= state << 5;
+            int slot = (int)(state & (SlotsPerBucket - 1));
             int idx = curIndex * SlotsPerBucket + slot;
 
             ushort oldFp = _buckets[idx];
@@ -214,47 +219,48 @@ public sealed class CuckooFilter
     public byte[] ToByteArray()
     {
         byte[] result = new byte[12 + _buckets.Length * sizeof(ushort)];
-        using var ms = new MemoryStream(result);
-        using var writer = new BinaryWriter(ms);
+        Span<byte> span = result.AsSpan();
 
-        writer.Write(Magic);
-        writer.Write(_bucketCount);
-        writer.Write(_count);
+        BinaryPrimitives.WriteUInt32LittleEndian(span.Slice(0, 4), Magic);
+        BinaryPrimitives.WriteInt32LittleEndian(span.Slice(4, 4), _bucketCount);
+        BinaryPrimitives.WriteInt32LittleEndian(span.Slice(8, 4), _count);
 
+        Span<byte> payload = span.Slice(12);
         for (int i = 0; i < _buckets.Length; i++)
         {
-            writer.Write(_buckets[i]);
+            BinaryPrimitives.WriteUInt16LittleEndian(payload.Slice(i * 2, 2), _buckets[i]);
         }
 
         return result;
     }
 
     /// <summary>
-    /// Deserializes a CuckooFilter from a byte array.
+    /// Deserializes a CuckooFilter from a byte span without intermediate stream or array allocations.
     /// </summary>
     public static CuckooFilter FromByteArray(ReadOnlySpan<byte> bytes)
     {
         if (bytes.Length < 12)
             throw new ArgumentException("Buffer too small for CuckooFilter header.", nameof(bytes));
 
-        using var ms = new MemoryStream(bytes.ToArray());
-        using var reader = new BinaryReader(ms);
-
-        uint magic = reader.ReadUInt32();
+        uint magic = BinaryPrimitives.ReadUInt32LittleEndian(bytes.Slice(0, 4));
         if (magic != Magic)
             throw new InvalidDataException("Invalid CuckooFilter magic header.");
 
-        int bucketCount = reader.ReadInt32();
-        int count = reader.ReadInt32();
+        int bucketCount = BinaryPrimitives.ReadInt32LittleEndian(bytes.Slice(4, 4));
+        int count = BinaryPrimitives.ReadInt32LittleEndian(bytes.Slice(8, 4));
+        if (bucketCount <= 0 || count < 0)
+            throw new InvalidDataException("Invalid CuckooFilter header dimensions.");
 
-        int expectedLength = 12 + bucketCount * SlotsPerBucket * sizeof(ushort);
+        int totalSlots = bucketCount * SlotsPerBucket;
+        int expectedLength = 12 + totalSlots * sizeof(ushort);
         if (bytes.Length < expectedLength)
             throw new InvalidDataException("Buffer truncated for CuckooFilter contents.");
 
-        ushort[] buckets = new ushort[bucketCount * SlotsPerBucket];
+        ushort[] buckets = new ushort[totalSlots];
+        ReadOnlySpan<byte> payload = bytes.Slice(12, totalSlots * sizeof(ushort));
         for (int i = 0; i < buckets.Length; i++)
         {
-            buckets[i] = reader.ReadUInt16();
+            buckets[i] = BinaryPrimitives.ReadUInt16LittleEndian(payload.Slice(i * 2, 2));
         }
 
         return new CuckooFilter(bucketCount, count, buckets);

@@ -1,4 +1,6 @@
 using System;
+using System.Runtime.InteropServices;
+using System.Security.Cryptography;
 using ZeroSecurity.Common;
 
 namespace ZeroSecurity.Crypto;
@@ -27,10 +29,19 @@ public static class X25519
 
     /// <summary>
     /// Computes the 32-byte shared secret from a local private key and a peer's public key.
+    /// Enforces RFC 7748 Section 6.1contributory behavior by rejecting low-order public keys that yield an all-zero shared secret.
     /// </summary>
     public static void Agree(ReadOnlySpan<byte> privateKey, ReadOnlySpan<byte> peerPublicKey, Span<byte> sharedSecret)
     {
         ScalarMult(privateKey, peerPublicKey, sharedSecret);
+
+        Span<byte> zeros = stackalloc byte[KeySize];
+        zeros.Clear();
+        if (CryptoMemory.ConstantTimeEquals(sharedSecret.Slice(0, KeySize), zeros))
+        {
+            CryptoMemory.SecureZero(sharedSecret.Slice(0, KeySize));
+            throw new CryptographicException("Peer public key produced an all-zero shared secret (low-order point).");
+        }
     }
 
     /// <summary>
@@ -66,72 +77,91 @@ public static class X25519
         Span<long> da = stackalloc long[10];
         Span<long> cb = stackalloc long[10];
 
-        FeFromBytes(point, x1);
-        FeOne(x2);
-        FeZero(z2);
-        x1.CopyTo(x3);
-        FeOne(z3);
-
-        long swap = 0;
-
-        // 3. Montgomery ladder (255 down to 0)
-        for (int pos = 254; pos >= 0; pos--)
+        try
         {
-            int byteIdx = pos >> 3;
-            int bitIdx = pos & 7;
-            long bit = (k[byteIdx] >> bitIdx) & 1;
+            FeFromBytes(point, x1);
+            FeOne(x2);
+            FeZero(z2);
+            x1.CopyTo(x3);
+            FeOne(z3);
 
-            swap ^= bit;
+            long swap = 0;
+
+            // 3. Montgomery ladder (255 down to 0)
+            for (int pos = 254; pos >= 0; pos--)
+            {
+                int byteIdx = pos >> 3;
+                int bitIdx = pos & 7;
+                long bit = (k[byteIdx] >> bitIdx) & 1;
+
+                swap ^= bit;
+                FeCSwap(swap, x2, x3);
+                FeCSwap(swap, z2, z3);
+                swap = bit;
+
+                // A = x2 + z2
+                FeAdd(a, x2, z2);
+                // AA = A^2
+                FeSquare(aa, a);
+                // B = x2 - z2
+                FeSub(b, x2, z2);
+                // BB = B^2
+                FeSquare(bb, b);
+                // E = AA - BB
+                FeSub(e, aa, bb);
+                // C = x3 + z3
+                FeAdd(c, x3, z3);
+                // D = x3 - z3
+                FeSub(d, x3, z3);
+                // DA = D * A
+                FeMul(da, d, a);
+                // CB = C * B
+                FeMul(cb, c, b);
+
+                // x3 = (DA + CB)^2
+                FeAdd(x3, da, cb);
+                FeSquare(x3, x3);
+
+                // z3 = x1 * (DA - CB)^2
+                FeSub(z3, da, cb);
+                FeSquare(z3, z3);
+                FeMul(z3, x1, z3);
+
+                // x2 = AA * BB
+                FeMul(x2, aa, bb);
+
+                // z2 = E * (AA + a24 * E)  [where a24 = 121665]
+                FeMulA24(c, e);
+                FeAdd(c, aa, c);
+                FeMul(z2, e, c);
+            }
+
             FeCSwap(swap, x2, x3);
             FeCSwap(swap, z2, z3);
-            swap = bit;
 
-            // A = x2 + z2
-            FeAdd(a, x2, z2);
-            // AA = A^2
-            FeSquare(aa, a);
-            // B = x2 - z2
-            FeSub(b, x2, z2);
-            // BB = B^2
-            FeSquare(bb, b);
-            // E = AA - BB
-            FeSub(e, aa, bb);
-            // C = x3 + z3
-            FeAdd(c, x3, z3);
-            // D = x3 - z3
-            FeSub(d, x3, z3);
-            // DA = D * A
-            FeMul(da, d, a);
-            // CB = C * B
-            FeMul(cb, c, b);
-
-            // x3 = (DA + CB)^2
-            FeAdd(x3, da, cb);
-            FeSquare(x3, x3);
-
-            // z3 = x1 * (DA - CB)^2
-            FeSub(z3, da, cb);
-            FeSquare(z3, z3);
-            FeMul(z3, x1, z3);
-
-            // x2 = AA * BB
-            FeMul(x2, aa, bb);
-
-            // z2 = E * (AA + a24 * E)  [where a24 = 121665]
-            FeMulA24(c, e);
-            FeAdd(c, aa, c);
-            FeMul(z2, e, c);
+            // 4. Output = x2 * z2^(p - 2)
+            FeInvert(z2, z2);
+            FeMul(x2, x2, z2);
+            FeToBytes(x2, output);
         }
-
-        FeCSwap(swap, x2, x3);
-        FeCSwap(swap, z2, z3);
-
-        // 4. Output = x2 * z2^(p - 2)
-        FeInvert(z2, z2);
-        FeMul(x2, x2, z2);
-        FeToBytes(x2, output);
-
-        CryptoMemory.SecureZero(k);
+        finally
+        {
+            CryptoMemory.SecureZero(k);
+            CryptoMemory.SecureZero(MemoryMarshal.AsBytes(x1));
+            CryptoMemory.SecureZero(MemoryMarshal.AsBytes(x2));
+            CryptoMemory.SecureZero(MemoryMarshal.AsBytes(z2));
+            CryptoMemory.SecureZero(MemoryMarshal.AsBytes(x3));
+            CryptoMemory.SecureZero(MemoryMarshal.AsBytes(z3));
+            CryptoMemory.SecureZero(MemoryMarshal.AsBytes(a));
+            CryptoMemory.SecureZero(MemoryMarshal.AsBytes(b));
+            CryptoMemory.SecureZero(MemoryMarshal.AsBytes(c));
+            CryptoMemory.SecureZero(MemoryMarshal.AsBytes(d));
+            CryptoMemory.SecureZero(MemoryMarshal.AsBytes(e));
+            CryptoMemory.SecureZero(MemoryMarshal.AsBytes(aa));
+            CryptoMemory.SecureZero(MemoryMarshal.AsBytes(bb));
+            CryptoMemory.SecureZero(MemoryMarshal.AsBytes(da));
+            CryptoMemory.SecureZero(MemoryMarshal.AsBytes(cb));
+        }
     }
 
     #region Field Arithmetic Modulo 2^255 - 19 (10 Limbs: Radix 2^25.5)

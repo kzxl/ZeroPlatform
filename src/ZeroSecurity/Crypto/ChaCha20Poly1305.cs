@@ -1,4 +1,5 @@
 using System;
+using System.Runtime.InteropServices;
 using ZeroSecurity.Common;
 
 namespace ZeroSecurity.Crypto;
@@ -68,6 +69,7 @@ public static class ChaCha20Poly1305
         if (plaintext.Length < ciphertext.Length) throw new ArgumentException("Plaintext span too small.", nameof(plaintext));
 
         Span<byte> polyKeyBlock = stackalloc byte[64];
+        Span<byte> expectedTag = stackalloc byte[TagSize];
         try
         {
             // 1. Generate Poly1305 key
@@ -75,12 +77,11 @@ public static class ChaCha20Poly1305
             ReadOnlySpan<byte> polyKey = polyKeyBlock.Slice(0, 32);
 
             // 2. Verify MAC
-            Span<byte> expectedTag = stackalloc byte[TagSize];
             ComputeTag(polyKey, associatedData, ciphertext, expectedTag);
 
             if (!CryptoMemory.ConstantTimeEquals(tag.Slice(0, TagSize), expectedTag))
             {
-                plaintext.Slice(0, ciphertext.Length).Clear();
+                CryptoMemory.SecureZero(plaintext.Slice(0, ciphertext.Length));
                 return false;
             }
 
@@ -91,6 +92,7 @@ public static class ChaCha20Poly1305
         finally
         {
             CryptoMemory.SecureZero(polyKeyBlock);
+            CryptoMemory.SecureZero(expectedTag);
         }
     }
 
@@ -98,44 +100,49 @@ public static class ChaCha20Poly1305
     {
         Span<uint> state = stackalloc uint[16];
 
-        state[0] = Sigma[0];
-        state[1] = Sigma[1];
-        state[2] = Sigma[2];
-        state[3] = Sigma[3];
-
-        for (int i = 0; i < 8; i++)
+        try
         {
-            state[4 + i] = ReadUInt32LittleEndian(key.Slice(i * 4, 4));
-        }
+            state[0] = Sigma[0];
+            state[1] = Sigma[1];
+            state[2] = Sigma[2];
+            state[3] = Sigma[3];
 
-        for (int i = 0; i < 4; i++)
+            for (int i = 0; i < 8; i++)
+            {
+                state[4 + i] = ReadUInt32LittleEndian(key.Slice(i * 4, 4));
+            }
+
+            for (int i = 0; i < 4; i++)
+            {
+                state[12 + i] = ReadUInt32LittleEndian(nonce.Slice(i * 4, 4));
+            }
+
+            for (int i = 0; i < 10; i++)
+            {
+                QR(ref state[0], ref state[4], ref state[8], ref state[12]);
+                QR(ref state[1], ref state[5], ref state[9], ref state[13]);
+                QR(ref state[2], ref state[6], ref state[10], ref state[14]);
+                QR(ref state[3], ref state[7], ref state[11], ref state[15]);
+
+                QR(ref state[0], ref state[5], ref state[10], ref state[15]);
+                QR(ref state[1], ref state[6], ref state[11], ref state[12]);
+                QR(ref state[2], ref state[7], ref state[8], ref state[13]);
+                QR(ref state[3], ref state[4], ref state[9], ref state[14]);
+            }
+
+            WriteUInt32LittleEndian(state[0], subkey.Slice(0, 4));
+            WriteUInt32LittleEndian(state[1], subkey.Slice(4, 4));
+            WriteUInt32LittleEndian(state[2], subkey.Slice(8, 4));
+            WriteUInt32LittleEndian(state[3], subkey.Slice(12, 4));
+            WriteUInt32LittleEndian(state[12], subkey.Slice(16, 4));
+            WriteUInt32LittleEndian(state[13], subkey.Slice(20, 4));
+            WriteUInt32LittleEndian(state[14], subkey.Slice(24, 4));
+            WriteUInt32LittleEndian(state[15], subkey.Slice(28, 4));
+        }
+        finally
         {
-            state[12 + i] = ReadUInt32LittleEndian(nonce.Slice(i * 4, 4));
+            CryptoMemory.SecureZero(MemoryMarshal.AsBytes(state));
         }
-
-        for (int i = 0; i < 10; i++)
-        {
-            QR(ref state[0], ref state[4], ref state[8], ref state[12]);
-            QR(ref state[1], ref state[5], ref state[9], ref state[13]);
-            QR(ref state[2], ref state[6], ref state[10], ref state[14]);
-            QR(ref state[3], ref state[7], ref state[11], ref state[15]);
-
-            QR(ref state[0], ref state[5], ref state[10], ref state[15]);
-            QR(ref state[1], ref state[6], ref state[11], ref state[12]);
-            QR(ref state[2], ref state[7], ref state[8], ref state[13]);
-            QR(ref state[3], ref state[4], ref state[9], ref state[14]);
-        }
-
-        WriteUInt32LittleEndian(state[0], subkey.Slice(0, 4));
-        WriteUInt32LittleEndian(state[1], subkey.Slice(4, 4));
-        WriteUInt32LittleEndian(state[2], subkey.Slice(8, 4));
-        WriteUInt32LittleEndian(state[3], subkey.Slice(12, 4));
-        WriteUInt32LittleEndian(state[12], subkey.Slice(16, 4));
-        WriteUInt32LittleEndian(state[13], subkey.Slice(20, 4));
-        WriteUInt32LittleEndian(state[14], subkey.Slice(24, 4));
-        WriteUInt32LittleEndian(state[15], subkey.Slice(28, 4));
-
-        state.Clear();
     }
 
     private static void ChaCha20Process(ReadOnlySpan<byte> key, ReadOnlySpan<byte> nonce, uint initialCounter, ReadOnlySpan<byte> input, Span<byte> output)
@@ -144,66 +151,76 @@ public static class ChaCha20Poly1305
         uint counter = initialCounter;
         int offset = 0;
 
-        while (offset < input.Length)
+        try
         {
-            ChaCha20Block(key, nonce, counter++, keyStream);
-            int take = Math.Min(64, input.Length - offset);
-
-            for (int i = 0; i < take; i++)
+            while (offset < input.Length)
             {
-                output[offset + i] = (byte)(input[offset + i] ^ keyStream[i]);
+                ChaCha20Block(key, nonce, counter++, keyStream);
+                int take = Math.Min(64, input.Length - offset);
+
+                for (int i = 0; i < take; i++)
+                {
+                    output[offset + i] = (byte)(input[offset + i] ^ keyStream[i]);
+                }
+
+                offset += take;
             }
-
-            offset += take;
         }
-
-        CryptoMemory.SecureZero(keyStream);
+        finally
+        {
+            CryptoMemory.SecureZero(keyStream);
+        }
     }
 
     private static void ChaCha20Block(ReadOnlySpan<byte> key, ReadOnlySpan<byte> nonce, uint counter, Span<byte> output)
     {
         Span<uint> state = stackalloc uint[16];
-
-        state[0] = Sigma[0];
-        state[1] = Sigma[1];
-        state[2] = Sigma[2];
-        state[3] = Sigma[3];
-
-        for (int i = 0; i < 8; i++)
-        {
-            state[4 + i] = ReadUInt32LittleEndian(key.Slice(i * 4, 4));
-        }
-
-        state[12] = counter;
-
-        for (int i = 0; i < 3; i++)
-        {
-            state[13 + i] = ReadUInt32LittleEndian(nonce.Slice(i * 4, 4));
-        }
-
         Span<uint> working = stackalloc uint[16];
-        state.CopyTo(working);
 
-        for (int i = 0; i < 10; i++)
+        try
         {
-            QR(ref working[0], ref working[4], ref working[8], ref working[12]);
-            QR(ref working[1], ref working[5], ref working[9], ref working[13]);
-            QR(ref working[2], ref working[6], ref working[10], ref working[14]);
-            QR(ref working[3], ref working[7], ref working[11], ref working[15]);
+            state[0] = Sigma[0];
+            state[1] = Sigma[1];
+            state[2] = Sigma[2];
+            state[3] = Sigma[3];
 
-            QR(ref working[0], ref working[5], ref working[10], ref working[15]);
-            QR(ref working[1], ref working[6], ref working[11], ref working[12]);
-            QR(ref working[2], ref working[7], ref working[8], ref working[13]);
-            QR(ref working[3], ref working[4], ref working[9], ref working[14]);
+            for (int i = 0; i < 8; i++)
+            {
+                state[4 + i] = ReadUInt32LittleEndian(key.Slice(i * 4, 4));
+            }
+
+            state[12] = counter;
+
+            for (int i = 0; i < 3; i++)
+            {
+                state[13 + i] = ReadUInt32LittleEndian(nonce.Slice(i * 4, 4));
+            }
+
+            state.CopyTo(working);
+
+            for (int i = 0; i < 10; i++)
+            {
+                QR(ref working[0], ref working[4], ref working[8], ref working[12]);
+                QR(ref working[1], ref working[5], ref working[9], ref working[13]);
+                QR(ref working[2], ref working[6], ref working[10], ref working[14]);
+                QR(ref working[3], ref working[7], ref working[11], ref working[15]);
+
+                QR(ref working[0], ref working[5], ref working[10], ref working[15]);
+                QR(ref working[1], ref working[6], ref working[11], ref working[12]);
+                QR(ref working[2], ref working[7], ref working[8], ref working[13]);
+                QR(ref working[3], ref working[4], ref working[9], ref working[14]);
+            }
+
+            for (int i = 0; i < 16; i++)
+            {
+                WriteUInt32LittleEndian(working[i] + state[i], output.Slice(i * 4, 4));
+            }
         }
-
-        for (int i = 0; i < 16; i++)
+        finally
         {
-            WriteUInt32LittleEndian(working[i] + state[i], output.Slice(i * 4, 4));
+            CryptoMemory.SecureZero(MemoryMarshal.AsBytes(state));
+            CryptoMemory.SecureZero(MemoryMarshal.AsBytes(working));
         }
-
-        state.Clear();
-        working.Clear();
     }
 
     private static void QR(ref uint a, ref uint b, ref uint c, ref uint d)
@@ -220,93 +237,99 @@ public static class ChaCha20Poly1305
     {
         // 1. Clamp r
         Span<byte> c = stackalloc byte[16];
-        polyKey.Slice(0, 16).CopyTo(c);
-        c[3] &= 15;
-        c[7] &= 15;
-        c[11] &= 15;
-        c[15] &= 15;
-        c[4] &= 252;
-        c[8] &= 252;
-        c[12] &= 252;
-
-        uint r0 = ((uint)c[0] | ((uint)c[1] << 8) | ((uint)c[2] << 16) | ((uint)c[3] << 24)) & 0x03ffffff;
-        uint r1 = (((uint)c[3] >> 2) | ((uint)c[4] << 6) | ((uint)c[5] << 14) | ((uint)c[6] << 22)) & 0x03ffffff;
-        uint r2 = (((uint)c[6] >> 4) | ((uint)c[7] << 4) | ((uint)c[8] << 12) | ((uint)c[9] << 20)) & 0x03ffffff;
-        uint r3 = (((uint)c[9] >> 6) | ((uint)c[10] << 2) | ((uint)c[11] << 10) | ((uint)c[12] << 18)) & 0x03ffffff;
-        uint r4 = (((uint)c[13]) | ((uint)c[14] << 8) | ((uint)c[15] << 16)) & 0x03ffffff;
-
-        uint s1 = r1 * 5;
-        uint s2 = r2 * 5;
-        uint s3 = r3 * 5;
-        uint s4 = r4 * 5;
-
-        // s = polyKey[16..31]
-        uint s_0 = ReadUInt32LittleEndian(polyKey.Slice(16, 4));
-        uint s_1 = ReadUInt32LittleEndian(polyKey.Slice(20, 4));
-        uint s_2 = ReadUInt32LittleEndian(polyKey.Slice(24, 4));
-        uint s_3 = ReadUInt32LittleEndian(polyKey.Slice(28, 4));
-
-        uint h0 = 0, h1 = 0, h2 = 0, h3 = 0, h4 = 0;
         Span<byte> padBlock = stackalloc byte[16];
+        try
+        {
+            polyKey.Slice(0, 16).CopyTo(c);
+            c[3] &= 15;
+            c[7] &= 15;
+            c[11] &= 15;
+            c[15] &= 15;
+            c[4] &= 252;
+            c[8] &= 252;
+            c[12] &= 252;
 
-        // Process AAD (zero-padded to 16 bytes)
-        Poly1305ProcessChunks(aad, padBlock, ref h0, ref h1, ref h2, ref h3, ref h4, r0, r1, r2, r3, r4, s1, s2, s3, s4);
+            uint r0 = ((uint)c[0] | ((uint)c[1] << 8) | ((uint)c[2] << 16) | ((uint)c[3] << 24)) & 0x03ffffff;
+            uint r1 = (((uint)c[3] >> 2) | ((uint)c[4] << 6) | ((uint)c[5] << 14) | ((uint)c[6] << 22)) & 0x03ffffff;
+            uint r2 = (((uint)c[6] >> 4) | ((uint)c[7] << 4) | ((uint)c[8] << 12) | ((uint)c[9] << 20)) & 0x03ffffff;
+            uint r3 = (((uint)c[9] >> 6) | ((uint)c[10] << 2) | ((uint)c[11] << 10) | ((uint)c[12] << 18)) & 0x03ffffff;
+            uint r4 = (((uint)c[13]) | ((uint)c[14] << 8) | ((uint)c[15] << 16)) & 0x03ffffff;
 
-        // Process Ciphertext (zero-padded to 16 bytes)
-        Poly1305ProcessChunks(ciphertext, padBlock, ref h0, ref h1, ref h2, ref h3, ref h4, r0, r1, r2, r3, r4, s1, s2, s3, s4);
+            uint s1 = r1 * 5;
+            uint s2 = r2 * 5;
+            uint s3 = r3 * 5;
+            uint s4 = r4 * 5;
 
-        // Process Lengths (8 bytes aad.Length, 8 bytes ciphertext.Length)
-        padBlock.Clear();
-        WriteUInt64LittleEndian((ulong)aad.Length, padBlock.Slice(0, 8));
-        WriteUInt64LittleEndian((ulong)ciphertext.Length, padBlock.Slice(8, 8));
-        Poly1305Block(padBlock, ref h0, ref h1, ref h2, ref h3, ref h4, r0, r1, r2, r3, r4, s1, s2, s3, s4);
+            // s = polyKey[16..31]
+            uint s_0 = ReadUInt32LittleEndian(polyKey.Slice(16, 4));
+            uint s_1 = ReadUInt32LittleEndian(polyKey.Slice(20, 4));
+            uint s_2 = ReadUInt32LittleEndian(polyKey.Slice(24, 4));
+            uint s_3 = ReadUInt32LittleEndian(polyKey.Slice(28, 4));
 
-        // Full carry propagation
-        ulong carry = h1 >> 26; h1 &= 0x03ffffff; h2 += (uint)carry;
-        carry = h2 >> 26; h2 &= 0x03ffffff; h3 += (uint)carry;
-        carry = h3 >> 26; h3 &= 0x03ffffff; h4 += (uint)carry;
-        carry = h4 >> 26; h4 &= 0x03ffffff; h0 += (uint)(carry * 5);
-        carry = h0 >> 26; h0 &= 0x03ffffff; h1 += (uint)carry;
+            uint h0 = 0, h1 = 0, h2 = 0, h3 = 0, h4 = 0;
 
-        // Compute h + 5 to see if h >= 2^130 - 5
-        uint g0 = h0 + 5;
-        carry = g0 >> 26; g0 &= 0x03ffffff;
-        uint g1 = h1 + (uint)carry;
-        carry = g1 >> 26; g1 &= 0x03ffffff;
-        uint g2 = h2 + (uint)carry;
-        carry = g2 >> 26; g2 &= 0x03ffffff;
-        uint g3 = h3 + (uint)carry;
-        carry = g3 >> 26; g3 &= 0x03ffffff;
-        uint g4 = h4 + (uint)carry - (1u << 26);
+            // Process AAD (zero-padded to 16 bytes)
+            Poly1305ProcessChunks(aad, padBlock, ref h0, ref h1, ref h2, ref h3, ref h4, r0, r1, r2, r3, r4, s1, s2, s3, s4);
 
-        // If g4 >= 0 (bit 31 is 0), h >= 2^130 - 5, so select g; otherwise select h.
-        uint mask = (uint)-(int)((g4 >> 31) ^ 1);
-        h0 = (h0 & ~mask) | (g0 & mask);
-        h1 = (h1 & ~mask) | (g1 & mask);
-        h2 = (h2 & ~mask) | (g2 & mask);
-        h3 = (h3 & ~mask) | (g3 & mask);
-        h4 = (h4 & ~mask) | (g4 & mask);
+            // Process Ciphertext (zero-padded to 16 bytes)
+            Poly1305ProcessChunks(ciphertext, padBlock, ref h0, ref h1, ref h2, ref h3, ref h4, r0, r1, r2, r3, r4, s1, s2, s3, s4);
 
-        // Reconstruct 128-bit integer from 26-bit limbs
-        uint f0 = h0 | (h1 << 26);
-        uint f1 = (h1 >> 6) | (h2 << 20);
-        uint f2 = (h2 >> 12) | (h3 << 14);
-        uint f3 = (h3 >> 18) | (h4 << 8);
+            // Process Lengths (8 bytes aad.Length, 8 bytes ciphertext.Length)
+            padBlock.Clear();
+            WriteUInt64LittleEndian((ulong)aad.Length, padBlock.Slice(0, 8));
+            WriteUInt64LittleEndian((ulong)ciphertext.Length, padBlock.Slice(8, 8));
+            Poly1305Block(padBlock, ref h0, ref h1, ref h2, ref h3, ref h4, r0, r1, r2, r3, r4, s1, s2, s3, s4);
 
-        // Add s (modulo 2^128)
-        ulong sum = (ulong)f0 + s_0;
-        WriteUInt32LittleEndian((uint)sum, tag.Slice(0, 4));
+            // Full carry propagation
+            ulong carry = h1 >> 26; h1 &= 0x03ffffff; h2 += (uint)carry;
+            carry = h2 >> 26; h2 &= 0x03ffffff; h3 += (uint)carry;
+            carry = h3 >> 26; h3 &= 0x03ffffff; h4 += (uint)carry;
+            carry = h4 >> 26; h4 &= 0x03ffffff; h0 += (uint)(carry * 5);
+            carry = h0 >> 26; h0 &= 0x03ffffff; h1 += (uint)carry;
 
-        sum = (ulong)f1 + s_1 + (sum >> 32);
-        WriteUInt32LittleEndian((uint)sum, tag.Slice(4, 4));
+            // Compute h + 5 to see if h >= 2^130 - 5
+            uint g0 = h0 + 5;
+            carry = g0 >> 26; g0 &= 0x03ffffff;
+            uint g1 = h1 + (uint)carry;
+            carry = g1 >> 26; g1 &= 0x03ffffff;
+            uint g2 = h2 + (uint)carry;
+            carry = g2 >> 26; g2 &= 0x03ffffff;
+            uint g3 = h3 + (uint)carry;
+            carry = g3 >> 26; g3 &= 0x03ffffff;
+            uint g4 = h4 + (uint)carry - (1u << 26);
 
-        sum = (ulong)f2 + s_2 + (sum >> 32);
-        WriteUInt32LittleEndian((uint)sum, tag.Slice(8, 4));
+            // If g4 >= 0 (bit 31 is 0), h >= 2^130 - 5, so select g; otherwise select h.
+            uint mask = (uint)-(int)((g4 >> 31) ^ 1);
+            h0 = (h0 & ~mask) | (g0 & mask);
+            h1 = (h1 & ~mask) | (g1 & mask);
+            h2 = (h2 & ~mask) | (g2 & mask);
+            h3 = (h3 & ~mask) | (g3 & mask);
+            h4 = (h4 & ~mask) | (g4 & mask);
 
-        sum = (ulong)f3 + s_3 + (sum >> 32);
-        WriteUInt32LittleEndian((uint)sum, tag.Slice(12, 4));
+            // Reconstruct 128-bit integer from 26-bit limbs
+            uint f0 = h0 | (h1 << 26);
+            uint f1 = (h1 >> 6) | (h2 << 20);
+            uint f2 = (h2 >> 12) | (h3 << 14);
+            uint f3 = (h3 >> 18) | (h4 << 8);
 
-        CryptoMemory.SecureZero(c);
+            // Add s (modulo 2^128)
+            ulong sum = (ulong)f0 + s_0;
+            WriteUInt32LittleEndian((uint)sum, tag.Slice(0, 4));
+
+            sum = (ulong)f1 + s_1 + (sum >> 32);
+            WriteUInt32LittleEndian((uint)sum, tag.Slice(4, 4));
+
+            sum = (ulong)f2 + s_2 + (sum >> 32);
+            WriteUInt32LittleEndian((uint)sum, tag.Slice(8, 4));
+
+            sum = (ulong)f3 + s_3 + (sum >> 32);
+            WriteUInt32LittleEndian((uint)sum, tag.Slice(12, 4));
+        }
+        finally
+        {
+            CryptoMemory.SecureZero(c);
+            CryptoMemory.SecureZero(padBlock);
+        }
     }
 
     private static void Poly1305ProcessChunks(

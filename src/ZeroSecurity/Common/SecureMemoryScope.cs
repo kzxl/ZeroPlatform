@@ -14,14 +14,22 @@ namespace ZeroSecurity.Common;
 /// </summary>
 public sealed unsafe class SecureMemoryScope : IDisposable
 {
+    private static readonly bool IsWindows = Environment.OSVersion.Platform == PlatformID.Win32NT;
+
     private IntPtr _pointer;
     private readonly int _length;
+    private bool _isPageLocked;
     private int _disposed;
 
     /// <summary>
     /// Gets the length of the secure memory buffer in bytes.
     /// </summary>
     public int Length => _length;
+
+    /// <summary>
+    /// Gets whether the underlying unmanaged pages are locked into physical RAM (preventing OS swap-to-disk).
+    /// </summary>
+    public bool IsPageLocked => _isPageLocked && !IsDisposed;
 
     /// <summary>
     /// Gets whether this scope has been disposed.
@@ -59,7 +67,7 @@ public sealed unsafe class SecureMemoryScope : IDisposable
 
     /// <summary>
     /// Allocates a new secure unmanaged memory scope of the specified size in bytes.
-    /// All bytes are initialized to zero.
+    /// All bytes are initialized to zero and best-effort locked into physical RAM pages.
     /// </summary>
     /// <param name="byteCount">Size of buffer in bytes.</param>
     public SecureMemoryScope(int byteCount)
@@ -73,6 +81,8 @@ public sealed unsafe class SecureMemoryScope : IDisposable
             _pointer = Marshal.AllocHGlobal(byteCount);
             // Zero memory immediately upon allocation
             CryptoMemory.SecureZero(new Span<byte>((void*)_pointer, _length));
+            // Best-effort OS page lock to prevent swapping secret keys to disk
+            _isPageLocked = TryLockMemory(_pointer, (UIntPtr)byteCount);
         }
         else
         {
@@ -178,7 +188,7 @@ public sealed unsafe class SecureMemoryScope : IDisposable
     }
 
     /// <summary>
-    /// Cryptographically sanitizes (zero-fills) the unmanaged buffer and releases memory.
+    /// Cryptographically sanitizes (zero-fills) the unmanaged buffer, unlocks physical pages, and releases memory.
     /// </summary>
     public void Dispose()
     {
@@ -200,11 +210,63 @@ public sealed unsafe class SecureMemoryScope : IDisposable
             }
             finally
             {
+                if (_isPageLocked)
+                {
+                    TryUnlockMemory(_pointer, (UIntPtr)_length);
+                    _isPageLocked = false;
+                }
                 Marshal.FreeHGlobal(_pointer);
                 _pointer = IntPtr.Zero;
             }
         }
     }
+
+    private static bool TryLockMemory(IntPtr ptr, UIntPtr size)
+    {
+        try
+        {
+            if (IsWindows)
+            {
+                return VirtualLock(ptr, size);
+            }
+            return MLock(ptr, size) == 0;
+        }
+        catch
+        {
+            return false;
+        }
+    }
+
+    private static void TryUnlockMemory(IntPtr ptr, UIntPtr size)
+    {
+        try
+        {
+            if (IsWindows)
+            {
+                VirtualUnlock(ptr, size);
+            }
+            else
+            {
+                MUnlock(ptr, size);
+            }
+        }
+        catch
+        {
+            // Ignore OS unlock errors on disposal
+        }
+    }
+
+    [DllImport("kernel32.dll", SetLastError = true, ExactSpelling = true)]
+    private static extern bool VirtualLock(IntPtr lpAddress, UIntPtr dwSize);
+
+    [DllImport("kernel32.dll", SetLastError = true, ExactSpelling = true)]
+    private static extern bool VirtualUnlock(IntPtr lpAddress, UIntPtr dwSize);
+
+    [DllImport("libc", SetLastError = true, EntryPoint = "mlock")]
+    private static extern int MLock(IntPtr addr, UIntPtr len);
+
+    [DllImport("libc", SetLastError = true, EntryPoint = "munlock")]
+    private static extern int MUnlock(IntPtr addr, UIntPtr len);
 
     [MethodImpl(MethodImplOptions.AggressiveInlining)]
     private void ThrowIfDisposed()
