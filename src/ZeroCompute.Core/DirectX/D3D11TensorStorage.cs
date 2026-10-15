@@ -1,4 +1,5 @@
 using System;
+using System.Buffers;
 using ZeroTensor.Core.Storage;
 
 namespace ZeroCompute.Core.DirectX
@@ -65,25 +66,37 @@ namespace ZeroCompute.Core.DirectX
             if (_disposed) throw new ObjectDisposedException(nameof(D3D11TensorStorage<T>));
             if (offset < 0 || length < 0 || offset + length > Length)
                 throw new ArgumentOutOfRangeException(nameof(length));
+            if (destination.Length < length)
+                throw new ArgumentException("Destination span is shorter than the requested length.", nameof(destination));
+            if (length == 0)
+                return;
 
-            if (offset == 0 && length == Length)
+            if (offset == 0)
             {
                 _buffer.Download(destination.Slice(0, length));
             }
             else
             {
-                // Sub-range copy
-                Span<T> temp = stackalloc T[Math.Min(length, 128)];
-                if (length <= 128)
+                int requiredCount = offset + length;
+                if (requiredCount <= 128)
                 {
+                    Span<T> temp = stackalloc T[requiredCount];
                     _buffer.Download(temp);
                     temp.Slice(offset, length).CopyTo(destination);
                 }
                 else
                 {
-                    T[] full = new T[Length];
-                    _buffer.Download(full.AsSpan());
-                    full.AsSpan(offset, length).CopyTo(destination);
+                    T[] rented = ArrayPool<T>.Shared.Rent(requiredCount);
+                    try
+                    {
+                        Span<T> temp = rented.AsSpan(0, requiredCount);
+                        _buffer.Download(temp);
+                        temp.Slice(offset, length).CopyTo(destination);
+                    }
+                    finally
+                    {
+                        ArrayPool<T>.Shared.Return(rented);
+                    }
                 }
             }
         }
@@ -93,18 +106,37 @@ namespace ZeroCompute.Core.DirectX
             if (_disposed) throw new ObjectDisposedException(nameof(D3D11TensorStorage<T>));
             if (offset < 0 || length < 0 || offset + length > Length)
                 throw new ArgumentOutOfRangeException(nameof(length));
+            if (source.Length < length)
+                throw new ArgumentException("Source span is shorter than the requested length.", nameof(source));
+            if (length == 0)
+                return;
 
             if (offset == 0 && length == Length)
             {
                 _buffer.Upload(source.Slice(0, length));
             }
+            else if (Length <= 128)
+            {
+                Span<T> full = stackalloc T[Length];
+                _buffer.Download(full);
+                source.Slice(0, length).CopyTo(full.Slice(offset, length));
+                _buffer.Upload((ReadOnlySpan<T>)full);
+            }
             else
             {
                 // Read-modify-write if partial upload
-                T[] full = new T[Length];
-                _buffer.Download(full.AsSpan());
-                source.Slice(0, length).CopyTo(full.AsSpan(offset, length));
-                _buffer.Upload((ReadOnlySpan<T>)full.AsSpan());
+                T[] rented = ArrayPool<T>.Shared.Rent(Length);
+                try
+                {
+                    Span<T> full = rented.AsSpan(0, Length);
+                    _buffer.Download(full);
+                    source.Slice(0, length).CopyTo(full.Slice(offset, length));
+                    _buffer.Upload((ReadOnlySpan<T>)full);
+                }
+                finally
+                {
+                    ArrayPool<T>.Shared.Return(rented);
+                }
             }
         }
 

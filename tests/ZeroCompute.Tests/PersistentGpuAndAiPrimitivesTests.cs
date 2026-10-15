@@ -313,5 +313,41 @@ namespace ZeroCompute.Tests
                     for (int j = 0; j < N; j++)
                         Assert.Equal(expectedC[b, i, j], actualC[b, i, j], precision: 3);
         }
+
+        [Fact]
+        public void D3D11TensorStorage_CopyToHost_WithNonZeroOffset_SucceedsForSmallAndLargeRanges()
+        {
+            if (!ComputeDevice.IsGpuAvailable)
+            {
+                return;
+            }
+
+            var gpu = ComputeDevice.Gpu;
+            int totalLen = 200;
+            var hostTensor = Tensor.Zeros<float>(totalLen);
+            for (int i = 0; i < totalLen; i++)
+            {
+                hostTensor[i] = i * 1.5f;
+            }
+
+            using var devTensor = gpu.ToDevice(hostTensor);
+            var transferStorage = Assert.IsAssignableFrom<IDeviceStorageTransfer<float>>(devTensor.Storage);
+
+            // 1. Small sub-range with non-zero offset where offset + length <= 128 (stackalloc path)
+            Span<float> smallDest = stackalloc float[16];
+            transferStorage.CopyToHost(offset: 20, length: 16, smallDest);
+            for (int i = 0; i < 16; i++)
+            {
+                Assert.Equal((20 + i) * 1.5f, smallDest[i]);
+            }
+
+            // 2. Sub-range where length <= 128 but offset + length > 128 (ArrayPool path, previously threw ArgumentOutOfRangeException)
+            Span<float> midDest = stackalloc float[32];
+            transferStorage.CopyToHost(offset: 110, length: 32, midDest);
+            for (int i = 0; i < 32; i++)
+            {
+                Assert.Equal((110 + i) * 1.5f, midDest[i]);
+            }
+        }
     }
 }
