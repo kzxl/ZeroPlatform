@@ -20,6 +20,8 @@ namespace ZeroBus.EtherCat
         public const byte CmdLrd = 0x0A;  // Logical Read
         public const byte CmdLwr = 0x0B;  // Logical Write
         public const byte CmdLrw = 0x0C;  // Logical Read Write
+        public const byte CmdArmw = 0x0D; // Auto Increment Multiple Read Write
+        public const byte CmdFrmw = 0x0E; // Configured Address Multiple Read Write
 
         // Standard Registers
         public const ushort RegType = 0x0000;
