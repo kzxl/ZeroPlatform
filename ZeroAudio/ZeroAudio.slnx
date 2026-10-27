@@ -1,0 +1,8 @@
+<Solution>
+  <Folder Name="/src/">
+    <Project Path="src/ZeroAudio.Core/ZeroAudio.Core.csproj" />
+  </Folder>
+  <Folder Name="/tests/">
+    <Project Path="tests/ZeroAudio.Tests/ZeroAudio.Tests.csproj" />
+  </Folder>
+</Solution>
