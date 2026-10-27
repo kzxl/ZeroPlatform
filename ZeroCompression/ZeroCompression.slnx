@@ -1,0 +1,4 @@
+<Solution>
+  <Project Path="src/ZeroCompression.Core/ZeroCompression.Core.csproj" />
+  <Project Path="tests/ZeroCompression.Tests/ZeroCompression.Tests.csproj" />
+</Solution>
