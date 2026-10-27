@@ -1,0 +1,40 @@
+name: CI Build & Verify
+
+on:
+  push:
+    branches: [ master ]
+  pull_request:
+    branches: [ master ]
+
+jobs:
+  build-and-test:
+    name: Build & Test (Windows)
+    runs-on: windows-latest
+
+    steps:
+      - name: Checkout Code
+        uses: actions/checkout@v4
+        with:
+          fetch-depth: 0
+
+      - name: Setup .NET SDK
+        uses: actions/setup-dotnet@v4
+        with:
+          dotnet-version: |
+            8.0.x
+            9.0.x
+
+      - name: Restore Dependencies
+        run: dotnet restore ZeroPlatform.slnx
+
+      - name: Build Solution (Release)
+        run: dotnet build ZeroPlatform.slnx -c Release --no-restore
+
+      - name: Run Integration Tests
+        run: dotnet test tests/ZeroPlatform.Tests.Integration/ZeroPlatform.Tests.Integration.csproj -c Release --no-build
+
+      - name: Run Foundation Core Tests
+        run: |
+          dotnet test ZeroPrimitives/tests/ZeroPrimitives.Tests/ZeroPrimitives.Tests.csproj -c Release --no-build -f net8.0
+          dotnet test ZeroConcurrency/tests/ZeroConcurrency.Tests/ZeroConcurrency.Tests.csproj -c Release --no-build -f net8.0
+          dotnet test ZeroSecurity/tests/ZeroSecurity.Tests/ZeroSecurity.Tests.csproj -c Release --no-build -f net8.0

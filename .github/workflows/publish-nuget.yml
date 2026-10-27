@@ -1,0 +1,43 @@
+name: Publish NuGet Packages
+
+on:
+  push:
+    tags:
+      - 'v*'
+  workflow_dispatch:
+
+jobs:
+  publish:
+    name: Pack and Publish to NuGet
+    runs-on: windows-latest
+    if: github.repository == 'kzxl/ZeroPlatform'
+
+    steps:
+      - name: Checkout Code
+        uses: actions/checkout@v4
+        with:
+          fetch-depth: 0
+
+      - name: Setup .NET SDK
+        uses: actions/setup-dotnet@v4
+        with:
+          dotnet-version: |
+            8.0.x
+            9.0.x
+
+      - name: Restore Dependencies
+        run: dotnet restore ZeroPlatform.slnx
+
+      - name: Build Solution (Release)
+        run: dotnet build ZeroPlatform.slnx -c Release --no-restore
+
+      - name: Run Integration Tests
+        run: dotnet test tests/ZeroPlatform.Tests.Integration/ZeroPlatform.Tests.Integration.csproj -c Release --no-build
+
+      - name: Pack All Subsystems
+        run: dotnet pack ZeroPlatform.slnx -c Release --no-build -o ./nupkgs
+
+      - name: Push Packages to NuGet.org
+        run: dotnet nuget push ./nupkgs/*.nupkg --api-key ${{ secrets.NUGET_API_KEY }} --source https://api.nuget.org/v3/index.json --skip-duplicate
+        env:
+          NUGET_API_KEY: ${{ secrets.NUGET_API_KEY }}

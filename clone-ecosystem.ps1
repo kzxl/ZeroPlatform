@@ -1,7 +1,8 @@
 # ==============================================================================
-# ZeroPlatform Ecosystem Subsystem Clone Utility
-# Synchronizes all 37 autonomous Zero repositories into the local workspace.
-# Categorized according to the ZeroPlatform 6-Tier Strict DAG Architecture.
+# ZeroPlatform: Ecosystem Subsystem Clone Utility [RETIRED / ARCHIVED]
+# NOTE: As of October 2026, ZeroPlatform is a unified Sovereign Monorepo.
+# All 40 autonomous subsystems are directly tracked in this single repository.
+# You do NOT need to clone satellites individually. Simply git clone ZeroPlatform!
 # ==============================================================================
 
 $ErrorActionPreference = "Stop"
