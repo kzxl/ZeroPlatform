@@ -1,0 +1,33 @@
+<Project Sdk="Microsoft.NET.Sdk">
+  <PropertyGroup>
+    <TargetFrameworks>netstandard2.0;net462;net8.0</TargetFrameworks>
+    <LangVersion>latest</LangVersion>
+    <AllowUnsafeBlocks>true</AllowUnsafeBlocks>
+    <Nullable>enable</Nullable>
+    <Description>Pure C# 3D spatial scanning, Visual SLAM, RGB-D point cloud unprojector, spatial voxel grid integration, TSDF volume, and Marching Cubes 3D mesh reconstruction for .NET.</Description>
+    <PackageTags>slam;visual-slam;3d-scanning;rgbd;point-cloud;voxel-grid;tsdf;marching-cubes;reconstruction</PackageTags>
+  </PropertyGroup>
+
+  <ItemGroup Condition="'$(TargetFramework)' == 'netstandard2.0' Or '$(TargetFramework)' == 'net462'">
+    <PackageReference Include="System.Memory" Version="4.5.5" />
+    <PackageReference Include="System.Buffers" Version="4.5.1" />
+    <PackageReference Include="System.Numerics.Vectors" Version="4.5.0" />
+    <PackageReference Include="System.Runtime.CompilerServices.Unsafe" Version="6.0.0" />
+    <PackageReference Include="System.Threading.Tasks.Extensions" Version="4.5.4" />
+    <PackageReference Include="System.ValueTuple" Version="4.5.0" />
+  </ItemGroup>
+
+  <ItemGroup Condition="Exists('..\..\..\ZeroPrimitives\src\ZeroPrimitives.Core\ZeroPrimitives.Core.csproj')">
+    <ProjectReference Include="..\..\..\ZeroPrimitives\src\ZeroPrimitives.Core\ZeroPrimitives.Core.csproj" />
+  </ItemGroup>
+  <ItemGroup Condition="!Exists('..\..\..\ZeroPrimitives\src\ZeroPrimitives.Core\ZeroPrimitives.Core.csproj')">
+    <PackageReference Include="ZeroPrimitives.Core" Version="1.7.0" />
+  </ItemGroup>
+
+  <ItemGroup Condition="Exists('..\..\..\ZeroGeometry\src\ZeroGeometry.Core\ZeroGeometry.Core.csproj')">
+    <ProjectReference Include="..\..\..\ZeroGeometry\src\ZeroGeometry.Core\ZeroGeometry.Core.csproj" />
+  </ItemGroup>
+  <ItemGroup Condition="!Exists('..\..\..\ZeroGeometry\src\ZeroGeometry.Core\ZeroGeometry.Core.csproj')">
+    <PackageReference Include="ZeroGeometry.Core" Version="1.2.0" />
+  </ItemGroup>
+</Project>
