@@ -13,30 +13,15 @@
 
   <ItemGroup>
     <ProjectReference Include="..\ZeroPipeline.Core\ZeroPipeline.Core.csproj" />
-  </ItemGroup>
-
-  <Choose>
-    <When Condition="Exists('..\..\..\ZeroOcr\src\ZeroOcr.Core\ZeroOcr.Core.csproj')">
-      <ItemGroup>
-        <ProjectReference Include="..\..\..\ZeroOcr\src\ZeroOcr.Core\ZeroOcr.Core.csproj" />
-      </ItemGroup>
-    </When>
-    <Otherwise>
-      <ItemGroup>
-        <PackageReference Include="ZeroOcr.Core" Version="1.0.0" />
-      </ItemGroup>
-    </Otherwise>
-  </Choose>
-
-  <ItemGroup>
-    <PackageReference Include="ZeroPrimitives.Core" Version="1.7.0" />
-    <PackageReference Include="ZeroGraphics.Core" Version="1.7.0" />
-    <PackageReference Include="ZeroGraphics.Imaging" Version="1.7.0" />
-    <PackageReference Include="ZeroGraphics.Vision" Version="1.7.0" />
-    <PackageReference Include="ZeroGeometry.Core" Version="1.2.0" />
-    <PackageReference Include="ZeroTensor.Core" Version="1.5.0" />
-    <PackageReference Include="ZeroInference.Core" Version="1.5.0" />
-    <PackageReference Include="ZeroStorage.Core" Version="1.5.0" />
-    <PackageReference Include="ZeroComm.Core" Version="2.0.0" />
+    <ProjectReference Include="..\..\..\ZeroOcr\src\ZeroOcr.Core\ZeroOcr.Core.csproj" />
+    <ProjectReference Include="..\..\..\ZeroPrimitives\src\ZeroPrimitives.Core\ZeroPrimitives.Core.csproj" />
+    <ProjectReference Include="..\..\..\ZeroGraphics\src\ZeroGraphics.Core\ZeroGraphics.Core.csproj" />
+    <ProjectReference Include="..\..\..\ZeroGraphics\src\ZeroGraphics.Imaging\ZeroGraphics.Imaging.csproj" />
+    <ProjectReference Include="..\..\..\ZeroGraphics\src\ZeroGraphics.Vision\ZeroGraphics.Vision.csproj" />
+    <ProjectReference Include="..\..\..\ZeroGeometry\src\ZeroGeometry.Core\ZeroGeometry.Core.csproj" />
+    <ProjectReference Include="..\..\..\ZeroTensor\src\ZeroTensor.Core\ZeroTensor.Core.csproj" />
+    <ProjectReference Include="..\..\..\ZeroInference\src\ZeroInference.Core\ZeroInference.Core.csproj" />
+    <ProjectReference Include="..\..\..\ZeroStorage\src\ZeroStorage.Core\ZeroStorage.Core.csproj" />
+    <ProjectReference Include="..\..\..\ZeroComm\src\ZeroComm.Core\ZeroComm.Core.csproj" />
   </ItemGroup>
 </Project>
