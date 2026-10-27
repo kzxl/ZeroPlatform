@@ -1,0 +1,10 @@
+<Solution>
+  <Folder Name="/src/">
+    <Project Path="src/ZeroOcr.Core/ZeroOcr.Core.csproj" />
+    <Project Path="src/ZeroOcr.Inference/ZeroOcr.Inference.csproj" />
+    <Project Path="src/ZeroOcr.Windows/ZeroOcr.Windows.csproj" />
+  </Folder>
+  <Folder Name="/tests/">
+    <Project Path="tests/ZeroOcr.Tests/ZeroOcr.Tests.csproj" />
+  </Folder>
+</Solution>
