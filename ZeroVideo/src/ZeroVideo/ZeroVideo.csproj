@@ -11,7 +11,7 @@
   </PropertyGroup>
 
   <ItemGroup>
-    <PackageReference Include="ZeroPrimitives.Core" Version="1.7.0" />
-    <PackageReference Include="ZeroConcurrency" Version="1.4.0" />
+    <ProjectReference Include="..\..\..\ZeroPrimitives\src\ZeroPrimitives.Core\ZeroPrimitives.Core.csproj" />
+    <ProjectReference Include="..\..\..\ZeroConcurrency\src\ZeroConcurrency\ZeroConcurrency.csproj" />
   </ItemGroup>
 </Project>

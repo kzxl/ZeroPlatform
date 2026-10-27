@@ -20,7 +20,7 @@
   </ItemGroup>
 
   <ItemGroup>
-    <PackageReference Include="ZeroGraphics.Core" Version="1.7.0" />
+    <ProjectReference Include="..\..\..\..\ZeroGraphics\src\ZeroGraphics.Core\ZeroGraphics.Core.csproj" />
   </ItemGroup>
 
 </Project>

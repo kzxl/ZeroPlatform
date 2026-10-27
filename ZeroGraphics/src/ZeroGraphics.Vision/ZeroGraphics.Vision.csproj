@@ -15,7 +15,6 @@
   <ItemGroup>
     <ProjectReference Include="..\ZeroGraphics.Core\ZeroGraphics.Core.csproj" />
     <ProjectReference Include="..\ZeroGraphics.Imaging\ZeroGraphics.Imaging.csproj" />
-    <ProjectReference Include="..\..\..\ZeroVector\src\ZeroVector.Core\ZeroVector.Core.csproj" Condition="Exists('..\..\..\ZeroVector\src\ZeroVector.Core\ZeroVector.Core.csproj')" />
-    <PackageReference Include="ZeroVector.Core" Version="1.1.0" Condition="!Exists('..\..\..\ZeroVector\src\ZeroVector.Core\ZeroVector.Core.csproj')" />
-  </ItemGroup>
+    <ProjectReference Include="..\..\..\ZeroVector\src\ZeroVector.Core\ZeroVector.Core.csproj" />
+      </ItemGroup>
 </Project>

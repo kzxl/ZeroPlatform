@@ -19,22 +19,16 @@
     <ProjectReference Include="..\ZeroAgent.Core\ZeroAgent.Core.csproj" />
     <ProjectReference Include="..\ZeroAgent.Tools\ZeroAgent.Tools.csproj" />
 
-    <ProjectReference Include="..\..\..\ZeroPrompt\src\ZeroPrompt.Core\ZeroPrompt.Core.csproj" Condition="Exists('..\..\..\ZeroPrompt\src\ZeroPrompt.Core\ZeroPrompt.Core.csproj')" />
-    <PackageReference Include="ZeroPrompt.Core" Version="1.3.0" Condition="!Exists('..\..\..\ZeroPrompt\src\ZeroPrompt.Core\ZeroPrompt.Core.csproj')" />
-
-    <ProjectReference Include="..\..\..\ZeroVector\src\ZeroVector.Core\ZeroVector.Core.csproj" Condition="Exists('..\..\..\ZeroVector\src\ZeroVector.Core\ZeroVector.Core.csproj')" />
-    <PackageReference Include="ZeroVector.Core" Version="1.1.0" Condition="!Exists('..\..\..\ZeroVector\src\ZeroVector.Core\ZeroVector.Core.csproj')" />
-
-    <ProjectReference Include="..\..\..\ZeroPrimitives\src\ZeroPrimitives.Core\ZeroPrimitives.Core.csproj" Condition="Exists('..\..\..\ZeroPrimitives\src\ZeroPrimitives.Core\ZeroPrimitives.Core.csproj')" />
-    <PackageReference Include="ZeroPrimitives.Core" Version="1.7.0" Condition="!Exists('..\..\..\ZeroPrimitives\src\ZeroPrimitives.Core\ZeroPrimitives.Core.csproj')" />
-
-    <ProjectReference Include="..\..\..\ZeroConcurrency\src\ZeroConcurrency\ZeroConcurrency.csproj" Condition="Exists('..\..\..\ZeroConcurrency\src\ZeroConcurrency\ZeroConcurrency.csproj')" />
-    <PackageReference Include="ZeroConcurrency" Version="1.4.0" Condition="!Exists('..\..\..\ZeroConcurrency\src\ZeroConcurrency\ZeroConcurrency.csproj')" />
-
-    <ProjectReference Include="..\..\..\ZeroTensor\src\ZeroTensor.Core\ZeroTensor.Core.csproj" Condition="Exists('..\..\..\ZeroTensor\src\ZeroTensor.Core\ZeroTensor.Core.csproj')" />
-    <PackageReference Include="ZeroTensor.Core" Version="1.5.0" Condition="!Exists('..\..\..\ZeroTensor\src\ZeroTensor.Core\ZeroTensor.Core.csproj')" />
-
-    <ProjectReference Include="..\..\..\ZeroNeural\src\ZeroNeural.Core\ZeroNeural.Core.csproj" Condition="Exists('..\..\..\ZeroNeural\src\ZeroNeural.Core\ZeroNeural.Core.csproj')" />
-    <PackageReference Include="ZeroNeural.Core" Version="1.2.0" Condition="!Exists('..\..\..\ZeroNeural\src\ZeroNeural.Core\ZeroNeural.Core.csproj')" />
-  </ItemGroup>
+    <ProjectReference Include="..\..\..\ZeroPrompt\src\ZeroPrompt.Core\ZeroPrompt.Core.csproj" />
+    
+    <ProjectReference Include="..\..\..\ZeroVector\src\ZeroVector.Core\ZeroVector.Core.csproj" />
+    
+    <ProjectReference Include="..\..\..\ZeroPrimitives\src\ZeroPrimitives.Core\ZeroPrimitives.Core.csproj" />
+    
+    <ProjectReference Include="..\..\..\ZeroConcurrency\src\ZeroConcurrency\ZeroConcurrency.csproj" />
+    
+    <ProjectReference Include="..\..\..\ZeroTensor\src\ZeroTensor.Core\ZeroTensor.Core.csproj" />
+    
+    <ProjectReference Include="..\..\..\ZeroNeural\src\ZeroNeural.Core\ZeroNeural.Core.csproj" />
+      </ItemGroup>
 </Project>

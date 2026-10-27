@@ -21,13 +21,13 @@
     <ProjectReference Include="..\..\..\ZeroPrimitives\src\ZeroPrimitives.Core\ZeroPrimitives.Core.csproj" />
   </ItemGroup>
   <ItemGroup Condition="!Exists('..\..\..\ZeroPrimitives\src\ZeroPrimitives.Core\ZeroPrimitives.Core.csproj')">
-    <PackageReference Include="ZeroPrimitives.Core" Version="1.7.0" />
+    
   </ItemGroup>
 
   <ItemGroup Condition="Exists('..\..\..\ZeroGeometry\src\ZeroGeometry.Core\ZeroGeometry.Core.csproj')">
     <ProjectReference Include="..\..\..\ZeroGeometry\src\ZeroGeometry.Core\ZeroGeometry.Core.csproj" />
   </ItemGroup>
   <ItemGroup Condition="!Exists('..\..\..\ZeroGeometry\src\ZeroGeometry.Core\ZeroGeometry.Core.csproj')">
-    <PackageReference Include="ZeroGeometry.Core" Version="1.2.0" />
+    
   </ItemGroup>
 </Project>

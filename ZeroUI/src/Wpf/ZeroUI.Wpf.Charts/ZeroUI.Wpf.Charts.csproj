@@ -20,9 +20,9 @@
   </ItemGroup>
 
   <ItemGroup>
-    <PackageReference Include="ZeroGraphics.Core" Version="1.7.0" />
-    <PackageReference Include="ZeroGraphics.DirectX" Version="1.7.0" />
-    <PackageReference Include="ZeroGraphics.Direct2D" Version="1.7.0" />
-    <PackageReference Include="ZeroGraphics.Waveform" Version="1.7.0" />
+    <ProjectReference Include="..\..\..\..\ZeroGraphics\src\ZeroGraphics.Core\ZeroGraphics.Core.csproj" />
+    <ProjectReference Include="..\..\..\..\ZeroGraphics\src\ZeroGraphics.DirectX\ZeroGraphics.DirectX.csproj" />
+    <ProjectReference Include="..\..\..\..\ZeroGraphics\src\ZeroGraphics.Direct2D\ZeroGraphics.Direct2D.csproj" />
+    <ProjectReference Include="..\..\..\..\ZeroGraphics\src\ZeroGraphics.Waveform\ZeroGraphics.Waveform.csproj" />
   </ItemGroup>
 </Project>

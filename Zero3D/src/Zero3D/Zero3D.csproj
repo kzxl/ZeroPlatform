@@ -11,6 +11,6 @@
   </PropertyGroup>
 
   <ItemGroup>
-    <PackageReference Include="ZeroPrimitives.Core" Version="1.7.0" />
+    <ProjectReference Include="..\..\..\ZeroPrimitives\src\ZeroPrimitives.Core\ZeroPrimitives.Core.csproj" />
   </ItemGroup>
 </Project>

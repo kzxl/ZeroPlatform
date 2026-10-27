@@ -18,6 +18,6 @@
 
   <ItemGroup>
     <ProjectReference Include="..\..\src\ZeroGeometry.Core\ZeroGeometry.Core.csproj" />
-    <PackageReference Include="ZeroTensor.Core" Version="1.5.0" />
+    <ProjectReference Include="..\..\..\ZeroTensor\src\ZeroTensor.Core\ZeroTensor.Core.csproj" />
   </ItemGroup>
 </Project>

@@ -20,10 +20,10 @@
   </ItemGroup>
 
   <ItemGroup>
-    <PackageReference Include="ZeroGraphics.Core" Version="1.7.0" />
-    <PackageReference Include="ZeroGraphics.Imaging" Version="1.7.0" />
-    <PackageReference Include="ZeroGraphics.DirectX" Version="1.7.0" />
-    <PackageReference Include="ZeroGraphics.Direct2D" Version="1.7.0" />
-    <PackageReference Include="ZeroOcr.Core" Version="1.0.0" />
+    <ProjectReference Include="..\..\..\..\ZeroGraphics\src\ZeroGraphics.Core\ZeroGraphics.Core.csproj" />
+    <ProjectReference Include="..\..\..\..\ZeroGraphics\src\ZeroGraphics.Imaging\ZeroGraphics.Imaging.csproj" />
+    <ProjectReference Include="..\..\..\..\ZeroGraphics\src\ZeroGraphics.DirectX\ZeroGraphics.DirectX.csproj" />
+    <ProjectReference Include="..\..\..\..\ZeroGraphics\src\ZeroGraphics.Direct2D\ZeroGraphics.Direct2D.csproj" />
+    <ProjectReference Include="..\..\..\..\ZeroOcr\src\ZeroOcr.Core\ZeroOcr.Core.csproj" />
   </ItemGroup>
 </Project>

@@ -13,7 +13,7 @@
   <ItemGroup>
     <PackageReference Include="SharpCompress" Version="0.49.1" />
     <PackageReference Include="ZstdSharp.Port" Version="0.8.8" />
-    <PackageReference Include="ZeroPrimitives.Core" Version="1.7.0" />
-    <PackageReference Include="ZeroSecurity" Version="1.2.0" />
+    <ProjectReference Include="..\..\..\ZeroPrimitives\src\ZeroPrimitives.Core\ZeroPrimitives.Core.csproj" />
+    <ProjectReference Include="..\..\..\ZeroSecurity\src\ZeroSecurity\ZeroSecurity.csproj" />
   </ItemGroup>
 </Project>

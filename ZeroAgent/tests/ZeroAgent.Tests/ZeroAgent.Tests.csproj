@@ -20,10 +20,8 @@
     <ProjectReference Include="..\..\src\ZeroAgent.Core\ZeroAgent.Core.csproj" />
     <ProjectReference Include="..\..\src\ZeroAgent.Tools\ZeroAgent.Tools.csproj" />
     <ProjectReference Include="..\..\src\ZeroAgent.Dialog\ZeroAgent.Dialog.csproj" />
-    <ProjectReference Include="..\..\..\ZeroVector\src\ZeroVector.Core\ZeroVector.Core.csproj" Condition="Exists('..\..\..\ZeroVector\src\ZeroVector.Core\ZeroVector.Core.csproj')" />
-    <PackageReference Include="ZeroVector.Core" Version="1.1.0" Condition="!Exists('..\..\..\ZeroVector\src\ZeroVector.Core\ZeroVector.Core.csproj')" />
-
-    <ProjectReference Include="..\..\..\ZeroTokenizer\src\ZeroTokenizer.Core\ZeroTokenizer.Core.csproj" Condition="Exists('..\..\..\ZeroTokenizer\src\ZeroTokenizer.Core\ZeroTokenizer.Core.csproj')" />
-    <PackageReference Include="ZeroTokenizer.Core" Version="1.1.0" Condition="!Exists('..\..\..\ZeroTokenizer\src\ZeroTokenizer.Core\ZeroTokenizer.Core.csproj')" />
-  </ItemGroup>
+    <ProjectReference Include="..\..\..\ZeroVector\src\ZeroVector.Core\ZeroVector.Core.csproj" />
+    
+    <ProjectReference Include="..\..\..\ZeroTokenizer\src\ZeroTokenizer.Core\ZeroTokenizer.Core.csproj" />
+      </ItemGroup>
 </Project>

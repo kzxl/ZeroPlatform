@@ -18,7 +18,7 @@
   </ItemGroup>
 
   <ItemGroup>
-    <PackageReference Include="ZeroUI.Core" Version="1.15.0" />
-    <PackageReference Include="ZeroUI.WinForms" Version="1.15.0" />
+    <ProjectReference Include="..\..\..\ZeroUI\src\ZeroUI.Core\ZeroUI.Core.csproj" />
+    <ProjectReference Include="..\..\..\ZeroUI\src\WinForms\ZeroUI.WinForms\ZeroUI.WinForms.csproj" />
   </ItemGroup>
 </Project>
