@@ -1,0 +1,27 @@
+<Project Sdk="Microsoft.NET.Sdk">
+  <PropertyGroup>
+    <TargetFrameworks>net462;net8.0-windows</TargetFrameworks>
+    <UseWPF>true</UseWPF>
+    <LangVersion>latest</LangVersion>
+    <AllowUnsafeBlocks>true</AllowUnsafeBlocks>
+    <Nullable>enable</Nullable>
+    <RootNamespace>ZeroUI.Wpf.Editors</RootNamespace>
+    <AssemblyName>ZeroUI.Wpf.Editors</AssemblyName>
+    <Description>ZeroUI WPF Editors - Advanced enterprise editors, input controls, pickers, and masks.</Description>
+    <PackageTags>wpf;editors;textbox;combobox;datepicker</PackageTags>
+    <Authors>Phong Võ</Authors>
+    <PackageLicenseExpression>MIT</PackageLicenseExpression>
+    <NoWarn>$(NoWarn);CS0618</NoWarn>
+  </PropertyGroup>
+
+  <ItemGroup>
+    <ProjectReference Include="..\..\ZeroUI.Core\ZeroUI.Core.csproj" />
+    <ProjectReference Include="..\ZeroUI.Wpf.Common\ZeroUI.Wpf.Common.csproj" />
+    <ProjectReference Include="..\ZeroUI.Wpf.Media\ZeroUI.Wpf.Media.csproj" />
+  </ItemGroup>
+
+  <ItemGroup>
+    <PackageReference Include="ZeroGraphics.Core" Version="1.7.0" />
+  </ItemGroup>
+
+</Project>

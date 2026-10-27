@@ -1,0 +1,8 @@
+blank_issues_enabled: false
+contact_links:
+  - name: 💬 Community Discussions & Q&A
+    url: https://github.com/kzxl/ZeroUI/discussions
+    about: Ask architectural questions, discuss designs, or get help with ZeroUI integration.
+  - name: 📖 ZeroPlatform Ecosystem Documentation
+    url: https://github.com/kzxl/ZeroPlatform
+    about: Explore the broader sovereign ZeroPlatform industrial automation ecosystem.

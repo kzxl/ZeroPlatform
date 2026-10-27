@@ -1,0 +1,34 @@
+<Project Sdk="Microsoft.NET.Sdk">
+  <PropertyGroup>
+    <TargetFrameworks>net462;net8.0-windows</TargetFrameworks>
+    <UseWPF>true</UseWPF>
+    <LangVersion>latest</LangVersion>
+    <AllowUnsafeBlocks>true</AllowUnsafeBlocks>
+    <Nullable>enable</Nullable>
+    <RootNamespace>ZeroUI.Wpf.Design</RootNamespace>
+    <AssemblyName>ZeroUI.Wpf.Design</AssemblyName>
+    <Description>ZeroUI WPF Design-Time Metadata and Designer Provider Subsystem</Description>
+    <Authors>Phong Võ</Authors>
+    <PackageLicenseExpression>MIT</PackageLicenseExpression>
+    <NoWarn>$(NoWarn);CS0618</NoWarn>
+  </PropertyGroup>
+
+  <ItemGroup>
+    <ProjectReference Include="..\..\ZeroUI.Core\ZeroUI.Core.csproj" />
+    <ProjectReference Include="..\ZeroUI.Wpf.Common\ZeroUI.Wpf.Common.csproj" />
+    <ProjectReference Include="..\ZeroUI.Wpf.Editors\ZeroUI.Wpf.Editors.csproj" />
+    <ProjectReference Include="..\ZeroUI.Wpf.Data\ZeroUI.Wpf.Data.csproj" />
+    <ProjectReference Include="..\ZeroUI.Wpf.Charts\ZeroUI.Wpf.Charts.csproj" />
+    <ProjectReference Include="..\ZeroUI.Wpf.Industrial\ZeroUI.Wpf.Industrial.csproj" />
+    <ProjectReference Include="..\ZeroUI.Wpf.Documents\ZeroUI.Wpf.Documents.csproj" />
+    <ProjectReference Include="..\ZeroUI.Wpf.Media\ZeroUI.Wpf.Media.csproj" />
+    <ProjectReference Include="..\ZeroUI.Wpf\ZeroUI.Wpf.csproj" />
+  </ItemGroup>
+
+  <ItemGroup Condition="'$(TargetFramework)' == 'net462'">
+    <Reference Include="PresentationFramework" />
+    <Reference Include="PresentationCore" />
+    <Reference Include="WindowsBase" />
+    <Reference Include="System.Xaml" />
+  </ItemGroup>
+</Project>

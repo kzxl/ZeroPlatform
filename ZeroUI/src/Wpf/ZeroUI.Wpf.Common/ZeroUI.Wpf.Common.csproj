@@ -1,0 +1,27 @@
+<Project Sdk="Microsoft.NET.Sdk">
+  <PropertyGroup>
+    <TargetFrameworks>net462;net8.0-windows</TargetFrameworks>
+    <UseWPF>true</UseWPF>
+    <LangVersion>latest</LangVersion>
+    <AllowUnsafeBlocks>true</AllowUnsafeBlocks>
+    <Nullable>enable</Nullable>
+    <RootNamespace>ZeroUI.Wpf</RootNamespace>
+    <AssemblyName>ZeroUI.Wpf.Common</AssemblyName>
+    <Description>ZeroUI WPF Common - Shell, Base, Theming, Primitives, Buttons, Panels, Layout, and Overlays.</Description>
+    <PackageTags>wpf;theme;controls;shell;docking;theming</PackageTags>
+    <Authors>Phong Võ</Authors>
+    <PackageLicenseExpression>MIT</PackageLicenseExpression>
+    <NoWarn>$(NoWarn);CS0618</NoWarn>
+  </PropertyGroup>
+
+  <ItemGroup>
+    <ProjectReference Include="..\..\ZeroUI.Core\ZeroUI.Core.csproj" />
+  </ItemGroup>
+
+  <ItemGroup>
+    <PackageReference Include="ZeroGraphics.Core" Version="1.7.0" />
+    <PackageReference Include="ZeroGraphics.DirectX" Version="1.7.0" />
+    <PackageReference Include="ZeroGraphics.Direct2D" Version="1.7.0" />
+    <PackageReference Include="ZeroGraphics.Waveform" Version="1.7.0" />
+  </ItemGroup>
+</Project>

@@ -1,0 +1,1 @@
+namespace ZeroUI.Core.Workflow { public class Facet {} }

@@ -1,0 +1,30 @@
+<Project Sdk="Microsoft.NET.Sdk">
+  <PropertyGroup>
+    <TargetFrameworks>net462;net8.0-windows</TargetFrameworks>
+    <UseWindowsForms>true</UseWindowsForms>
+    <LangVersion>latest</LangVersion>
+    <Nullable>enable</Nullable>
+    <RootNamespace>ZeroUI.WinForms.Design</RootNamespace>
+    <AssemblyName>ZeroUI.WinForms.Design</AssemblyName>
+    <Description>ZeroUI WinForms Design-Time Extension Suite - Visual Studio Form Designer, Smart Tags, In-place Designers, Rich UITypeEditors, and Component Designers.</Description>
+    <PackageTags>winforms;designer;smart-tags;form-designer;components</PackageTags>
+    <Authors>Phong Võ</Authors>
+    <PackageLicenseExpression>MIT</PackageLicenseExpression>
+  </PropertyGroup>
+
+  <ItemGroup Condition="'$(TargetFramework)' == 'net462'">
+    <Reference Include="System.Design" />
+    <Reference Include="System.Drawing.Design" />
+  </ItemGroup>
+
+  <ItemGroup>
+    <ProjectReference Include="..\..\ZeroUI.Core\ZeroUI.Core.csproj" />
+    <ProjectReference Include="..\ZeroUI.WinForms.Common\ZeroUI.WinForms.Common.csproj" />
+    <ProjectReference Include="..\ZeroUI.WinForms.Editors\ZeroUI.WinForms.Editors.csproj" />
+    <ProjectReference Include="..\ZeroUI.WinForms.Data\ZeroUI.WinForms.Data.csproj" />
+    <ProjectReference Include="..\ZeroUI.WinForms.Charts\ZeroUI.WinForms.Charts.csproj" />
+    <ProjectReference Include="..\ZeroUI.WinForms.Industrial\ZeroUI.WinForms.Industrial.csproj" />
+    <ProjectReference Include="..\ZeroUI.WinForms.Media\ZeroUI.WinForms.Media.csproj" />
+    <ProjectReference Include="..\ZeroUI.WinForms.Documents\ZeroUI.WinForms.Documents.csproj" />
+  </ItemGroup>
+</Project>

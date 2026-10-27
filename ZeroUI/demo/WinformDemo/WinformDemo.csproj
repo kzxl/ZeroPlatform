@@ -1,0 +1,19 @@
+<Project Sdk="Microsoft.NET.Sdk">
+  <PropertyGroup>
+    <OutputType>WinExe</OutputType>
+    <TargetFramework>net8.0-windows</TargetFramework>
+    <UseWindowsForms>true</UseWindowsForms>
+    <LangVersion>latest</LangVersion>
+    <AllowUnsafeBlocks>true</AllowUnsafeBlocks>
+    <Nullable>enable</Nullable>
+    <ApplicationHighDpiMode>PerMonitorV2</ApplicationHighDpiMode>
+    <NoWarn>$(NoWarn);CS0618</NoWarn>
+  </PropertyGroup>
+
+  <ItemGroup>
+    <ProjectReference Include="..\..\src\ZeroUI.Core\ZeroUI.Core.csproj" />
+    <ProjectReference Include="..\..\src\WinForms\ZeroUI.WinForms\ZeroUI.WinForms.csproj" />
+    <ProjectReference Include="..\..\src\WinForms\ZeroUI.WinForms.Design\ZeroUI.WinForms.Design.csproj" />
+    <ProjectReference Include="..\ZeroUI.Demo.Data\ZeroUI.Demo.Data.csproj" />
+  </ItemGroup>
+</Project>

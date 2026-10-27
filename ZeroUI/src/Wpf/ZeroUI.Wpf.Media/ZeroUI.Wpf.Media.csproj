@@ -1,0 +1,29 @@
+<Project Sdk="Microsoft.NET.Sdk">
+  <PropertyGroup>
+    <TargetFrameworks>net462;net8.0-windows</TargetFrameworks>
+    <UseWPF>true</UseWPF>
+    <LangVersion>latest</LangVersion>
+    <AllowUnsafeBlocks>true</AllowUnsafeBlocks>
+    <Nullable>enable</Nullable>
+    <RootNamespace>ZeroUI.Wpf.Media</RootNamespace>
+    <AssemblyName>ZeroUI.Wpf.Media</AssemblyName>
+    <Description>ZeroUI WPF Media - High-performance GPU accelerated image viewer, photo studio controls, comparators, and media primitives.</Description>
+    <PackageTags>wpf;media;imageviewer;photostudio;d3d11;directx;zoom;pan;pixel-grid</PackageTags>
+    <Authors>Phong Võ</Authors>
+    <PackageLicenseExpression>MIT</PackageLicenseExpression>
+    <NoWarn>$(NoWarn);CS0618</NoWarn>
+  </PropertyGroup>
+
+  <ItemGroup>
+    <ProjectReference Include="..\..\ZeroUI.Core\ZeroUI.Core.csproj" />
+    <ProjectReference Include="..\ZeroUI.Wpf.Common\ZeroUI.Wpf.Common.csproj" />
+  </ItemGroup>
+
+  <ItemGroup>
+    <PackageReference Include="ZeroGraphics.Core" Version="1.7.0" />
+    <PackageReference Include="ZeroGraphics.Imaging" Version="1.7.0" />
+    <PackageReference Include="ZeroGraphics.DirectX" Version="1.7.0" />
+    <PackageReference Include="ZeroGraphics.Direct2D" Version="1.7.0" />
+    <PackageReference Include="ZeroOcr.Core" Version="1.0.0" />
+  </ItemGroup>
+</Project>

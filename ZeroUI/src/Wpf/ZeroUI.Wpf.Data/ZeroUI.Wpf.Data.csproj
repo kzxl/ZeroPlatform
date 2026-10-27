@@ -1,0 +1,27 @@
+<Project Sdk="Microsoft.NET.Sdk">
+  <PropertyGroup>
+    <TargetFrameworks>net462;net8.0-windows</TargetFrameworks>
+    <UseWPF>true</UseWPF>
+    <LangVersion>latest</LangVersion>
+    <AllowUnsafeBlocks>true</AllowUnsafeBlocks>
+    <Nullable>enable</Nullable>
+    <RootNamespace>ZeroUI.Wpf.Data</RootNamespace>
+    <AssemblyName>ZeroUI.Wpf.Data</AssemblyName>
+    <Description>ZeroUI WPF Data - Virtual DataGrid, TreeList, PivotGrid, and multi-column lookup controls.</Description>
+    <PackageTags>wpf;grid;datagrid;virtualization;pivotgrid;treelist</PackageTags>
+    <Authors>Phong Võ</Authors>
+    <PackageLicenseExpression>MIT</PackageLicenseExpression>
+    <NoWarn>$(NoWarn);CS0618</NoWarn>
+  </PropertyGroup>
+
+  <ItemGroup>
+    <ProjectReference Include="..\..\ZeroUI.Core\ZeroUI.Core.csproj" />
+    <ProjectReference Include="..\ZeroUI.Wpf.Common\ZeroUI.Wpf.Common.csproj" />
+    <ProjectReference Include="..\ZeroUI.Wpf.Editors\ZeroUI.Wpf.Editors.csproj" />
+  </ItemGroup>
+
+  <ItemGroup>
+    <PackageReference Include="ZeroGraphics.Core" Version="1.7.0" />
+  </ItemGroup>
+
+</Project>

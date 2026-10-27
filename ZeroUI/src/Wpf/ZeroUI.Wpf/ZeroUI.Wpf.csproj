@@ -1,0 +1,28 @@
+<Project Sdk="Microsoft.NET.Sdk">
+  <PropertyGroup>
+    <TargetFrameworks>net462;net8.0-windows</TargetFrameworks>
+    <UseWPF>true</UseWPF>
+    <LangVersion>latest</LangVersion>
+    <AllowUnsafeBlocks>true</AllowUnsafeBlocks>
+    <Nullable>enable</Nullable>
+    <RootNamespace>ZeroUI.Wpf</RootNamespace>
+    <AssemblyName>ZeroUI.Wpf</AssemblyName>
+    <Description>ZeroUI WPF Suite - Complete enterprise UI suite bundling Common, Editors, Data, Charts, Industrial, and Documents.</Description>
+    <PackageTags>wpf;datagrid;grid;scada;hmi;industrial-automation;virtualization;zero-allocation;dark-theme</PackageTags>
+    <Authors>Phong Võ</Authors>
+    <PackageLicenseExpression>MIT</PackageLicenseExpression>
+    <PackageProjectUrl>https://github.com/kzxl/ZeroUI</PackageProjectUrl>
+    <NoWarn>$(NoWarn);CS0618</NoWarn>
+  </PropertyGroup>
+
+  <ItemGroup>
+    <ProjectReference Include="..\..\ZeroUI.Core\ZeroUI.Core.csproj" />
+    <ProjectReference Include="..\ZeroUI.Wpf.Common\ZeroUI.Wpf.Common.csproj" />
+    <ProjectReference Include="..\ZeroUI.Wpf.Editors\ZeroUI.Wpf.Editors.csproj" />
+    <ProjectReference Include="..\ZeroUI.Wpf.Data\ZeroUI.Wpf.Data.csproj" />
+    <ProjectReference Include="..\ZeroUI.Wpf.Charts\ZeroUI.Wpf.Charts.csproj" />
+    <ProjectReference Include="..\ZeroUI.Wpf.Industrial\ZeroUI.Wpf.Industrial.csproj" />
+    <ProjectReference Include="..\ZeroUI.Wpf.Documents\ZeroUI.Wpf.Documents.csproj" />
+    <ProjectReference Include="..\ZeroUI.Wpf.Media\ZeroUI.Wpf.Media.csproj" />
+  </ItemGroup>
+</Project>

@@ -1,0 +1,27 @@
+<Project Sdk="Microsoft.NET.Sdk">
+  <PropertyGroup>
+    <TargetFrameworks>net462;net8.0-windows</TargetFrameworks>
+    <UseWindowsForms>true</UseWindowsForms>
+    <LangVersion>latest</LangVersion>
+    <AllowUnsafeBlocks>true</AllowUnsafeBlocks>
+    <Nullable>enable</Nullable>
+    <RootNamespace>ZeroUI.WinForms</RootNamespace>
+    <AssemblyName>ZeroUI.WinForms</AssemblyName>
+    <Description>ZeroUI WinForms Suite - Complete enterprise UI suite bundling Common, Editors, Data, Charts, Industrial, and Documents.</Description>
+    <PackageTags>winforms;datagridview;grid;scada;hmi;industrial-automation;mes;plc;dark-theme;virtualization;zero-allocation</PackageTags>
+    <Authors>Phong Võ</Authors>
+    <PackageLicenseExpression>MIT</PackageLicenseExpression>
+    <PackageProjectUrl>https://github.com/kzxl/ZeroUI</PackageProjectUrl>
+  </PropertyGroup>
+
+  <ItemGroup>
+    <ProjectReference Include="..\..\ZeroUI.Core\ZeroUI.Core.csproj" />
+    <ProjectReference Include="..\ZeroUI.WinForms.Common\ZeroUI.WinForms.Common.csproj" />
+    <ProjectReference Include="..\ZeroUI.WinForms.Editors\ZeroUI.WinForms.Editors.csproj" />
+    <ProjectReference Include="..\ZeroUI.WinForms.Data\ZeroUI.WinForms.Data.csproj" />
+    <ProjectReference Include="..\ZeroUI.WinForms.Charts\ZeroUI.WinForms.Charts.csproj" />
+    <ProjectReference Include="..\ZeroUI.WinForms.Industrial\ZeroUI.WinForms.Industrial.csproj" />
+    <ProjectReference Include="..\ZeroUI.WinForms.Documents\ZeroUI.WinForms.Documents.csproj" />
+    <ProjectReference Include="..\ZeroUI.WinForms.Media\ZeroUI.WinForms.Media.csproj" />
+  </ItemGroup>
+</Project>

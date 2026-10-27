@@ -1,0 +1,7 @@
+<Project xmlns="http://schemas.microsoft.com/developer/msbuild/2003">
+  <!-- ZeroUI WinForms Visual Studio Designer Integration Targets -->
+  <!-- Automatically resolves ZeroUI.WinForms.Design.dll in Visual Studio Out-of-Process Designer -->
+  <ItemGroup Condition="'$(DesignTimeBuild)' == 'true' Or '$(BuildingInsideVisualStudio)' == 'true'">
+    <ReferencePath Include="$(MSBuildThisFileDirectory)..\lib\$(TargetFramework)\ZeroUI.WinForms.Design.dll" Condition="Exists('$(MSBuildThisFileDirectory)..\lib\$(TargetFramework)\ZeroUI.WinForms.Design.dll')" />
+  </ItemGroup>
+</Project>

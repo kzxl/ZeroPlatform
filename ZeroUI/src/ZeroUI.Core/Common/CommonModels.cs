@@ -1,0 +1,1 @@
+namespace ZeroUI.Core.Common { public class CommonDummy {} }

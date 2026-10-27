@@ -1,0 +1,30 @@
+<Project Sdk="Microsoft.NET.Sdk">
+  <PropertyGroup>
+    <TargetFrameworks>net462;net8.0-windows</TargetFrameworks>
+    <UseWindowsForms>true</UseWindowsForms>
+    <LangVersion>latest</LangVersion>
+    <AllowUnsafeBlocks>true</AllowUnsafeBlocks>
+    <Nullable>enable</Nullable>
+    <RootNamespace>ZeroUI.WinForms</RootNamespace>
+    <AssemblyName>ZeroUI.WinForms.Common</AssemblyName>
+    <Description>ZeroUI WinForms Common - Shell, Base, Theming, Primitives, Buttons, Panels, Layout, and Overlays.</Description>
+    <PackageTags>winforms;theme;controls;shell;ribbon;docking</PackageTags>
+    <Authors>Phong Võ</Authors>
+    <PackageLicenseExpression>MIT</PackageLicenseExpression>
+  </PropertyGroup>
+
+  <ItemGroup>
+    <ProjectReference Include="..\..\ZeroUI.Core\ZeroUI.Core.csproj" />
+  </ItemGroup>
+
+  <ItemGroup>
+    <PackageReference Include="ZeroGraphics.Core" Version="1.7.0" />
+    <PackageReference Include="ZeroGraphics.DirectX" Version="1.7.0" />
+    <PackageReference Include="ZeroGraphics.Direct2D" Version="1.7.0" />
+    <PackageReference Include="ZeroGraphics.Waveform" Version="1.7.0" />
+  </ItemGroup>
+
+  <ItemGroup>
+    <EmbeddedResource Include="Icons\*.bmp" />
+  </ItemGroup>
+</Project>

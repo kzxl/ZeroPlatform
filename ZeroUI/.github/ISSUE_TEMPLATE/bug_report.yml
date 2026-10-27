@@ -1,0 +1,86 @@
+name: 🐛 Bug Report
+description: Report a bug, rendering glitch, or unexpected exception in ZeroUI.
+title: "[Bug]: "
+labels: ["bug"]
+body:
+  - type: markdown
+    attributes:
+      value: |
+        Thank you for reporting a bug in ZeroUI! Please provide detailed information so we can investigate and fix it quickly.
+  - type: textarea
+    id: description
+    attributes:
+      label: Bug Description
+      description: A clear and concise description of what the bug is.
+      placeholder: Describe the bug encountered...
+    validations:
+      required: true
+  - type: textarea
+    id: reproduction
+    attributes:
+      label: Steps to Reproduce
+      description: Detailed, minimal steps to reproduce the issue.
+      placeholder: |
+        1. Initialize ZeroGridControl with ...
+        2. Bind data source ...
+        3. Trigger filter or scroll ...
+        4. Observe unexpected behavior
+    validations:
+      required: true
+  - type: textarea
+    id: expected
+    attributes:
+      label: Expected Behavior
+      description: What did you expect to happen instead?
+      placeholder: Expected behavior...
+    validations:
+      required: true
+  - type: dropdown
+    id: framework
+    attributes:
+      label: Target Framework & Runtime
+      description: Which .NET runtime target is affected?
+      options:
+        - .NET 8.0-windows
+        - .NET 9.0-windows
+        - .NET Framework 4.6.2 / 4.8
+        - .NET Standard 2.0
+    validations:
+      required: true
+  - type: dropdown
+    id: component
+    attributes:
+      label: Component / Subsystem
+      description: Which control or area of ZeroUI does this affect?
+      options:
+        - ZeroGrid (Virtual Scroll, Header Filter, Cell Painter)
+        - TreeListControl
+        - DarkChromeWindow / Window Chrome
+        - Modern Controls (SegmentedControl, CollapsibleToolCard, ReticleLoupe)
+        - ZeroGraphics / Direct3D 11 Render Surface
+        - Core Infrastructure / Other
+    validations:
+      required: true
+  - type: input
+    id: version
+    attributes:
+      label: ZeroUI Version
+      description: What version of ZeroUI are you using?
+      placeholder: "e.g., 1.8.2"
+    validations:
+      required: true
+  - type: textarea
+    id: logs
+    attributes:
+      label: Stack Trace / Error Logs
+      description: Paste any exception messages, call stacks, or inner exceptions here.
+      render: shell
+  - type: checkboxes
+    id: checks
+    attributes:
+      label: Verification Checklist
+      options:
+        - label: I have verified that this issue is reproducible on the latest version of ZeroUI.
+          required: true
+        - label: I have searched existing GitHub issues and confirmed this is not a duplicate.
+          required: true

@@ -1,0 +1,48 @@
+name: 💡 Feature Request
+description: Propose a new UI control, rendering capability, or zero-alloc optimization.
+title: "[Feature]: "
+labels: ["enhancement"]
+body:
+  - type: markdown
+    attributes:
+      value: |
+        Thank you for suggesting an enhancement to ZeroUI! Help us understand the industrial requirement and proposed architecture.
+  - type: textarea
+    id: problem
+    attributes:
+      label: Problem or Industrial Use Case
+      description: What specific engineering or UI challenge does this feature address?
+      placeholder: |
+        A clear description of what the problem is. E.g., "In high-frequency automated inspection, we need..."
+    validations:
+      required: true
+  - type: textarea
+    id: solution
+    attributes:
+      label: Proposed Solution & API Design
+      description: Describe your proposed control, API design, or rendering optimization.
+      placeholder: Describe how the feature should behave and ideally how the API should look...
+    validations:
+      required: true
+  - type: dropdown
+    id: subsystem
+    attributes:
+      label: Target UI Framework
+      description: Which UI platform should this feature be built for?
+      options:
+        - WinForms & WPF (Shared Core)
+        - WinForms Dedicated
+        - WPF Dedicated
+        - Direct3D 11 / ZeroGraphics
+    validations:
+      required: true
+  - type: textarea
+    id: alternatives
+    attributes:
+      label: Alternatives Considered
+      description: What existing workarounds or alternative solutions have you considered?
+  - type: textarea
+    id: additional_context
+    attributes:
+      label: Additional Context / Mockups
+      description: Attach screenshots, mockups, or performance benchmarks if available.

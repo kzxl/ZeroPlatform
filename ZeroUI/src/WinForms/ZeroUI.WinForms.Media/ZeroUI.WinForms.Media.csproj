@@ -1,0 +1,29 @@
+<Project Sdk="Microsoft.NET.Sdk">
+  <PropertyGroup>
+    <TargetFrameworks>net462;net8.0-windows</TargetFrameworks>
+    <UseWindowsForms>true</UseWindowsForms>
+    <LangVersion>latest</LangVersion>
+    <AllowUnsafeBlocks>true</AllowUnsafeBlocks>
+    <Nullable>enable</Nullable>
+    <RootNamespace>ZeroUI.WinForms.Media</RootNamespace>
+    <AssemblyName>ZeroUI.WinForms.Media</AssemblyName>
+    <Description>ZeroUI WinForms Media - High-performance GPU accelerated image viewer, photo studio canvas, and media inspection controls.</Description>
+    <PackageTags>winforms;media;imageviewer;photostudio;d3d11;directx;zoom;pan;pixel-grid</PackageTags>
+    <Authors>Phong Võ</Authors>
+    <PackageLicenseExpression>MIT</PackageLicenseExpression>
+    <NoWarn>$(NoWarn);CS0618</NoWarn>
+  </PropertyGroup>
+
+  <ItemGroup>
+    <ProjectReference Include="..\..\ZeroUI.Core\ZeroUI.Core.csproj" />
+    <ProjectReference Include="..\ZeroUI.WinForms.Common\ZeroUI.WinForms.Common.csproj" />
+  </ItemGroup>
+
+  <ItemGroup>
+    <PackageReference Include="ZeroGraphics.Core" Version="1.7.0" />
+    <PackageReference Include="ZeroGraphics.Imaging" Version="1.7.0" />
+    <PackageReference Include="ZeroGraphics.DirectX" Version="1.7.0" />
+    <PackageReference Include="ZeroGraphics.Direct2D" Version="1.7.0" />
+    <PackageReference Include="ZeroOcr.Core" Version="1.0.0" />
+  </ItemGroup>
+</Project>

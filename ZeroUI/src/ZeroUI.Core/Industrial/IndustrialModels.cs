@@ -1,0 +1,1 @@
+namespace ZeroUI.Core.Industrial { public class ByteRange {} }

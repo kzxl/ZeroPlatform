@@ -1,0 +1,39 @@
+<Solution>
+  <Folder Name="/src/">
+    <Project Path="src/ZeroUI.Core/ZeroUI.Core.csproj" />
+    <Project Path="src/ZeroUI.Historian.Sqlite/ZeroUI.Historian.Sqlite.csproj" />
+  </Folder>
+  <Folder Name="/src/WinForms/">
+    <Project Path="src/WinForms/ZeroUI.WinForms.Common/ZeroUI.WinForms.Common.csproj" />
+    <Project Path="src/WinForms/ZeroUI.WinForms.Editors/ZeroUI.WinForms.Editors.csproj" />
+    <Project Path="src/WinForms/ZeroUI.WinForms.Data/ZeroUI.WinForms.Data.csproj" />
+    <Project Path="src/WinForms/ZeroUI.WinForms.Charts/ZeroUI.WinForms.Charts.csproj" />
+    <Project Path="src/WinForms/ZeroUI.WinForms.Industrial/ZeroUI.WinForms.Industrial.csproj" />
+    <Project Path="src/WinForms/ZeroUI.WinForms.Documents/ZeroUI.WinForms.Documents.csproj" />
+    <Project Path="src/WinForms/ZeroUI.WinForms.Media/ZeroUI.WinForms.Media.csproj" />
+    <Project Path="src/WinForms/ZeroUI.WinForms.Design/ZeroUI.WinForms.Design.csproj" />
+    <Project Path="src/WinForms/ZeroUI.WinForms/ZeroUI.WinForms.csproj" />
+  </Folder>
+  <Folder Name="/src/Wpf/">
+    <Project Path="src/Wpf/ZeroUI.Wpf.Common/ZeroUI.Wpf.Common.csproj" />
+    <Project Path="src/Wpf/ZeroUI.Wpf.Editors/ZeroUI.Wpf.Editors.csproj" />
+    <Project Path="src/Wpf/ZeroUI.Wpf.Data/ZeroUI.Wpf.Data.csproj" />
+    <Project Path="src/Wpf/ZeroUI.Wpf.Charts/ZeroUI.Wpf.Charts.csproj" />
+    <Project Path="src/Wpf/ZeroUI.Wpf.Industrial/ZeroUI.Wpf.Industrial.csproj" />
+    <Project Path="src/Wpf/ZeroUI.Wpf.Documents/ZeroUI.Wpf.Documents.csproj" />
+    <Project Path="src/Wpf/ZeroUI.Wpf.Media/ZeroUI.Wpf.Media.csproj" />
+    <Project Path="src/Wpf/ZeroUI.Wpf.Design/ZeroUI.Wpf.Design.csproj" />
+    <Project Path="src/Wpf/ZeroUI.Wpf/ZeroUI.Wpf.csproj" />
+  </Folder>
+  <Folder Name="/demo/">
+    <Project Path="demo/ZeroUI.Demo.Data/ZeroUI.Demo.Data.csproj" />
+    <Project Path="demo/WinformDemo/WinformDemo.csproj" />
+    <Project Path="demo/WpfDemo/WpfDemo.csproj" />
+  </Folder>
+  <Folder Name="/tests/">
+    <Project Path="tests/ZeroUI.Benchmarks/ZeroUI.Benchmarks.csproj" />
+    <Project Path="tests/ZeroUI.Core.Benchmarks/ZeroUI.Core.Benchmarks.csproj" />
+    <Project Path="tests/ZeroUI.Core.Tests/ZeroUI.Core.Tests.csproj" />
+    <Project Path="tests/ZeroUI.Desktop.Tests/ZeroUI.Desktop.Tests.csproj" />
+  </Folder>
+</Solution>

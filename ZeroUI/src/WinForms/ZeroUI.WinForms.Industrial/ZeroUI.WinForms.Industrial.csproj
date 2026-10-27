@@ -1,0 +1,28 @@
+<Project Sdk="Microsoft.NET.Sdk">
+  <PropertyGroup>
+    <TargetFrameworks>net462;net8.0-windows</TargetFrameworks>
+    <UseWindowsForms>true</UseWindowsForms>
+    <LangVersion>latest</LangVersion>
+    <AllowUnsafeBlocks>true</AllowUnsafeBlocks>
+    <Nullable>enable</Nullable>
+    <RootNamespace>ZeroUI.WinForms.Industrial</RootNamespace>
+    <AssemblyName>ZeroUI.WinForms.Industrial</AssemblyName>
+    <Description>ZeroUI WinForms Industrial - SCADA gauges, ISA-18.2 alarms, P&amp;ID mimics, and domain modules.</Description>
+    <PackageTags>winforms;scada;hmi;gauges;alarms;pid;industrial-automation</PackageTags>
+    <Authors>Phong Võ</Authors>
+    <PackageLicenseExpression>MIT</PackageLicenseExpression>
+  </PropertyGroup>
+
+  <ItemGroup>
+    <ProjectReference Include="..\..\ZeroUI.Core\ZeroUI.Core.csproj" />
+    <ProjectReference Include="..\ZeroUI.WinForms.Common\ZeroUI.WinForms.Common.csproj" />
+    <ProjectReference Include="..\ZeroUI.WinForms.Editors\ZeroUI.WinForms.Editors.csproj" />
+    <ProjectReference Include="..\ZeroUI.WinForms.Charts\ZeroUI.WinForms.Charts.csproj" />
+  </ItemGroup>
+
+  <ItemGroup>
+    <PackageReference Include="ZeroGraphics.Core" Version="1.7.0" />
+    <PackageReference Include="ZeroGraphics.Direct2D" Version="1.7.0" />
+  </ItemGroup>
+
+</Project>
