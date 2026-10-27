@@ -36,7 +36,7 @@ foreach ($repo in $satellites) {
         gh repo archive "kzxl/$repo" --yes
         Write-Host "   [ARCHIVED] kzxl/$repo successfully archived as Read-Only." -ForegroundColor Green
     } catch {
-        Write-Warning "   [ERROR] Failed to archive kzxl/$repo: $_"
+        Write-Warning "   [ERROR] Failed to archive kzxl/${repo}: $_"
     }
 }
 
