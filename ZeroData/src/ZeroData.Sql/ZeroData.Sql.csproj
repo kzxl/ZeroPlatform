@@ -1,0 +1,29 @@
+<Project Sdk="Microsoft.NET.Sdk">
+
+  <PropertyGroup>
+    <TargetFramework>netstandard2.0</TargetFramework>
+    <LangVersion>latest</LangVersion>
+    <Nullable>enable</Nullable>
+    <PackageId>ZeroData.Sql</PackageId>
+    <RootNamespace>ZeroData.Sql</RootNamespace>
+    <Description>Sovereign high-performance native ADO.NET query execution, Expression Tree materialization, and ORM framework for the Zero ecosystem. Supports .NET Framework and .NET Core, with full async support, fast key lookups, batch operations, change tracking, and LINQ to SQL compatibility.</Description>
+    <PackageTags>zerodata;sql;orm;database;adonet;zero-allocation;netstandard</PackageTags>
+  </PropertyGroup>
+
+  <ItemGroup>
+    <AssemblyAttribute Include="System.Runtime.CompilerServices.InternalsVisibleTo">
+      <_Parameter1>ZeroData.Sql.Tests</_Parameter1>
+    </AssemblyAttribute>
+  </ItemGroup>
+
+  <ItemGroup>
+    <PackageReference Include="ZeroPrimitives.Core" Version="1.7.0" />
+    <PackageReference Include="Microsoft.Data.SqlClient" Version="5.2.2" />
+    <PackageReference Include="Microsoft.Bcl.AsyncInterfaces" Version="8.0.0" />
+  </ItemGroup>
+
+  <ItemGroup>
+    <ProjectReference Include="..\ZeroData.Core\ZeroData.Core.csproj" />
+  </ItemGroup>
+
+</Project>

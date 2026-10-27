@@ -1,0 +1,11 @@
+<Solution>
+  <Folder Name="/src/">
+    <Project Path="src/ZeroData.Core/ZeroData.Core.csproj" />
+    <Project Path="src/ZeroData.Sql/ZeroData.Sql.csproj" />
+    <Project Path="src/ZeroData.Sql.CodeGen/ZeroData.Sql.CodeGen.csproj" />
+  </Folder>
+  <Folder Name="/tests/">
+    <Project Path="tests/ZeroData.Tests/ZeroData.Tests.csproj" />
+    <Project Path="tests/ZeroData.Sql.Tests/ZeroData.Sql.Tests.csproj" />
+  </Folder>
+</Solution>
