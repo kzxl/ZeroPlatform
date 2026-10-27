@@ -1,0 +1,26 @@
+<Project Sdk="Microsoft.NET.Sdk">
+  <PropertyGroup>
+    <TargetFrameworks>netstandard2.0;net462;net8.0;net9.0</TargetFrameworks>
+    <LangVersion>latest</LangVersion>
+    <AllowUnsafeBlocks>true</AllowUnsafeBlocks>
+    <Nullable>enable</Nullable>
+    <Description>High-performance sovereign 2D vector graphics rendering engine for ZeroGraphics: Path2D, adaptive tessellation, GPU stroke expansion, and RHI vector batch rendering.</Description>
+    <PackageTags>vector-graphics;path2d;svg;tessellation;bezier;stroker;triangulation;rhi;zero-graphics;gpu-canvas</PackageTags>
+  </PropertyGroup>
+
+  <ItemGroup Condition="'$(TargetFramework)' == 'netstandard2.0' Or '$(TargetFramework)' == 'net462'">
+    <PackageReference Include="System.Memory" Version="4.5.5" />
+    <PackageReference Include="System.Buffers" Version="4.5.1" />
+  </ItemGroup>
+
+  <ItemGroup>
+    <ProjectReference Include="..\ZeroGraphics.Core\ZeroGraphics.Core.csproj" />
+    <ProjectReference Include="..\ZeroGraphics.Rhi\ZeroGraphics.Rhi.csproj" />
+  </ItemGroup>
+
+  <ItemGroup>
+    <AssemblyAttribute Include="System.Runtime.CompilerServices.InternalsVisibleTo">
+      <_Parameter1>ZeroGraphics.Tests</_Parameter1>
+    </AssemblyAttribute>
+  </ItemGroup>
+</Project>

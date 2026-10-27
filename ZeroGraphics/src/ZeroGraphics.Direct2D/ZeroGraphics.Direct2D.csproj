@@ -1,0 +1,19 @@
+<Project Sdk="Microsoft.NET.Sdk">
+  <PropertyGroup>
+    <TargetFrameworks>net462;net8.0-windows</TargetFrameworks>
+    <UseWindowsForms>true</UseWindowsForms>
+    <LangVersion>latest</LangVersion>
+    <AllowUnsafeBlocks>true</AllowUnsafeBlocks>
+    <Nullable>enable</Nullable>
+    <Description>High-performance Direct2D and DirectWrite typography and 2D vector rendering engine for Windows Forms (.NET Framework 4.6.2 and .NET 8.0).</Description>
+    <PackageTags>direct2d;d2d1;directwrite;typography;cleartype;winforms;rendering;vector;zero-allocation</PackageTags>
+    <Authors>Phong Võ</Authors>
+    <PackageLicenseExpression>MIT</PackageLicenseExpression>
+    <PackageProjectUrl>https://github.com/kzxl/ZeroUI</PackageProjectUrl>
+  </PropertyGroup>
+
+  <ItemGroup>
+    <ProjectReference Include="..\ZeroGraphics.Core\ZeroGraphics.Core.csproj" />
+    <ProjectReference Include="..\ZeroGraphics.DirectX\ZeroGraphics.DirectX.csproj" />
+  </ItemGroup>
+</Project>

@@ -1,0 +1,19 @@
+﻿<Project Sdk="Microsoft.NET.Sdk">
+  <PropertyGroup>
+    <TargetFrameworks>net462;net8.0-windows</TargetFrameworks>
+    <UseWindowsForms>true</UseWindowsForms>
+    <LangVersion>latest</LangVersion>
+    <AllowUnsafeBlocks>true</AllowUnsafeBlocks>
+    <Nullable>enable</Nullable>
+    <Description>High-frequency real-time waveform, oscilloscope, and industrial telemetry chart canvas powered by Direct3D 11 hardware-accelerated LineStrip rendering (.NET Framework 4.6.2 and .NET 8.0).</Description>
+    <PackageTags>directx;d3d11;waveform;oscilloscope;telemetry;scada;chart;linestrip;zero-allocation</PackageTags>
+    <Authors>Phong Võ</Authors>
+    <PackageLicenseExpression>MIT</PackageLicenseExpression>
+    <PackageProjectUrl>https://github.com/kzxl/ZeroUI</PackageProjectUrl>
+  </PropertyGroup>
+
+  <ItemGroup>
+    <ProjectReference Include="..\ZeroGraphics.Core\ZeroGraphics.Core.csproj" />
+    <ProjectReference Include="..\ZeroGraphics.DirectX\ZeroGraphics.DirectX.csproj" />
+  </ItemGroup>
+</Project>

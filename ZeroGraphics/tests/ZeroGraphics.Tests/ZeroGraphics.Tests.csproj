@@ -1,0 +1,30 @@
+<Project Sdk="Microsoft.NET.Sdk">
+  <PropertyGroup>
+    <TargetFramework>net8.0-windows</TargetFramework>
+    <UseWindowsForms>true</UseWindowsForms>
+    <LangVersion>latest</LangVersion>
+    <Nullable>enable</Nullable>
+    <IsPackable>false</IsPackable>
+    <AllowUnsafeBlocks>true</AllowUnsafeBlocks>
+  </PropertyGroup>
+
+  <ItemGroup>
+    <PackageReference Include="Microsoft.NET.Test.Sdk" Version="17.11.1" />
+    <PackageReference Include="xunit" Version="2.9.2" />
+    <PackageReference Include="xunit.runner.visualstudio" Version="2.8.2">
+      <IncludeAssets>runtime; build; native; contentfiles; analyzers; buildtransitive</IncludeAssets>
+      <PrivateAssets>all</PrivateAssets>
+    </PackageReference>
+  </ItemGroup>
+
+  <ItemGroup>
+    <ProjectReference Include="..\..\src\ZeroGraphics.Core\ZeroGraphics.Core.csproj" />
+    <ProjectReference Include="..\..\src\ZeroGraphics.Direct2D\ZeroGraphics.Direct2D.csproj" />
+    <ProjectReference Include="..\..\src\ZeroGraphics.DirectX\ZeroGraphics.DirectX.csproj" />
+    <ProjectReference Include="..\..\src\ZeroGraphics.Imaging\ZeroGraphics.Imaging.csproj" />
+    <ProjectReference Include="..\..\src\ZeroGraphics.Rhi\ZeroGraphics.Rhi.csproj" />
+    <ProjectReference Include="..\..\src\ZeroGraphics.Vision\ZeroGraphics.Vision.csproj" />
+    <ProjectReference Include="..\..\src\ZeroGraphics.Vector\ZeroGraphics.Vector.csproj" />
+    <ProjectReference Include="..\..\src\ZeroGraphics.Waveform\ZeroGraphics.Waveform.csproj" />
+  </ItemGroup>
+</Project>

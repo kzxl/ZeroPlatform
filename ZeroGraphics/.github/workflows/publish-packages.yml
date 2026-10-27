@@ -1,0 +1,84 @@
+name: Publish NuGet Packages (GitHub & NuGet.org)
+
+on:
+  release:
+    types: [published]
+  push:
+    tags:
+      - 'v*'
+  workflow_dispatch:
+
+permissions:
+  contents: read
+  packages: write
+  id-token: write # Required for NuGet.org Trusted Publishing (OIDC)
+
+jobs:
+  publish:
+    name: Build, Pack & Publish ZeroGraphics Packages
+    runs-on: windows-latest
+
+    steps:
+      - name: Checkout Code
+        uses: actions/checkout@v4
+
+      - name: Setup .NET SDK
+        uses: actions/setup-dotnet@v4
+        with:
+          dotnet-version: '8.0.x'
+          source-url: https://nuget.pkg.github.com/kzxl/index.json
+        env:
+          NUGET_AUTH_TOKEN: ${{ secrets.GITHUB_TOKEN }}
+
+      - name: Pack ZeroGraphics.Core
+        run: dotnet pack src/ZeroGraphics.Core/ZeroGraphics.Core.csproj -c Release -o nupkgs
+
+      - name: Pack ZeroGraphics.Rhi
+        run: dotnet pack src/ZeroGraphics.Rhi/ZeroGraphics.Rhi.csproj -c Release -o nupkgs
+
+      - name: Pack ZeroGraphics.Vector
+        run: dotnet pack src/ZeroGraphics.Vector/ZeroGraphics.Vector.csproj -c Release -o nupkgs
+
+      - name: Pack ZeroGraphics.DirectX
+        run: dotnet pack src/ZeroGraphics.DirectX/ZeroGraphics.DirectX.csproj -c Release -o nupkgs
+
+      - name: Pack ZeroGraphics.Direct2D
+        run: dotnet pack src/ZeroGraphics.Direct2D/ZeroGraphics.Direct2D.csproj -c Release -o nupkgs
+
+      - name: Pack ZeroGraphics.Waveform
+        run: dotnet pack src/ZeroGraphics.Waveform/ZeroGraphics.Waveform.csproj -c Release -o nupkgs
+
+      - name: Pack ZeroGraphics.Imaging
+        run: dotnet pack src/ZeroGraphics.Imaging/ZeroGraphics.Imaging.csproj -c Release -o nupkgs
+
+      - name: Pack ZeroGraphics.Vision
+        run: dotnet pack src/ZeroGraphics.Vision/ZeroGraphics.Vision.csproj -c Release -o nupkgs
+
+      # 1. Push to GitHub Packages
+      - name: Push to GitHub Packages
+        shell: pwsh
+        run: |
+          Get-ChildItem -Path nupkgs -Filter *.nupkg | ForEach-Object {
+            Write-Host "Pushing $($_.Name) to GitHub Packages..."
+            dotnet nuget push $_.FullName --source "https://nuget.pkg.github.com/kzxl/index.json" --api-key ${{ secrets.GITHUB_TOKEN }} --skip-duplicate
+          }
+
+      # 2. NuGet.org Login (OIDC Trusted Publishing)
+      - name: NuGet.org Login (OIDC Trusted Publishing)
+        uses: NuGet/login@v1
+        id: nuget-login
+        continue-on-error: true
+        with:
+          user: ${{ secrets.NUGET_USER || 'kzxl' }}
+
+      # 3. Push to NuGet.org (Supports both OIDC Token and NUGET_API_KEY Secret)
+      - name: Push to NuGet.org
+        env:
+          NUGET_KEY: ${{ steps.nuget-login.outputs.NUGET_API_KEY != '' && steps.nuget-login.outputs.NUGET_API_KEY || secrets.NUGET_API_KEY }}
+        if: env.NUGET_KEY != ''
+        shell: pwsh
+        run: |
+          Get-ChildItem -Path nupkgs -Filter *.nupkg | ForEach-Object {
+            Write-Host "Pushing $($_.Name) to NuGet.org..."
+            dotnet nuget push $_.FullName --source "https://api.nuget.org/v3/index.json" --api-key $env:NUGET_KEY --skip-duplicate
+          }

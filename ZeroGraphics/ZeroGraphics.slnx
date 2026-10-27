@@ -1,0 +1,18 @@
+<Solution>
+  <Folder Name="/src/">
+    <Project Path="src/ZeroGraphics.Core/ZeroGraphics.Core.csproj" />
+    <Project Path="src/ZeroGraphics.Direct2D/ZeroGraphics.Direct2D.csproj" />
+    <Project Path="src/ZeroGraphics.DirectX/ZeroGraphics.DirectX.csproj" />
+    <Project Path="src/ZeroGraphics.Imaging/ZeroGraphics.Imaging.csproj" />
+    <Project Path="src/ZeroGraphics.Rhi/ZeroGraphics.Rhi.csproj" />
+    <Project Path="src/ZeroGraphics.Vision/ZeroGraphics.Vision.csproj" />
+    <Project Path="src/ZeroGraphics.Vector/ZeroGraphics.Vector.csproj" />
+    <Project Path="src/ZeroGraphics.Waveform/ZeroGraphics.Waveform.csproj" />
+  </Folder>
+  <Folder Name="/samples/">
+    <Project Path="samples/ZeroGraphics.Samples.Demo/ZeroGraphics.Samples.Demo.csproj" />
+  </Folder>
+  <Folder Name="/tests/">
+    <Project Path="tests/ZeroGraphics.Tests/ZeroGraphics.Tests.csproj" />
+  </Folder>
+</Solution>

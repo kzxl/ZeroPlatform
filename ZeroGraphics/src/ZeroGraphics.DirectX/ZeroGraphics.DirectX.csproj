@@ -1,0 +1,17 @@
+<Project Sdk="Microsoft.NET.Sdk">
+  <PropertyGroup>
+    <TargetFrameworks>net462;net8.0-windows;net9.0-windows</TargetFrameworks>
+    <UseWindowsForms>true</UseWindowsForms>
+    <LangVersion>latest</LangVersion>
+    <AllowUnsafeBlocks>true</AllowUnsafeBlocks>
+    <Nullable>enable</Nullable>
+    <NoWarn>$(NoWarn);WFO1000</NoWarn>
+    <Description>High-performance Direct3D 11 and DXGI rendering pipeline with hardware-accelerated HLSL Signed Distance Field (SDF) effects for Windows Forms (.NET Framework 4.6.2 and .NET 8.0).</Description>
+    <PackageTags>directx;d3d11;dxgi;hlsl;gpu;winforms;rendering;hardware-acceleration;sdf-shaders;zero-allocation</PackageTags>
+  </PropertyGroup>
+
+  <ItemGroup>
+    <ProjectReference Include="..\ZeroGraphics.Core\ZeroGraphics.Core.csproj" />
+    <ProjectReference Include="..\ZeroGraphics.Rhi\ZeroGraphics.Rhi.csproj" />
+  </ItemGroup>
+</Project>
