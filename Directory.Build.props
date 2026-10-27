@@ -11,8 +11,13 @@
     <PackageProjectUrl>https://github.com/kzxl/ZeroPlatform</PackageProjectUrl>
     <RepositoryUrl>https://github.com/kzxl/ZeroPlatform.git</RepositoryUrl>
     <RepositoryType>git</RepositoryType>
+    <PackageIcon>icon.png</PackageIcon>
     <LangVersion>latest</LangVersion>
     <Nullable Condition="'$(Nullable)' == ''">enable</Nullable>
     <Deterministic>true</Deterministic>
   </PropertyGroup>
+
+  <ItemGroup Condition="'$(IsPackable)' != 'false'">
+    <None Include="$(MSBuildThisFileDirectory)icon.png" Pack="true" PackagePath="\" Visible="false" />
+  </ItemGroup>
 </Project>

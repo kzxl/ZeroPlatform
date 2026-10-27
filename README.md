@@ -1,3 +1,7 @@
+<p align="center">
+  <img src="icon.png" alt="ZeroPlatform Logo" width="160" height="160" />
+</p>
+
 # ZeroPlatform: Unified Industrial .NET Ecosystem
 
 [![License: MIT](https://img.shields.io/badge/License-MIT-blue.svg)](LICENSE)
