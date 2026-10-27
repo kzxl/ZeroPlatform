@@ -1,0 +1,17 @@
+<Project Sdk="Microsoft.NET.Sdk">
+  <PropertyGroup>
+    <TargetFrameworks>netstandard2.0;net462;net8.0</TargetFrameworks>
+    <LangVersion>latest</LangVersion>
+    <Nullable>enable</Nullable>
+    <AllowUnsafeBlocks>true</AllowUnsafeBlocks>
+    <GenerateDocumentationFile>true</GenerateDocumentationFile>
+    <NoWarn>$(NoWarn);1591</NoWarn>
+    <Description>Enterprise Pure C# Video Streaming, RTSP/RTP Transport, Industrial MJPEG Multipart Client, H.264 NALU Scanner, Snapshot BMP Exporter &amp; Low-Latency Frame Buffer for .NET.</Description>
+    <PackageTags>video;streaming;rtsp;rtp;mjpeg;h264;framebuffer;yuv;bmp;snapshot;machine-vision;industrial-automation</PackageTags>
+  </PropertyGroup>
+
+  <ItemGroup>
+    <PackageReference Include="ZeroPrimitives.Core" Version="1.7.0" />
+    <PackageReference Include="ZeroConcurrency" Version="1.4.0" />
+  </ItemGroup>
+</Project>
