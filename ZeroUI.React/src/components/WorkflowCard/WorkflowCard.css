@@ -1,0 +1,210 @@
+/* ZeroUI WorkflowCard CSS */
+
+.zero-workflow-card {
+  background-color: var(--zero-surface);
+  border: 1px solid var(--zero-border);
+  border-radius: var(--zero-radius-lg);
+  padding: 18px 20px 14px 20px;
+  font-family: var(--zero-font-family);
+  display: flex;
+  flex-direction: column;
+  gap: 16px;
+  transition: all 0.2s ease;
+  box-shadow: var(--zero-shadow-sm);
+}
+
+.zero-workflow-card:hover {
+  border-color: var(--zero-border-hover);
+  box-shadow: var(--zero-shadow-md);
+}
+
+/* Header */
+.zero-workflow-header {
+  display: flex;
+  align-items: flex-start;
+  justify-content: space-between;
+  gap: 12px;
+}
+
+.zero-workflow-header-left {
+  display: flex;
+  align-items: center;
+  gap: 12px;
+}
+
+.zero-workflow-step-badge {
+  display: inline-flex;
+  align-items: center;
+  justify-content: center;
+  min-width: 26px;
+  height: 26px;
+  padding: 0 6px;
+  border-radius: var(--zero-radius-md);
+  font-size: 13px;
+  font-weight: 700;
+  color: #ffffff;
+  background-color: var(--zero-primary);
+  flex-shrink: 0;
+}
+
+.zero-workflow-title-wrap {
+  display: flex;
+  flex-direction: column;
+  gap: 2px;
+}
+
+.zero-workflow-title {
+  font-size: 15px;
+  font-weight: 700;
+  color: var(--zero-text-primary);
+}
+
+.zero-workflow-subtitle {
+  font-size: 12px;
+  color: var(--zero-text-secondary);
+}
+
+.zero-workflow-status-tag {
+  display: inline-flex;
+  align-items: center;
+  padding: 4px 10px;
+  border-radius: var(--zero-radius-sm);
+  font-size: 11px;
+  font-weight: 700;
+  letter-spacing: 0.3px;
+  text-transform: uppercase;
+}
+
+/* Stages Pipeline Container */
+.zero-workflow-pipeline {
+  display: flex;
+  align-items: center;
+  width: 100%;
+  gap: 8px;
+  overflow-x: auto;
+  padding: 4px 0;
+}
+
+/* Single Stage Box */
+.zero-workflow-stage-box {
+  flex: 1;
+  min-width: 160px;
+  max-width: 240px;
+  display: flex;
+  align-items: center;
+  gap: 12px;
+  padding: 12px 14px;
+  background-color: var(--zero-card);
+  border: 1px solid var(--zero-border);
+  border-radius: var(--zero-radius-md);
+  cursor: pointer;
+  transition: all 0.18s ease;
+  user-select: none;
+}
+
+.zero-workflow-stage-box:hover {
+  border-color: var(--zero-primary);
+  transform: translateY(-2px);
+  box-shadow: var(--zero-shadow-md);
+}
+
+.zero-workflow-stage-icon-circle {
+  width: 38px;
+  height: 38px;
+  border-radius: 50%;
+  display: flex;
+  align-items: center;
+  justify-content: center;
+  flex-shrink: 0;
+  transition: all 0.15s ease;
+}
+
+.zero-workflow-stage-icon-circle svg {
+  width: 20px;
+  height: 20px;
+}
+
+.zero-workflow-stage-info {
+  display: flex;
+  flex-direction: column;
+  gap: 2px;
+  overflow: hidden;
+}
+
+.zero-workflow-stage-title {
+  font-size: 13px;
+  font-weight: 700;
+  color: var(--zero-text-primary);
+  white-space: nowrap;
+  overflow: hidden;
+  text-overflow: ellipsis;
+}
+
+.zero-workflow-stage-qty {
+  font-size: 11px;
+  font-weight: 600;
+  color: var(--zero-text-secondary);
+}
+
+.zero-workflow-stage-time {
+  font-size: 10px;
+  color: var(--zero-text-muted);
+}
+
+/* Status variants for Stage Box */
+.stage-status-Completed {
+  border-color: rgba(16, 185, 129, 0.4);
+}
+.stage-status-Completed .zero-workflow-stage-icon-circle {
+  background-color: rgba(16, 185, 129, 0.15);
+  color: #10b981;
+}
+
+.stage-status-InProgress {
+  border-color: rgba(59, 130, 246, 0.5);
+  background-color: rgba(59, 130, 246, 0.04);
+}
+.stage-status-InProgress .zero-workflow-stage-icon-circle {
+  background-color: rgba(59, 130, 246, 0.15);
+  color: var(--zero-primary);
+}
+
+.stage-status-Warning {
+  border-color: rgba(245, 158, 11, 0.4);
+}
+.stage-status-Warning .zero-workflow-stage-icon-circle {
+  background-color: rgba(245, 158, 11, 0.15);
+  color: #f59e0b;
+}
+
+.stage-status-Waiting {
+  border-color: var(--zero-border);
+}
+.stage-status-Waiting .zero-workflow-stage-icon-circle {
+  background-color: var(--zero-surface-hover);
+  color: var(--zero-text-secondary);
+}
+
+/* Connector Arrow Between Stages */
+.zero-workflow-arrow-connector {
+  display: flex;
+  align-items: center;
+  justify-content: center;
+  flex-shrink: 0;
+  padding: 0 4px;
+  color: var(--zero-text-muted);
+  font-size: 14px;
+  font-weight: 700;
+}
+
+.zero-workflow-arrow-connector.is-completed {
+  color: #10b981;
+}
+
+/* Footer */
+.zero-workflow-footer {
+  font-size: 11px;
+  color: var(--zero-text-muted);
+  border-top: 1px solid var(--zero-border);
+  padding-top: 8px;
+}

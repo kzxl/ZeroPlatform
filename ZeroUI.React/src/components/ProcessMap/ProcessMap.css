@@ -1,0 +1,207 @@
+/* ZeroUI ProcessMap CSS */
+
+.zero-processmap-container {
+  position: relative;
+  display: flex;
+  flex-direction: column;
+  width: 100%;
+  height: 600px;
+  background-color: var(--zero-card);
+  border: 1px solid var(--zero-border);
+  border-radius: var(--zero-radius-lg);
+  overflow: hidden;
+  font-family: var(--zero-font-family);
+  user-select: none;
+}
+
+/* Embedded Top Control Bar */
+.zero-processmap-toolbar {
+  position: absolute;
+  top: 14px;
+  left: 14px;
+  z-index: 20;
+  display: flex;
+  align-items: center;
+  gap: 10px;
+  background-color: var(--zero-surface);
+  border: 1px solid var(--zero-border);
+  border-radius: 24px;
+  padding: 4px 8px;
+  box-shadow: var(--zero-shadow-md);
+  backdrop-filter: blur(8px);
+}
+
+.zero-processmap-title-badge {
+  font-size: 12px;
+  font-weight: 600;
+  color: var(--zero-text-primary);
+  padding: 0 8px;
+  border-right: 1px solid var(--zero-border);
+}
+
+/* Canvas Area */
+.zero-processmap-canvas {
+  width: 100%;
+  height: 100%;
+  cursor: grab;
+  background-image: radial-gradient(var(--zero-border) 1px, transparent 1px);
+  background-size: 20px 20px;
+}
+
+.zero-processmap-canvas.is-dragging {
+  cursor: grabbing;
+}
+
+/* Swimlane Styling */
+.zero-processmap-lane {
+  cursor: pointer;
+  transition: stroke 0.15s ease;
+}
+
+.zero-processmap-lane-rect {
+  fill: rgba(59, 130, 246, 0.03);
+  stroke: var(--zero-border);
+  stroke-width: 1.5;
+  stroke-dasharray: 4 4;
+  rx: 8;
+  ry: 8;
+}
+
+.zero-processmap-lane.is-selected .zero-processmap-lane-rect {
+  stroke: var(--zero-primary);
+  stroke-width: 2;
+  stroke-dasharray: none;
+  filter: drop-shadow(0 0 6px rgba(59, 130, 246, 0.3));
+}
+
+.zero-processmap-lane-header {
+  cursor: move;
+}
+
+.zero-processmap-lane-header-bg {
+  fill: var(--zero-surface);
+  stroke: var(--zero-border);
+  stroke-width: 1;
+  rx: 6;
+  ry: 6;
+}
+
+.zero-processmap-lane.is-selected .zero-processmap-lane-header-bg {
+  fill: var(--zero-primary);
+}
+
+.zero-processmap-lane-header-title {
+  font-size: 11px;
+  font-weight: 700;
+  fill: var(--zero-text-secondary);
+  letter-spacing: 0.5px;
+  text-transform: uppercase;
+}
+
+.zero-processmap-lane.is-selected .zero-processmap-lane-header-title {
+  fill: #ffffff;
+}
+
+/* Resize Handles (8 Points) */
+.zero-processmap-resize-handle {
+  fill: #ffffff;
+  stroke: var(--zero-primary);
+  stroke-width: 2;
+  transition: transform 0.1s ease;
+}
+
+.zero-processmap-resize-handle:hover {
+  fill: var(--zero-primary);
+  transform: scale(1.3);
+}
+
+.handle-nw, .handle-se { cursor: nwse-resize; }
+.handle-ne, .handle-sw { cursor: nesw-resize; }
+.handle-n,  .handle-s  { cursor: ns-resize; }
+.handle-w,  .handle-e  { cursor: ew-resize; }
+
+/* Process Node Styling */
+.zero-processmap-node {
+  cursor: move;
+}
+
+.zero-processmap-node-card {
+  fill: var(--zero-surface);
+  stroke: var(--zero-border);
+  stroke-width: 1.5;
+  rx: 8;
+  ry: 8;
+  filter: drop-shadow(0 2px 4px rgba(0, 0, 0, 0.08));
+  transition: stroke 0.15s ease, filter 0.15s ease;
+}
+
+.zero-processmap-node:hover .zero-processmap-node-card {
+  stroke: var(--zero-border-hover);
+  filter: drop-shadow(0 4px 8px rgba(0, 0, 0, 0.12));
+}
+
+.zero-processmap-node.is-selected .zero-processmap-node-card {
+  stroke: var(--zero-primary);
+  stroke-width: 2.5;
+  filter: drop-shadow(0 0 8px rgba(59, 130, 246, 0.4));
+}
+
+.zero-processmap-node-title {
+  font-size: 12px;
+  font-weight: 600;
+  fill: var(--zero-text-primary);
+}
+
+.zero-processmap-node-sub {
+  font-size: 10px;
+  fill: var(--zero-text-muted);
+}
+
+.zero-processmap-node-status-badge {
+  font-size: 9px;
+  font-weight: 600;
+  letter-spacing: 0.3px;
+}
+
+/* Status variants for nodes */
+.node-status-Completed .status-bg { fill: rgba(16, 185, 129, 0.15); stroke: #10b981; }
+.node-status-Completed .status-text { fill: #10b981; }
+
+.node-status-Active .status-bg { fill: rgba(59, 130, 246, 0.15); stroke: #3b82f6; }
+.node-status-Active .status-text { fill: #3b82f6; }
+
+.node-status-Warning .status-bg { fill: rgba(245, 158, 11, 0.15); stroke: #f59e0b; }
+.node-status-Warning .status-text { fill: #f59e0b; }
+
+.node-status-Error .status-bg { fill: rgba(239, 68, 68, 0.15); stroke: #ef4444; }
+.node-status-Error .status-text { fill: #ef4444; }
+
+.node-status-Default .status-bg { fill: rgba(100, 116, 139, 0.12); stroke: #94a3b8; }
+.node-status-Default .status-text { fill: var(--zero-text-secondary); }
+
+/* Transitions / Connections */
+.zero-processmap-connection {
+  fill: none;
+  stroke: var(--zero-primary);
+  stroke-width: 2;
+  transition: stroke 0.15s ease;
+}
+
+.zero-processmap-connection.is-dashed {
+  stroke-dasharray: 4 4;
+}
+
+.zero-processmap-conn-label {
+  font-size: 10px;
+  font-weight: 600;
+  fill: var(--zero-text-secondary);
+  text-anchor: middle;
+}
+
+.zero-processmap-conn-label-bg {
+  fill: var(--zero-surface);
+  stroke: var(--zero-border);
+  stroke-width: 1;
+  rx: 4;
+  ry: 4;
+}

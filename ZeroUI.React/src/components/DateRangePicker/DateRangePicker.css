@@ -1,0 +1,287 @@
+/* ZeroUI DateRangePicker CSS */
+
+.zero-daterange-picker-container {
+  position: relative;
+  display: inline-flex;
+  font-family: var(--zero-font-family);
+}
+
+.zero-daterange-trigger {
+  display: inline-flex;
+  align-items: center;
+  gap: 8px;
+  background-color: var(--zero-surface);
+  border: 1px solid var(--zero-border);
+  border-radius: var(--zero-radius-md);
+  padding: 7px 12px;
+  font-size: 13px;
+  font-weight: 500;
+  color: var(--zero-text-primary);
+  cursor: pointer;
+  transition: all 0.15s ease;
+  user-select: none;
+}
+
+.zero-daterange-trigger:hover {
+  border-color: var(--zero-primary);
+}
+
+.zero-daterange-trigger.is-active {
+  border-color: var(--zero-primary);
+  box-shadow: 0 0 0 2px rgba(59, 130, 246, 0.2);
+}
+
+.zero-daterange-trigger .trigger-icon {
+  font-size: 14px;
+  opacity: 0.7;
+}
+
+.zero-daterange-popover {
+  position: absolute;
+  top: calc(100% + 6px);
+  left: 0;
+  z-index: 1000;
+  display: flex;
+  background-color: var(--zero-surface);
+  border: 1px solid var(--zero-border);
+  border-radius: var(--zero-radius-lg);
+  box-shadow: var(--zero-shadow-lg);
+  min-width: 480px;
+  overflow: hidden;
+  animation: zeroDateRangeFadeIn 0.15s cubic-bezier(0.16, 1, 0.3, 1);
+}
+
+@keyframes zeroDateRangeFadeIn {
+  from {
+    opacity: 0;
+    transform: translateY(-4px);
+  }
+  to {
+    opacity: 1;
+    transform: translateY(0);
+  }
+}
+
+.zero-daterange-presets {
+  display: flex;
+  flex-direction: column;
+  gap: 2px;
+  width: 140px;
+  padding: 10px 8px;
+  background-color: var(--zero-card);
+  border-right: 1px solid var(--zero-border);
+}
+
+.zero-daterange-preset-btn {
+  background: transparent;
+  border: none;
+  border-radius: var(--zero-radius-sm);
+  padding: 6px 10px;
+  font-size: 12px;
+  text-align: left;
+  color: var(--zero-text-secondary);
+  cursor: pointer;
+  transition: all 0.15s ease;
+}
+
+.zero-daterange-preset-btn:hover {
+  background-color: var(--zero-surface-hover);
+  color: var(--zero-text-primary);
+}
+
+.zero-daterange-main {
+  flex: 1;
+  padding: 14px;
+  display: flex;
+  flex-direction: column;
+  gap: 12px;
+}
+
+.zero-daterange-header {
+  display: flex;
+  align-items: center;
+  justify-content: space-between;
+  gap: 8px;
+}
+
+.zero-daterange-nav-btn {
+  background: transparent;
+  border: 1px solid var(--zero-border);
+  border-radius: var(--zero-radius-sm);
+  width: 28px;
+  height: 28px;
+  display: flex;
+  align-items: center;
+  justify-content: center;
+  font-size: 11px;
+  color: var(--zero-text-secondary);
+  cursor: pointer;
+}
+
+.zero-daterange-nav-btn:hover {
+  background-color: var(--zero-surface-hover);
+  color: var(--zero-text-primary);
+  border-color: var(--zero-border-hover);
+}
+
+.zero-daterange-title {
+  font-size: 13px;
+  font-weight: 600;
+  color: var(--zero-text-primary);
+}
+
+.zero-daterange-mode-pills {
+  display: inline-flex;
+  background-color: var(--zero-card);
+  border: 1px solid var(--zero-border);
+  border-radius: var(--zero-radius-sm);
+  padding: 2px;
+}
+
+.zero-daterange-mode-pill {
+  background: transparent;
+  border: none;
+  border-radius: 4px;
+  padding: 3px 8px;
+  font-size: 11px;
+  font-weight: 500;
+  color: var(--zero-text-secondary);
+  cursor: pointer;
+  transition: all 0.12s ease;
+}
+
+.zero-daterange-mode-pill.is-active {
+  background-color: var(--zero-primary);
+  color: #ffffff;
+}
+
+/* Day Calendar Grid */
+.zero-daterange-grid {
+  display: grid;
+  grid-template-columns: repeat(7, 1fr);
+  gap: 2px;
+  text-align: center;
+}
+
+.zero-daterange-weekday {
+  font-size: 11px;
+  font-weight: 600;
+  color: var(--zero-text-muted);
+  padding: 4px 0;
+}
+
+.zero-daterange-cell {
+  position: relative;
+  height: 32px;
+  display: flex;
+  align-items: center;
+  justify-content: center;
+  font-size: 12px;
+  color: var(--zero-text-primary);
+  border-radius: var(--zero-radius-sm);
+  cursor: pointer;
+  transition: background-color 0.12s ease;
+  user-select: none;
+}
+
+.zero-daterange-cell.other-month {
+  color: var(--zero-text-muted);
+  opacity: 0.4;
+}
+
+.zero-daterange-cell:hover:not(.empty) {
+  background-color: var(--zero-surface-hover);
+}
+
+.zero-daterange-cell.is-range-start,
+.zero-daterange-cell.is-range-end {
+  background-color: var(--zero-primary) !important;
+  color: #ffffff !important;
+  font-weight: 600;
+}
+
+.zero-daterange-cell.is-in-range {
+  background-color: rgba(59, 130, 246, 0.15);
+  color: var(--zero-primary);
+  border-radius: 0;
+}
+
+/* Month / Year Grid */
+.zero-daterange-grid-12 {
+  display: grid;
+  grid-template-columns: repeat(3, 1fr);
+  gap: 8px;
+}
+
+.zero-daterange-cell-12 {
+  height: 42px;
+  display: flex;
+  align-items: center;
+  justify-content: center;
+  font-size: 12px;
+  font-weight: 500;
+  border-radius: var(--zero-radius-md);
+  border: 1px solid var(--zero-border);
+  cursor: pointer;
+  transition: all 0.12s ease;
+}
+
+.zero-daterange-cell-12:hover {
+  background-color: var(--zero-surface-hover);
+  border-color: var(--zero-primary);
+}
+
+.zero-daterange-cell-12.is-selected {
+  background-color: var(--zero-primary);
+  color: #ffffff;
+  border-color: var(--zero-primary);
+  font-weight: 600;
+}
+
+.zero-daterange-footer {
+  display: flex;
+  align-items: center;
+  justify-content: space-between;
+  border-top: 1px solid var(--zero-border);
+  padding-top: 10px;
+  margin-top: 4px;
+}
+
+.zero-daterange-selected-preview {
+  font-size: 12px;
+  color: var(--zero-text-secondary);
+}
+
+.zero-daterange-actions {
+  display: flex;
+  gap: 8px;
+}
+
+.zero-daterange-action-btn {
+  border-radius: var(--zero-radius-sm);
+  padding: 5px 12px;
+  font-size: 12px;
+  font-weight: 500;
+  cursor: pointer;
+  transition: all 0.15s ease;
+}
+
+.zero-daterange-action-btn.btn-cancel {
+  background: transparent;
+  border: 1px solid var(--zero-border);
+  color: var(--zero-text-primary);
+}
+
+.zero-daterange-action-btn.btn-cancel:hover {
+  background-color: var(--zero-surface-hover);
+}
+
+.zero-daterange-action-btn.btn-apply {
+  background-color: var(--zero-primary);
+  border: 1px solid var(--zero-primary);
+  color: #ffffff;
+}
+
+.zero-daterange-action-btn.btn-apply:hover {
+  opacity: 0.9;
+}

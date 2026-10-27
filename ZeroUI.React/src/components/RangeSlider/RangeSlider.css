@@ -1,0 +1,84 @@
+/* ZeroUI RangeSlider CSS */
+
+.zero-rangeslider-wrap {
+  display: flex;
+  flex-direction: column;
+  gap: 8px;
+  width: 100%;
+  font-family: var(--zero-font-family);
+  user-select: none;
+}
+
+.zero-rangeslider-header {
+  display: flex;
+  align-items: center;
+  justify-content: space-between;
+  font-size: 12px;
+  font-weight: 600;
+  color: var(--zero-text-secondary);
+}
+
+.zero-rangeslider-value-pill {
+  background-color: var(--zero-card);
+  border: 1px solid var(--zero-border);
+  border-radius: var(--zero-radius-sm);
+  padding: 2px 8px;
+  color: var(--zero-primary);
+}
+
+.zero-rangeslider-track-container {
+  position: relative;
+  height: 24px;
+  display: flex;
+  align-items: center;
+  cursor: pointer;
+}
+
+.zero-rangeslider-rail {
+  position: absolute;
+  width: 100%;
+  height: 6px;
+  background-color: var(--zero-card);
+  border: 1px solid var(--zero-border);
+  border-radius: 3px;
+}
+
+.zero-rangeslider-track {
+  position: absolute;
+  height: 6px;
+  background-color: var(--zero-primary);
+  border-radius: 3px;
+  pointer-events: none;
+}
+
+.zero-rangeslider-thumb {
+  position: absolute;
+  width: 18px;
+  height: 18px;
+  border-radius: 50%;
+  background-color: #ffffff;
+  border: 2px solid var(--zero-primary);
+  box-shadow: 0 1px 4px rgba(0, 0, 0, 0.2);
+  transform: translateX(-50%);
+  cursor: grab;
+  transition: transform 0.1s ease, box-shadow 0.1s ease;
+  z-index: 2;
+}
+
+.zero-rangeslider-thumb:hover {
+  transform: translateX(-50%) scale(1.15);
+  box-shadow: 0 2px 6px rgba(59, 130, 246, 0.4);
+}
+
+.zero-rangeslider-thumb:active {
+  cursor: grabbing;
+  transform: translateX(-50%) scale(1.2);
+}
+
+.zero-rangeslider-bounds {
+  display: flex;
+  align-items: center;
+  justify-content: space-between;
+  font-size: 11px;
+  color: var(--zero-text-muted);
+}

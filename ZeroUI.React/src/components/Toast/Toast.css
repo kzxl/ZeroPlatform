@@ -1,0 +1,108 @@
+/* ZeroUI Toast Notification CSS */
+
+.zero-toast-container {
+  position: fixed;
+  bottom: 24px;
+  right: 24px;
+  z-index: 9999;
+  display: flex;
+  flex-direction: column;
+  gap: 10px;
+  pointer-events: none;
+  font-family: var(--zero-font-family);
+}
+
+.zero-toast-card {
+  pointer-events: auto;
+  display: flex;
+  align-items: flex-start;
+  gap: 12px;
+  min-width: 320px;
+  max-width: 440px;
+  background-color: var(--zero-surface);
+  border: 1px solid var(--zero-border);
+  border-radius: var(--zero-radius-md);
+  padding: 12px 14px;
+  box-shadow: var(--zero-shadow-lg);
+  animation: zeroToastSlideIn 0.25s cubic-bezier(0.16, 1, 0.3, 1);
+  transition: all 0.2s ease;
+}
+
+@keyframes zeroToastSlideIn {
+  from {
+    opacity: 0;
+    transform: translateY(16px) scale(0.96);
+  }
+  to {
+    opacity: 1;
+    transform: translateY(0) scale(1);
+  }
+}
+
+.zero-toast-icon {
+  font-size: 16px;
+  line-height: 1;
+  margin-top: 2px;
+}
+
+.zero-toast-content {
+  flex: 1;
+  display: flex;
+  flex-direction: column;
+  gap: 2px;
+}
+
+.zero-toast-title {
+  font-size: 13px;
+  font-weight: 600;
+  color: var(--zero-text-primary);
+}
+
+.zero-toast-message {
+  font-size: 12px;
+  color: var(--zero-text-secondary);
+}
+
+.zero-toast-close {
+  background: transparent;
+  border: none;
+  color: var(--zero-text-muted);
+  cursor: pointer;
+  font-size: 14px;
+  padding: 0;
+  line-height: 1;
+  transition: color 0.1s ease;
+}
+
+.zero-toast-close:hover {
+  color: var(--zero-text-primary);
+}
+
+/* Toast Variants */
+.zero-toast-card.toast-success {
+  border-left: 4px solid #10b981;
+}
+.zero-toast-card.toast-success .zero-toast-icon {
+  color: #10b981;
+}
+
+.zero-toast-card.toast-warning {
+  border-left: 4px solid #f59e0b;
+}
+.zero-toast-card.toast-warning .zero-toast-icon {
+  color: #f59e0b;
+}
+
+.zero-toast-card.toast-error {
+  border-left: 4px solid #ef4444;
+}
+.zero-toast-card.toast-error .zero-toast-icon {
+  color: #ef4444;
+}
+
+.zero-toast-card.toast-info {
+  border-left: 4px solid #3b82f6;
+}
+.zero-toast-card.toast-info .zero-toast-icon {
+  color: #3b82f6;
+}

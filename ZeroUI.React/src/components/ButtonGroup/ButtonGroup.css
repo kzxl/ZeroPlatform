@@ -1,0 +1,191 @@
+.zero-button-group {
+  display: inline-flex;
+  align-items: stretch;
+  background-color: var(--zero-surface);
+  border: 1px solid var(--zero-border);
+  border-radius: var(--zero-radius);
+  overflow: hidden;
+  box-shadow: 0 1px 2px 0 rgba(0, 0, 0, 0.05);
+  font-family: var(--zero-font-family);
+  font-size: 13px;
+  user-select: none;
+  vertical-align: middle;
+  height: 34px;
+}
+
+.zero-button-group--equal-width {
+  display: flex;
+  width: 100%;
+}
+
+.zero-button-group--equal-width .zero-button-group__item {
+  flex: 1 1 0;
+  justify-content: center;
+}
+
+.zero-button-group--fill {
+  display: flex;
+  width: 100%;
+}
+
+.zero-button-group--fill .zero-button-group__item {
+  flex: 1 1 auto;
+}
+
+.zero-button-group__item {
+  position: relative;
+  display: inline-flex;
+  align-items: center;
+  justify-content: center;
+  gap: 6px;
+  padding: 0 14px;
+  background-color: transparent;
+  color: var(--zero-text-primary);
+  border: none;
+  border-right: 1px solid var(--zero-border);
+  cursor: pointer;
+  white-space: nowrap;
+  font-weight: 500;
+  font-size: 13px;
+  transition: var(--zero-transition);
+  text-decoration: none;
+}
+
+.zero-button-group__item:last-child {
+  border-right: none;
+}
+
+.zero-button-group__item:hover:not(:disabled):not(.zero-button-group__item--checked) {
+  background-color: var(--zero-hover);
+}
+
+.zero-button-group__item:active:not(:disabled):not(.zero-button-group__item--checked) {
+  background-color: var(--zero-active);
+}
+
+/* Checked / Selected state */
+.zero-button-group__item--checked {
+  background-color: var(--zero-primary) !important;
+  color: #FFFFFF !important;
+  font-weight: 600;
+}
+
+/* Style variants */
+.zero-button-group__item--primary {
+  background-color: var(--zero-primary);
+  color: #FFFFFF;
+}
+.zero-button-group__item--primary:hover:not(:disabled) {
+  background-color: var(--zero-primary-hover);
+}
+
+.zero-button-group__item--success {
+  background-color: var(--zero-success);
+  color: #FFFFFF;
+}
+
+.zero-button-group__item--danger {
+  background-color: var(--zero-danger);
+  color: #FFFFFF;
+}
+
+.zero-button-group__item--ghost {
+  background-color: transparent;
+}
+
+/* Separator */
+.zero-button-group__separator {
+  width: 1px;
+  background-color: var(--zero-border);
+  margin: 6px 0;
+  border-right: none;
+  cursor: default;
+}
+
+/* Disabled */
+.zero-button-group__item:disabled {
+  opacity: 0.5;
+  cursor: not-allowed;
+}
+
+/* Badge dot */
+.zero-button-group__dot {
+  position: absolute;
+  top: 5px;
+  right: 7px;
+  width: 7px;
+  height: 7px;
+  border-radius: 50%;
+  background-color: var(--zero-danger);
+  box-shadow: 0 0 0 1.5px var(--zero-surface);
+}
+
+/* Badge pill */
+.zero-button-group__badge {
+  display: inline-flex;
+  align-items: center;
+  justify-content: center;
+  font-size: 10px;
+  font-weight: 700;
+  line-height: 1;
+  padding: 2px 6px;
+  border-radius: 9999px;
+  background-color: var(--zero-danger);
+  color: #FFFFFF;
+  margin-left: 4px;
+}
+
+/* Dropdown popover */
+.zero-button-group__dropdown-wrapper {
+  position: relative;
+  display: inline-flex;
+}
+
+.zero-button-group__dropdown-menu {
+  position: absolute;
+  top: calc(100% + 4px);
+  left: 0;
+  z-index: 1000;
+  min-width: 160px;
+  background-color: var(--zero-surface);
+  border: 1px solid var(--zero-border);
+  border-radius: var(--zero-radius);
+  box-shadow: var(--zero-shadow);
+  padding: 4px;
+  display: flex;
+  flex-direction: column;
+  gap: 2px;
+  animation: zeroFadeIn 0.12s ease-out;
+}
+
+.zero-button-group__dropdown-item {
+  display: flex;
+  align-items: center;
+  gap: 8px;
+  padding: 7px 10px;
+  font-size: 13px;
+  border-radius: 4px;
+  border: none;
+  background: transparent;
+  color: var(--zero-text-primary);
+  cursor: pointer;
+  text-align: left;
+  width: 100%;
+  transition: var(--zero-transition);
+}
+
+.zero-button-group__dropdown-item:hover {
+  background-color: var(--zero-hover);
+}
+
+.zero-button-group__dropdown-item--danger {
+  color: var(--zero-danger);
+}
+.zero-button-group__dropdown-item--danger:hover {
+  background-color: rgba(239, 68, 68, 0.12);
+}
+
+@keyframes zeroFadeIn {
+  from { opacity: 0; transform: translateY(-4px); }
+  to { opacity: 1; transform: translateY(0); }
+}
