@@ -1,0 +1,29 @@
+<Project Sdk="Microsoft.NET.Sdk">
+  <PropertyGroup>
+    <TargetFrameworks>netstandard2.0;net462;net8.0</TargetFrameworks>
+    <LangVersion>latest</LangVersion>
+    <AllowUnsafeBlocks>true</AllowUnsafeBlocks>
+    <Nullable>enable</Nullable>
+    <PackageId>ZeroSecurity</PackageId>
+    <Description>Pure C# sovereign cryptographic and cyber-defense foundation: RFC 6238 TOTP, RFC 4226 HOTP, BLAKE3, Fast SHA-256, HMAC-SHA256, HKDF, PBKDF2, SSDEEP fuzzy hash, BloomFilter, CuckooFilter, Aho-Corasick, Radix IP CIDR trie, Shannon byte entropy, Welford online Z-score stats, X25519 ECDH, ChaCha20-Poly1305, and XChaCha20-Poly1305 with zero external dependencies.</Description>
+    <PackageTags>security;cryptography;totp;hotp;2fa;mfa;blake3;ssdeep;bloomfilter;cuckoofilter;entropy;welford;ueba;chacha20;xchacha20;x25519;ecdh;hkdf;pbkdf2;hmac;ioc;edr;zeroplatform</PackageTags>
+  </PropertyGroup>
+
+  <ItemGroup Condition="'$(TargetFramework)' == 'netstandard2.0' Or '$(TargetFramework)' == 'net462'">
+    <PackageReference Include="System.Memory" Version="4.5.5" />
+    <PackageReference Include="System.Buffers" Version="4.5.1" />
+    <PackageReference Include="System.Runtime.CompilerServices.Unsafe" Version="6.0.0" />
+    <PackageReference Include="System.Numerics.Vectors" Version="4.5.0" />
+    <PackageReference Include="System.ValueTuple" Version="4.5.0" />
+  </ItemGroup>
+
+  <ItemGroup>
+    <PackageReference Include="ZeroPrimitives.Core" Version="1.7.0" />
+  </ItemGroup>
+
+  <ItemGroup>
+    <AssemblyAttribute Include="System.Runtime.CompilerServices.InternalsVisibleTo">
+      <_Parameter1>ZeroSecurity.Tests</_Parameter1>
+    </AssemblyAttribute>
+  </ItemGroup>
+</Project>
