@@ -293,7 +293,7 @@ dotnet pack ZeroPlatform.slnx -c Release -o ./dist/packages
 ```
 
 ### 6. Automated CI/CD & NuGet Trusted Publishing
-ZeroPlatform uses **GitHub Actions OIDC Trusted Publishing** (`NuGet/login@v1`) to securely pack and publish all 55 ecosystem packages to [NuGet.org](https://www.nuget.org/profiles/kzxl) without long-lived API keys. Pushing a release tag (e.g. `v3.0.0`) triggers `.github/workflows/publish-nuget.yml`.
+ZeroPlatform uses **GitHub Actions OIDC Trusted Publishing** (`NuGet/login@v1`) to securely pack and publish all 55 ecosystem packages to [NuGet.org](https://www.nuget.org/profiles/kzxl) without long-lived API keys. Pushing a release tag (e.g. `v3.0.0`) triggers `.github/workflows/publish-packages.yml`.
 
 ---
 
