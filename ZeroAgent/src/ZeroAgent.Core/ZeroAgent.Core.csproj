@@ -1,0 +1,47 @@
+<Project Sdk="Microsoft.NET.Sdk">
+  <PropertyGroup>
+    <TargetFrameworks>netstandard2.0;net462;net8.0</TargetFrameworks>
+    <LangVersion>latest</LangVersion>
+    <Nullable>enable</Nullable>
+    <AllowUnsafeBlocks>true</AllowUnsafeBlocks>
+    <Description>Pure C# enterprise-grade cognitive AI Agent runtime (ReAct loop, tool registry, episodic memory via ZeroVector, and multi-agent swarm) for .NET.</Description>
+    <PackageTags>ai;agent;react;swarm;multi-agent;llm;tool-calling;orchestration;vector;zerovector;zeroagent</PackageTags>
+  </PropertyGroup>
+
+  <ItemGroup Condition="'$(TargetFramework)' == 'netstandard2.0' Or '$(TargetFramework)' == 'net462'">
+    <PackageReference Include="System.Memory" Version="4.5.5" />
+    <PackageReference Include="System.Buffers" Version="4.5.1" />
+    <PackageReference Include="System.Threading.Tasks.Extensions" Version="4.5.4" />
+    <PackageReference Include="System.Text.Json" Version="8.0.5" />
+  </ItemGroup>
+
+  <ItemGroup Condition="'$(TargetFramework)' == 'net462'">
+    <Reference Include="System.Net.Http" />
+  </ItemGroup>
+
+  <ItemGroup>
+    <ProjectReference Include="..\..\..\ZeroPrimitives\src\ZeroPrimitives.Core\ZeroPrimitives.Core.csproj" Condition="Exists('..\..\..\ZeroPrimitives\src\ZeroPrimitives.Core\ZeroPrimitives.Core.csproj')" />
+    <PackageReference Include="ZeroPrimitives.Core" Version="1.7.0" Condition="!Exists('..\..\..\ZeroPrimitives\src\ZeroPrimitives.Core\ZeroPrimitives.Core.csproj')" />
+
+    <ProjectReference Include="..\..\..\ZeroConcurrency\src\ZeroConcurrency\ZeroConcurrency.csproj" Condition="Exists('..\..\..\ZeroConcurrency\src\ZeroConcurrency\ZeroConcurrency.csproj')" />
+    <PackageReference Include="ZeroConcurrency" Version="1.4.0" Condition="!Exists('..\..\..\ZeroConcurrency\src\ZeroConcurrency\ZeroConcurrency.csproj')" />
+
+    <ProjectReference Include="..\..\..\ZeroVector\src\ZeroVector.Core\ZeroVector.Core.csproj" Condition="Exists('..\..\..\ZeroVector\src\ZeroVector.Core\ZeroVector.Core.csproj')" />
+    <PackageReference Include="ZeroVector.Core" Version="1.1.0" Condition="!Exists('..\..\..\ZeroVector\src\ZeroVector.Core\ZeroVector.Core.csproj')" />
+
+    <ProjectReference Include="..\..\..\ZeroTokenizer\src\ZeroTokenizer.Core\ZeroTokenizer.Core.csproj" Condition="Exists('..\..\..\ZeroTokenizer\src\ZeroTokenizer.Core\ZeroTokenizer.Core.csproj')" />
+    <PackageReference Include="ZeroTokenizer.Core" Version="1.1.0" Condition="!Exists('..\..\..\ZeroTokenizer\src\ZeroTokenizer.Core\ZeroTokenizer.Core.csproj')" />
+
+    <ProjectReference Include="..\..\..\ZeroLlm\src\ZeroLlm.Core\ZeroLlm.Core.csproj" Condition="Exists('..\..\..\ZeroLlm\src\ZeroLlm.Core\ZeroLlm.Core.csproj')" />
+    <PackageReference Include="ZeroLlm.Core" Version="1.3.0" Condition="!Exists('..\..\..\ZeroLlm\src\ZeroLlm.Core\ZeroLlm.Core.csproj')" />
+
+    <ProjectReference Include="..\..\..\ZeroPrompt\src\ZeroPrompt.Core\ZeroPrompt.Core.csproj" Condition="Exists('..\..\..\ZeroPrompt\src\ZeroPrompt.Core\ZeroPrompt.Core.csproj')" />
+    <PackageReference Include="ZeroPrompt.Core" Version="1.3.0" Condition="!Exists('..\..\..\ZeroPrompt\src\ZeroPrompt.Core\ZeroPrompt.Core.csproj')" />
+  </ItemGroup>
+
+  <ItemGroup>
+    <AssemblyAttribute Include="System.Runtime.CompilerServices.InternalsVisibleTo">
+      <_Parameter1>ZeroAgent.Tests</_Parameter1>
+    </AssemblyAttribute>
+  </ItemGroup>
+</Project>
