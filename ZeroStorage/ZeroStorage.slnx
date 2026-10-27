@@ -1,0 +1,8 @@
+<Solution>
+  <Folder Name="/src/">
+    <Project Path="src/ZeroStorage.Core/ZeroStorage.Core.csproj" />
+  </Folder>
+  <Folder Name="/tests/">
+    <Project Path="tests/ZeroStorage.Tests/ZeroStorage.Tests.csproj" />
+  </Folder>
+</Solution>
