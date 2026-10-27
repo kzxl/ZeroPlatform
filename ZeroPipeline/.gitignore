@@ -1,0 +1,10 @@
+[Bb]in/
+[Oo]bj/
+dist/
+.vs/
+*.user
+*.suo
+*.userosscache
+*.sln.docstates
+.DS_Store
+Thumbs.db

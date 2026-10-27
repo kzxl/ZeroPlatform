@@ -1,0 +1,11 @@
+<Solution>
+  <Folder Name="/src/">
+    <Project Path="src/ZeroPipeline.Core/ZeroPipeline.Core.csproj" />
+    <Project Path="src/ZeroPipeline.Nodes/ZeroPipeline.Nodes.csproj" />
+    <Project Path="src/ZeroPipeline.Recipe/ZeroPipeline.Recipe.csproj" />
+    <Project Path="src/ZeroPipeline.UI/ZeroPipeline.UI.csproj" />
+  </Folder>
+  <Folder Name="/tests/">
+    <Project Path="tests/ZeroPipeline.Tests/ZeroPipeline.Tests.csproj" />
+  </Folder>
+</Solution>

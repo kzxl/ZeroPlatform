@@ -1,0 +1,15 @@
+<Project Sdk="Microsoft.NET.Sdk">
+  <PropertyGroup>
+    <TargetFrameworks>netstandard2.0;net462;net8.0</TargetFrameworks>
+    <LangVersion>latest</LangVersion>
+    <Nullable>enable</Nullable>
+    <Description>Inspection Recipe Engine: Dynamic DAG graph assembly, JSON serialization/deserialization, node registry, and recipe versioning for ZeroPlatform.</Description>
+    <PackageTags>pipeline;recipe;dag;json;serialization;graph-builder;zero-dependency</PackageTags>
+    <Authors>Phong Võ</Authors>
+    <PackageLicenseExpression>MIT</PackageLicenseExpression>
+  </PropertyGroup>
+
+  <ItemGroup>
+    <ProjectReference Include="..\ZeroPipeline.Core\ZeroPipeline.Core.csproj" />
+  </ItemGroup>
+</Project>

@@ -1,0 +1,42 @@
+<Project Sdk="Microsoft.NET.Sdk">
+  <PropertyGroup>
+    <TargetFrameworks>net462;net8.0-windows</TargetFrameworks>
+    <UseWindowsForms>true</UseWindowsForms>
+    <LangVersion>latest</LangVersion>
+    <AllowUnsafeBlocks>true</AllowUnsafeBlocks>
+    <Nullable>enable</Nullable>
+    <Description>Industrial Concrete Pipeline Nodes: Machine Vision, Metrology, Barcode/QR Decoders, AI Inference, Modbus PLC, and Gorilla TimeSeries Logging for ZeroPlatform.</Description>
+    <PackageTags>industrial;pipeline;machine-vision;metrology;caliper;barcode;inference;modbus;timeseries</PackageTags>
+    <Authors>Phong Võ</Authors>
+    <PackageLicenseExpression>MIT</PackageLicenseExpression>
+  </PropertyGroup>
+
+  <ItemGroup>
+    <ProjectReference Include="..\ZeroPipeline.Core\ZeroPipeline.Core.csproj" />
+  </ItemGroup>
+
+  <Choose>
+    <When Condition="Exists('..\..\..\ZeroOcr\src\ZeroOcr.Core\ZeroOcr.Core.csproj')">
+      <ItemGroup>
+        <ProjectReference Include="..\..\..\ZeroOcr\src\ZeroOcr.Core\ZeroOcr.Core.csproj" />
+      </ItemGroup>
+    </When>
+    <Otherwise>
+      <ItemGroup>
+        <PackageReference Include="ZeroOcr.Core" Version="1.0.0" />
+      </ItemGroup>
+    </Otherwise>
+  </Choose>
+
+  <ItemGroup>
+    <PackageReference Include="ZeroPrimitives.Core" Version="1.7.0" />
+    <PackageReference Include="ZeroGraphics.Core" Version="1.7.0" />
+    <PackageReference Include="ZeroGraphics.Imaging" Version="1.7.0" />
+    <PackageReference Include="ZeroGraphics.Vision" Version="1.7.0" />
+    <PackageReference Include="ZeroGeometry.Core" Version="1.2.0" />
+    <PackageReference Include="ZeroTensor.Core" Version="1.5.0" />
+    <PackageReference Include="ZeroInference.Core" Version="1.5.0" />
+    <PackageReference Include="ZeroStorage.Core" Version="1.5.0" />
+    <PackageReference Include="ZeroComm.Core" Version="2.0.0" />
+  </ItemGroup>
+</Project>
