@@ -4,17 +4,14 @@
     <LangVersion>latest</LangVersion>
     <AllowUnsafeBlocks>true</AllowUnsafeBlocks>
     <Nullable>enable</Nullable>
-    <Version>1.8.0</Version>
-    <AssemblyVersion>1.8.0.0</AssemblyVersion>
-    <FileVersion>1.8.0.0</FileVersion>
     <Authors>Phong Võ (kzxl)</Authors>
     <Company>ZeroUniverse</Company>
     <Description>Pure C# ultra-fast, zero-allocation primitive conversions, low-level span/pointer number parsers, Uuid7, FastUlid, hardware CRC32C, FastHex, SpanSplitter, BitOps, ByteRingBuffer, and compiled object mapping for high-throughput .NET applications.</Description>
     <PackageTags>primitives;safeconvert;fastconvert;uuid7;ulid;span;zero-allocation;hex;rfid;crc32c;simd;parsing;high-performance;mapper;zeroplatform</PackageTags>
     <PackageLicenseExpression>MIT</PackageLicenseExpression>
-    <RepositoryUrl>https://github.com/kzxl/ZeroPrimitives.git</RepositoryUrl>
+    <RepositoryUrl>https://github.com/kzxl/ZeroPlatform.git</RepositoryUrl>
     <RepositoryType>git</RepositoryType>
-    <PackageProjectUrl>https://github.com/kzxl/ZeroPrimitives</PackageProjectUrl>
+    <PackageProjectUrl>https://github.com/kzxl/ZeroPlatform</PackageProjectUrl>
     <PackageReadmeFile>README.md</PackageReadmeFile>
   </PropertyGroup>
 

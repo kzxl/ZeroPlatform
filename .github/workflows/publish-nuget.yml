@@ -6,6 +6,10 @@ on:
       - 'v*'
   workflow_dispatch:
 
+permissions:
+  contents: read
+  id-token: write
+
 jobs:
   publish:
     name: Pack and Publish to NuGet
@@ -37,7 +41,22 @@ jobs:
       - name: Pack All Subsystems
         run: dotnet pack ZeroPlatform.slnx -c Release --no-build -o ./nupkgs
 
+      - name: NuGet Login (Trusted Publishing OIDC)
+        id: nuget-login
+        continue-on-error: true
+        uses: NuGet/login@v1
+        with:
+          user: kzxl
+
       - name: Push Packages to NuGet.org
-        run: dotnet nuget push ./nupkgs/*.nupkg --api-key ${{ secrets.NUGET_API_KEY }} --source https://api.nuget.org/v3/index.json --skip-duplicate
-        env:
-          NUGET_API_KEY: ${{ secrets.NUGET_API_KEY }}
+        run: |
+          $apiKey = "${{ steps.nuget-login.outputs.NUGET_API_KEY }}"
+          if (-not $apiKey -or $apiKey.Trim() -eq "") {
+            $apiKey = "${{ secrets.NUGET_API_KEY }}"
+          }
+          if (-not $apiKey -or $apiKey.Trim() -eq "") {
+            Write-Error "No valid NuGet credentials found. Please configure NuGet Trusted Publishing for kzxl/ZeroPlatform or provide NUGET_API_KEY secret."
+            exit 1
+          }
+          dotnet nuget push ./nupkgs/*.nupkg --api-key $apiKey --source https://api.nuget.org/v3/index.json --skip-duplicate
+        shell: pwsh

@@ -1,12 +1,16 @@
 <Project>
   <PropertyGroup>
-    <Authors>Phong Võ, ZeroUniverse Contributors</Authors>
+    <Version>3.0.0</Version>
+    <AssemblyVersion>3.0.0.0</AssemblyVersion>
+    <FileVersion>3.0.0.0</FileVersion>
+    <InformationalVersion>3.0.0</InformationalVersion>
+    <Authors>Phong Võ, ZeroPlatform Contributors</Authors>
     <Company>ZeroUniverse</Company>
-    <Copyright>Copyright © 2026 ZeroUniverse</Copyright>
+    <Copyright>Copyright © 2026 Phong Võ</Copyright>
     <PackageLicenseExpression>MIT</PackageLicenseExpression>
+    <PackageProjectUrl>https://github.com/kzxl/ZeroPlatform</PackageProjectUrl>
     <RepositoryUrl>https://github.com/kzxl/ZeroPlatform.git</RepositoryUrl>
     <RepositoryType>git</RepositoryType>
-    <PackageProjectUrl>https://github.com/kzxl/ZeroPlatform</PackageProjectUrl>
     <LangVersion>latest</LangVersion>
     <Nullable Condition="'$(Nullable)' == ''">enable</Nullable>
     <Deterministic>true</Deterministic>
