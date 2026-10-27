@@ -1,0 +1,8 @@
+<Solution>
+  <Folder Name="/src/">
+    <Project Path="src/ZeroPrompt.Core/ZeroPrompt.Core.csproj" />
+  </Folder>
+  <Folder Name="/tests/">
+    <Project Path="tests/ZeroPrompt.Tests/ZeroPrompt.Tests.csproj" />
+  </Folder>
+</Solution>

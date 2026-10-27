@@ -1,0 +1,30 @@
+<Project Sdk="Microsoft.NET.Sdk">
+  <PropertyGroup>
+    <TargetFrameworks>netstandard2.0;net462;net8.0</TargetFrameworks>
+    <LangVersion>latest</LangVersion>
+    <AllowUnsafeBlocks>true</AllowUnsafeBlocks>
+    <Nullable>enable</Nullable>
+    <Description>Pure C# Prompt Engineering &amp; Grammar-Constrained Token Decoding Engine (Zero-Allocation Templates, JSON Schema Finite Automata, Logit Masking, and Dynamic Few-Shot Exemplars) for .NET.</Description>
+    <PackageTags>prompt;templating;grammar;json-schema;constrained-decoding;logit-masking;few-shot;rag;ai;agent;zeroprompt</PackageTags>
+  </PropertyGroup>
+
+  <ItemGroup Condition="'$(TargetFramework)' == 'netstandard2.0' Or '$(TargetFramework)' == 'net462'">
+    <PackageReference Include="System.Memory" Version="4.5.5" />
+    <PackageReference Include="System.Buffers" Version="4.5.1" />
+    <PackageReference Include="System.Runtime.CompilerServices.Unsafe" Version="6.0.0" />
+    <PackageReference Include="System.Text.Json" Version="8.0.5" />
+  </ItemGroup>
+
+  <ItemGroup>
+    <PackageReference Include="ZeroPrimitives.Core" Version="1.7.0" />
+    <PackageReference Include="ZeroConcurrency" Version="1.4.0" />
+    <PackageReference Include="ZeroVector.Core" Version="1.1.0" />
+    <PackageReference Include="ZeroTokenizer.Core" Version="1.0.0" />
+  </ItemGroup>
+
+  <ItemGroup>
+    <AssemblyAttribute Include="System.Runtime.CompilerServices.InternalsVisibleTo">
+      <_Parameter1>ZeroPrompt.Tests</_Parameter1>
+    </AssemblyAttribute>
+  </ItemGroup>
+</Project>
