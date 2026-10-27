@@ -1,0 +1,8 @@
+<Solution>
+  <Folder Name="/src/">
+    <Project Path="src/ZeroTokenizer.Core/ZeroTokenizer.Core.csproj" />
+  </Folder>
+  <Folder Name="/tests/">
+    <Project Path="tests/ZeroTokenizer.Tests/ZeroTokenizer.Tests.csproj" />
+  </Folder>
+</Solution>
