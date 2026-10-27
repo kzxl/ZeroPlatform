@@ -1,0 +1,9 @@
+<Solution>
+  <Folder Name="/src/">
+    <Project Path="src/ZeroCompute.Core/ZeroCompute.Core.csproj" />
+  </Folder>
+  <Folder Name="/tests/">
+    <Project Path="tests/ZeroCompute.Benchmarks/ZeroCompute.Benchmarks.csproj" />
+    <Project Path="tests/ZeroCompute.Tests/ZeroCompute.Tests.csproj" />
+  </Folder>
+</Solution>
