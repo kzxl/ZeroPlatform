@@ -58,5 +58,10 @@ jobs:
             Write-Error "No valid NuGet credentials found. Please configure NuGet Trusted Publishing for kzxl/ZeroPlatform or provide NUGET_API_KEY secret."
             exit 1
           }
-          dotnet nuget push ./nupkgs/*.nupkg --api-key $apiKey --source https://api.nuget.org/v3/index.json --skip-duplicate
+          $packages = Get-ChildItem -Path ./nupkgs -Filter *.nupkg
+          Write-Host "Found $($packages.Count) packages to push."
+          foreach ($pkg in $packages) {
+            Write-Host "Pushing $($pkg.Name)..."
+            dotnet nuget push $pkg.FullName --api-key $apiKey --source https://api.nuget.org/v3/index.json --skip-duplicate
+          }
         shell: pwsh
