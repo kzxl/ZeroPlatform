@@ -1,0 +1,23 @@
+<Project Sdk="Microsoft.NET.Sdk">
+
+  <PropertyGroup>
+    <TargetFrameworks>net8.0-windows;net8.0</TargetFrameworks>
+    <Nullable>enable</Nullable>
+    <ImplicitUsings>enable</ImplicitUsings>
+    <AllowUnsafeBlocks>true</AllowUnsafeBlocks>
+    <RootNamespace>ZeroSystem</RootNamespace>
+    <AssemblyName>ZeroSystem.Core</AssemblyName>
+    <PackageId>ZeroSystem.Core</PackageId>
+    <Product>ZeroSystem</Product>
+    <Description>Sovereign Windows Native, Kernel P/Invoke, Hardware Telemetry, DWM Desktop, and OS Internals Subsystem for ZeroPlatform with zero external dependencies.</Description>
+    <PackageTags>win32;kernel;hardware-telemetry;diagnostics;vss;memory-optimizer;dwm;zero-dependency;sovereign;csharp</PackageTags>
+    <IncludeSymbols>true</IncludeSymbols>
+    <SymbolPackageFormat>snupkg</SymbolPackageFormat>
+  </PropertyGroup>
+
+  <ItemGroup>
+    <PackageReference Include="ZeroPrimitives.Core" Version="1.7.0" />
+    <PackageReference Include="ZeroConcurrency" Version="1.4.0" />
+  </ItemGroup>
+
+</Project>
