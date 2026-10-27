@@ -1,0 +1,38 @@
+<Project Sdk="Microsoft.NET.Sdk">
+  <PropertyGroup>
+    <TargetFrameworks>netstandard2.0;net462;net8.0</TargetFrameworks>
+    <LangVersion>latest</LangVersion>
+    <AllowUnsafeBlocks>true</AllowUnsafeBlocks>
+    <Nullable>enable</Nullable>
+    <Version>1.5.0</Version>
+    <AssemblyVersion>1.5.0.0</AssemblyVersion>
+    <FileVersion>1.5.0.0</FileVersion>
+    <Authors>Phong Võ (kzxl)</Authors>
+    <Company>ZeroUniverse</Company>
+    <Description>Pure C# ultra-fast, zero-allocation lock-free concurrency primitives, TokenBucketRateLimiter, DisruptorRing, cache-line padded SPSC/MPMC ring buffers, execution-context bypassing schedulers, zero-allocation pooled ValueTask sources, and Go-like CSP channels for high-throughput .NET applications.</Description>
+    <PackageTags>concurrency;lock-free;ratelimiter;disruptor;ringbuffer;spsc;mpmc;scheduler;valuetask;channels;zero-allocation;performance;high-throughput;zeroplatform</PackageTags>
+    <PackageLicenseExpression>MIT</PackageLicenseExpression>
+    <RepositoryUrl>https://github.com/kzxl/ZeroConcurrency.git</RepositoryUrl>
+    <RepositoryType>git</RepositoryType>
+    <PackageProjectUrl>https://github.com/kzxl/ZeroConcurrency</PackageProjectUrl>
+    <PackageReadmeFile>README.md</PackageReadmeFile>
+    <NoWarn>$(NoWarn);CS0169</NoWarn>
+  </PropertyGroup>
+
+  <ItemGroup>
+    <PackageReference Include="ZeroPrimitives.Core" Version="1.7.0" />
+  </ItemGroup>
+
+  <ItemGroup Condition="'$(TargetFramework)' == 'netstandard2.0' Or '$(TargetFramework)' == 'net462'">
+    <PackageReference Include="System.Threading.Tasks.Extensions" Version="4.5.4" />
+    <PackageReference Include="System.Memory" Version="4.5.5" />
+    <PackageReference Include="System.Runtime.CompilerServices.Unsafe" Version="6.0.0" />
+    <PackageReference Include="Microsoft.Bcl.AsyncInterfaces" Version="8.0.0" />
+  </ItemGroup>
+
+  <ItemGroup>
+    <AssemblyAttribute Include="System.Runtime.CompilerServices.InternalsVisibleTo">
+      <_Parameter1>ZeroConcurrency.Tests</_Parameter1>
+    </AssemblyAttribute>
+  </ItemGroup>
+</Project>

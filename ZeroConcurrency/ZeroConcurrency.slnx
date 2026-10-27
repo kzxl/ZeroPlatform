@@ -1,0 +1,5 @@
+<Solution>
+  <Project Path="src/ZeroConcurrency/ZeroConcurrency.csproj" />
+  <Project Path="tests/ZeroConcurrency.Tests/ZeroConcurrency.Tests.csproj" />
+  <Project Path="tests/ZeroConcurrency.Benchmarks/ZeroConcurrency.Benchmarks.csproj" />
+</Solution>
