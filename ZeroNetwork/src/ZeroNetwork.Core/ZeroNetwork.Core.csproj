@@ -1,0 +1,36 @@
+<Project Sdk="Microsoft.NET.Sdk">
+  <PropertyGroup>
+    <TargetFrameworks>netstandard2.0;net462;net8.0</TargetFrameworks>
+    <LangVersion>latest</LangVersion>
+    <Nullable>enable</Nullable>
+    <AllowUnsafeBlocks>true</AllowUnsafeBlocks>
+    <AssemblyName>ZeroNetwork.Core</AssemblyName>
+    <RootNamespace>ZeroNetwork</RootNamespace>
+    <PackageId>ZeroNetwork.Core</PackageId>
+    <Description>High-performance, zero-dependency .NET networking suite: IP/CIDR math, active ARP scanner, WoL, UDP multicast, micro HTTP/1.1 server with REST router and Prometheus metrics, streaming REST client, WebSocket client and server (RFC 6455), pure C# SignalR Hub client and server, and universal in-process/IPC topic Pub/Sub bus.</Description>
+    <PackageTags>network;zeronetwork;ip;cidr;arp;wol;wake-on-lan;multicast;udp;http;rest;websocket;signalr;hub;pubsub;bus;realtime;iot;scada;zero-dependency;zeroplatform</PackageTags>
+    <GenerateDocumentationFile>true</GenerateDocumentationFile>
+    <NoWarn>$(NoWarn);CS1591;CA1416</NoWarn>
+  </PropertyGroup>
+
+  <ItemGroup Condition="'$(TargetFramework)' == 'netstandard2.0' Or '$(TargetFramework)' == 'net462'">
+    <PackageReference Include="System.ValueTuple" Version="4.5.0" />
+    <PackageReference Include="System.Memory" Version="4.5.5" />
+    <PackageReference Include="System.Buffers" Version="4.5.1" />
+  </ItemGroup>
+
+  <ItemGroup Condition="'$(TargetFramework)' == 'net462'">
+    <Reference Include="System.Net.Http" />
+  </ItemGroup>
+
+  <ItemGroup>
+    <PackageReference Include="ZeroPrimitives.Core" Version="1.7.0" />
+    <PackageReference Include="ZeroConcurrency" Version="1.4.0" />
+  </ItemGroup>
+
+  <ItemGroup>
+    <AssemblyAttribute Include="System.Runtime.CompilerServices.InternalsVisibleTo">
+      <_Parameter1>ZeroNetwork.Tests</_Parameter1>
+    </AssemblyAttribute>
+  </ItemGroup>
+</Project>
