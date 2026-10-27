@@ -1,0 +1,8 @@
+<Solution>
+  <Folder Name="/src/">
+    <Project Path="src/ZeroInference.Core/ZeroInference.Core.csproj" />
+  </Folder>
+  <Folder Name="/tests/">
+    <Project Path="tests/ZeroInference.Tests/ZeroInference.Tests.csproj" />
+  </Folder>
+</Solution>
