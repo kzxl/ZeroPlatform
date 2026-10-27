@@ -1,0 +1,9 @@
+bin/
+obj/
+dist/
+nupkgs/
+*.user
+*.suo
+.vs/
+.idea/
+*.log

@@ -1,0 +1,30 @@
+<Project Sdk="Microsoft.NET.Sdk">
+  <PropertyGroup>
+    <TargetFrameworks>netstandard2.0;net462;net8.0</TargetFrameworks>
+    <LangVersion>latest</LangVersion>
+    <AllowUnsafeBlocks>true</AllowUnsafeBlocks>
+    <Nullable>enable</Nullable>
+    <Description>Pure C# in-process Small Language Model (SLM) runtime, GGUF v2/v3 binary parser, Paged KV-Cache allocator, Transformer decoder (RMSNorm, RoPE, SwiGLU, GQA), and token sampling engine for .NET.</Description>
+    <PackageTags>llm;slm;gguf;safetensors;transformer;inference;paged-attention;kv-cache;rope;gqa;swiglu;zero-allocation;ai;agent</PackageTags>
+  </PropertyGroup>
+
+  <ItemGroup Condition="'$(TargetFramework)' == 'netstandard2.0' Or '$(TargetFramework)' == 'net462'">
+    <PackageReference Include="System.Memory" Version="4.5.5" />
+    <PackageReference Include="System.Buffers" Version="4.5.1" />
+    <PackageReference Include="System.Runtime.CompilerServices.Unsafe" Version="6.0.0" />
+    <PackageReference Include="Microsoft.Bcl.AsyncInterfaces" Version="8.0.0" />
+  </ItemGroup>
+
+  <ItemGroup>
+    <PackageReference Include="ZeroPrimitives.Core" Version="1.7.0" />
+    <PackageReference Include="ZeroConcurrency" Version="1.4.0" />
+    <PackageReference Include="ZeroTensor.Core" Version="1.5.0" />
+    <PackageReference Include="ZeroTokenizer.Core" Version="1.0.0" />
+  </ItemGroup>
+
+  <ItemGroup>
+    <AssemblyAttribute Include="System.Runtime.CompilerServices.InternalsVisibleTo">
+      <_Parameter1>ZeroLlm.Tests</_Parameter1>
+    </AssemblyAttribute>
+  </ItemGroup>
+</Project>
