@@ -1,0 +1,32 @@
+<Project Sdk="Microsoft.NET.Sdk">
+  <PropertyGroup>
+    <TargetFrameworks>netstandard2.0;net462;net8.0</TargetFrameworks>
+    <LangVersion>latest</LangVersion>
+    <Nullable>enable</Nullable>
+    <AssemblyName>ZeroDocuments.Core</AssemblyName>
+    <RootNamespace>ZeroDocuments</RootNamespace>
+    <PackageId>ZeroDocuments.Core</PackageId>
+    <Description>Pure C# zero-dependency high-performance OpenXML Excel (.xlsx) and CSV reader, writer, and typed object mapper for .NET with full multi-targeting support (.NET 8.0, .NET 4.6.2, .NET Standard 2.0).</Description>
+    <PackageTags>excel;xlsx;csv;openxml;spreadsheet;datatable;mapper;high-performance;zero-dependency;zeroplatform;zerodocuments</PackageTags>
+    <GenerateDocumentationFile>true</GenerateDocumentationFile>
+    <NoWarn>$(NoWarn);CS1591;CA1416</NoWarn>
+  </PropertyGroup>
+
+  <ItemGroup Condition="'$(TargetFramework)' == 'netstandard2.0'">
+    <PackageReference Include="System.IO.Compression" Version="4.3.0" />
+  </ItemGroup>
+
+  <ItemGroup Condition="'$(TargetFramework)' == 'net462'">
+    <Reference Include="System.IO.Compression" />
+    <Reference Include="System.IO.Compression.FileSystem" />
+    <Reference Include="System.Xml" />
+    <Reference Include="System.Xml.Linq" />
+    <Reference Include="System.Data" />
+  </ItemGroup>
+
+  <ItemGroup>
+    <AssemblyAttribute Include="System.Runtime.CompilerServices.InternalsVisibleTo">
+      <_Parameter1>ZeroDocuments.Tests</_Parameter1>
+    </AssemblyAttribute>
+  </ItemGroup>
+</Project>
