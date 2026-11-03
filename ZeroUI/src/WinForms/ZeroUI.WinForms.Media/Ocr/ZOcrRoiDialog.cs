@@ -143,22 +143,37 @@ namespace ZeroUI.WinForms.Media.Ocr
             DoubleBuffered = true;
             Font = new Font("Segoe UI", 9f, FontStyle.Regular);
             BackColor = ZeroTheme.Palette.Background;
+            KeyPreview = true;
+            KeyDown += ZOcrRoiDialog_KeyDown;
 
-            // 1. Top Toolbar (Height: 46px)
+            // 1. Top Toolbar (Height: 44px) - Clean FlowLayout to eliminate button overlap & text truncation
             _topBar = new Panel
             {
                 Dock = DockStyle.Top,
-                Height = 48,
-                Padding = new Padding(10, 6, 10, 6),
+                Height = 44,
+                Padding = new Padding(8, 6, 8, 6),
                 BackColor = ZeroTheme.Palette.Surface
+            };
+
+            var topActions = new FlowLayoutPanel
+            {
+                Dock = DockStyle.Left,
+                AutoSize = true,
+                AutoSizeMode = AutoSizeMode.GrowAndShrink,
+                FlowDirection = FlowDirection.LeftToRight,
+                WrapContents = false,
+                BackColor = Color.Transparent,
+                Margin = Padding.Empty,
+                Padding = Padding.Empty
             };
 
             _btnPrevPage = new ZButton
             {
                 Text = "◀ Trước",
                 ButtonStyle = ZeroButtonStyle.Secondary,
-                Size = new Size(72, 32),
-                Location = new Point(10, 8),
+                Size = new Size(68, 30),
+                Font = new Font("Segoe UI", 9f, FontStyle.Regular),
+                Margin = new Padding(0, 0, 4, 0),
                 Enabled = _currentPage > 1
             };
             _btnPrevPage.Click += (s, e) => NavigatePage(_currentPage - 1);
@@ -167,39 +182,47 @@ namespace ZeroUI.WinForms.Media.Ocr
             {
                 Text = $"Trang {_currentPage} / {_totalPages}",
                 TextAlign = ContentAlignment.MiddleCenter,
-                Size = new Size(100, 32),
-                Location = new Point(_btnPrevPage.Right + 4, 8),
+                Size = new Size(88, 30),
+                Margin = new Padding(0, 0, 4, 0),
                 ForeColor = ZeroTheme.Palette.TextPrimary,
-                Font = new Font("Segoe UI", 9.5f, FontStyle.Bold)
+                Font = new Font("Segoe UI", 9f, FontStyle.Bold)
             };
 
             _btnNextPage = new ZButton
             {
                 Text = "Sau ▶",
                 ButtonStyle = ZeroButtonStyle.Secondary,
-                Size = new Size(72, 32),
-                Location = new Point(_lblPageIndicator.Right + 4, 8),
+                Size = new Size(68, 30),
+                Font = new Font("Segoe UI", 9f, FontStyle.Regular),
+                Margin = new Padding(0, 0, 8, 0),
                 Enabled = _currentPage < _totalPages
             };
             _btnNextPage.Click += (s, e) => NavigatePage(_currentPage + 1);
 
-            int zoomLeft = _btnNextPage.Right + 16;
+            var sep1 = new Panel
+            {
+                Size = new Size(1, 20),
+                BackColor = ZeroTheme.Palette.Border,
+                Margin = new Padding(2, 5, 8, 5)
+            };
 
             _btnZoomOut = new ZButton
             {
-                Text = "🔍 ➖",
+                Text = "➖",
                 ButtonStyle = ZeroButtonStyle.Secondary,
-                Size = new Size(58, 32),
-                Location = new Point(zoomLeft, 8)
+                Size = new Size(36, 30),
+                Font = new Font("Segoe UI", 9.5f, FontStyle.Bold),
+                Margin = new Padding(0, 0, 4, 0)
             };
             _btnZoomOut.Click += (s, e) => _ocrViewer.Zoom /= 1.25;
 
             _btnZoomIn = new ZButton
             {
-                Text = "🔍 ➕",
+                Text = "➕",
                 ButtonStyle = ZeroButtonStyle.Secondary,
-                Size = new Size(58, 32),
-                Location = new Point(_btnZoomOut.Right + 4, 8)
+                Size = new Size(36, 30),
+                Font = new Font("Segoe UI", 9.5f, FontStyle.Bold),
+                Margin = new Padding(0, 0, 4, 0)
             };
             _btnZoomIn.Click += (s, e) => _ocrViewer.Zoom *= 1.25;
 
@@ -207,8 +230,9 @@ namespace ZeroUI.WinForms.Media.Ocr
             {
                 Text = "⛶ Vừa trang",
                 ButtonStyle = ZeroButtonStyle.Secondary,
-                Size = new Size(88, 32),
-                Location = new Point(_btnZoomIn.Right + 4, 8)
+                Size = new Size(102, 30),
+                Font = new Font("Segoe UI", 9f, FontStyle.Regular),
+                Margin = new Padding(0, 0, 4, 0)
             };
             _btnZoomFit.Click += (s, e) => _ocrViewer.ZoomToFit();
 
@@ -216,17 +240,26 @@ namespace ZeroUI.WinForms.Media.Ocr
             {
                 Text = "1:1",
                 ButtonStyle = ZeroButtonStyle.Secondary,
-                Size = new Size(48, 32),
-                Location = new Point(_btnZoomFit.Right + 4, 8)
+                Size = new Size(46, 30),
+                Font = new Font("Segoe UI", 9f, FontStyle.Regular),
+                Margin = new Padding(0, 0, 8, 0)
             };
             _btnZoom100.Click += (s, e) => _ocrViewer.Zoom = 1.0;
+
+            var sep2 = new Panel
+            {
+                Size = new Size(1, 20),
+                BackColor = ZeroTheme.Palette.Border,
+                Margin = new Padding(2, 5, 8, 5)
+            };
 
             _btnClearRoi = new ZButton
             {
                 Text = "✖ Bỏ chọn vùng",
                 ButtonStyle = ZeroButtonStyle.Secondary,
-                Size = new Size(110, 32),
-                Location = new Point(_btnZoom100.Right + 16, 8)
+                Size = new Size(128, 30),
+                Font = new Font("Segoe UI", 9f, FontStyle.Regular),
+                Margin = new Padding(0, 0, 8, 0)
             };
             _btnClearRoi.Click += (s, e) =>
             {
@@ -234,30 +267,40 @@ namespace ZeroUI.WinForms.Media.Ocr
                 UpdateRoiStatus();
             };
 
+            topActions.Controls.AddRange(new Control[]
+            {
+                _btnPrevPage, _lblPageIndicator, _btnNextPage,
+                sep1,
+                _btnZoomOut, _btnZoomIn, _btnZoomFit, _btnZoom100,
+                sep2,
+                _btnClearRoi
+            });
+
+            var topToolTips = new ToolTip();
+            topToolTips.SetToolTip(_btnZoomOut, "Thu nhỏ (Ctrl + Cuộn chuột xuống)");
+            topToolTips.SetToolTip(_btnZoomIn, "Phóng to (Ctrl + Cuộn chuột lên)");
+            topToolTips.SetToolTip(_btnZoomFit, "Thu phóng vừa cửa sổ");
+            topToolTips.SetToolTip(_btnZoom100, "Kích thước gốc 100%");
+            topToolTips.SetToolTip(_btnClearRoi, "Bỏ chọn vùng ROI hiện tại (Phím Delete)");
+
             _lblHint = new Label
             {
-                Text = "💡 Giữ chuột trái & kéo trên văn bản để khoanh vùng bảng hàng hóa cần trích xuất",
+                Text = "💡 Giữ chuột trái & kéo trên tài liệu để khoanh vùng bảng hàng hóa",
                 TextAlign = ContentAlignment.MiddleRight,
-                Dock = DockStyle.Right,
-                AutoSize = false,
-                Width = 420,
+                Dock = DockStyle.Fill,
                 ForeColor = ZeroTheme.Palette.TextSecondary,
                 Font = new Font("Segoe UI", 8.5f, FontStyle.Italic)
             };
 
-            _topBar.Controls.AddRange(new Control[]
-            {
-                _btnPrevPage, _lblPageIndicator, _btnNextPage,
-                _btnZoomOut, _btnZoomIn, _btnZoomFit, _btnZoom100,
-                _btnClearRoi, _lblHint
-            });
+            _topBar.Controls.Add(_lblHint);
+            _topBar.Controls.Add(topActions);
 
-            // 2. Bottom Action Bar (Height: 52px)
+            // 2. Bottom Action Bar (Height: 48px) - Spaced buttons with 8px margin
             _bottomBar = new Panel
             {
                 Dock = DockStyle.Bottom,
-                Height = 54,
-                Padding = new Padding(12, 10, 12, 10),
+                Height = 48,
+                Padding = new Padding(12, 8, 12, 8),
                 BackColor = ZeroTheme.Palette.Surface
             };
 
@@ -265,32 +308,30 @@ namespace ZeroUI.WinForms.Media.Ocr
             {
                 Text = "Chưa chọn vùng (Mặc định sẽ trích xuất toàn bộ trang tài liệu)",
                 TextAlign = ContentAlignment.MiddleLeft,
-                Dock = DockStyle.Left,
-                AutoSize = false,
-                Width = 450,
+                Dock = DockStyle.Fill,
                 ForeColor = ZeroTheme.Palette.TextSecondary,
                 Font = new Font("Segoe UI", 9f, FontStyle.Regular)
             };
 
-            _btnCancel = new ZButton
+            var bottomActions = new FlowLayoutPanel
             {
-                Text = "Hủy bỏ",
-                ButtonStyle = ZeroButtonStyle.Secondary,
-                Size = new Size(95, 36),
-                Dock = DockStyle.Right
-            };
-            _btnCancel.Click += (s, e) =>
-            {
-                DialogResult = DialogResult.Cancel;
-                Close();
+                Dock = DockStyle.Right,
+                AutoSize = true,
+                AutoSizeMode = AutoSizeMode.GrowAndShrink,
+                FlowDirection = FlowDirection.LeftToRight,
+                WrapContents = false,
+                BackColor = Color.Transparent,
+                Margin = Padding.Empty,
+                Padding = Padding.Empty
             };
 
             _btnScanAll = new ZButton
             {
                 Text = "Quét toàn bộ trang",
                 ButtonStyle = ZeroButtonStyle.Secondary,
-                Size = new Size(140, 36),
-                Dock = DockStyle.Right
+                Size = new Size(140, 32),
+                Font = new Font("Segoe UI", 9f, FontStyle.Regular),
+                Margin = new Padding(0, 0, 8, 0)
             };
             _btnScanAll.Click += (s, e) =>
             {
@@ -314,8 +355,9 @@ namespace ZeroUI.WinForms.Media.Ocr
             {
                 Text = "⚡ Quét vùng chọn [ROI]",
                 ButtonStyle = ZeroButtonStyle.Primary,
-                Size = new Size(170, 36),
-                Dock = DockStyle.Right,
+                Size = new Size(175, 32),
+                Font = new Font("Segoe UI", 9f, FontStyle.Bold),
+                Margin = new Padding(0, 0, 8, 0),
                 Enabled = false
             };
             _btnScanRoi.Click += (s, e) =>
@@ -328,11 +370,29 @@ namespace ZeroUI.WinForms.Media.Ocr
                 }
             };
 
-            // Order docked right controls: Cancel (far right), ScanAll, ScanRoi
+            _btnCancel = new ZButton
+            {
+                Text = "Hủy bỏ",
+                ButtonStyle = ZeroButtonStyle.Secondary,
+                Size = new Size(80, 32),
+                Font = new Font("Segoe UI", 9f, FontStyle.Regular),
+                Margin = Padding.Empty
+            };
+            _btnCancel.Click += (s, e) =>
+            {
+                DialogResult = DialogResult.Cancel;
+                Close();
+            };
+
+            bottomActions.Controls.AddRange(new Control[]
+            {
+                _btnScanAll,
+                _btnScanRoi,
+                _btnCancel
+            });
+
             _bottomBar.Controls.Add(_lblStatus);
-            _bottomBar.Controls.Add(_btnScanRoi);
-            _bottomBar.Controls.Add(_btnScanAll);
-            _bottomBar.Controls.Add(_btnCancel);
+            _bottomBar.Controls.Add(bottomActions);
 
             // 3. Center OcrViewer Canvas
             _ocrViewer.RoiSelected += (s, roi) =>
@@ -436,6 +496,43 @@ namespace ZeroUI.WinForms.Media.Ocr
         }
 
         #endregion
+
+
+        private void ZOcrRoiDialog_KeyDown(object? sender, KeyEventArgs e)
+        {
+            if (e.KeyCode == Keys.Escape)
+            {
+                e.Handled = true;
+                _btnCancel.PerformClick();
+            }
+            else if (e.KeyCode == Keys.Enter)
+            {
+                e.Handled = true;
+                if (HasSelectedRoi)
+                {
+                    _btnScanRoi.PerformClick();
+                }
+                else
+                {
+                    _btnScanAll.PerformClick();
+                }
+            }
+            else if (e.KeyCode == Keys.Delete || e.KeyCode == Keys.Back)
+            {
+                e.Handled = true;
+                _btnClearRoi.PerformClick();
+            }
+            else if (e.KeyCode == Keys.PageUp)
+            {
+                e.Handled = true;
+                NavigatePage(_currentPage - 1);
+            }
+            else if (e.KeyCode == Keys.PageDown)
+            {
+                e.Handled = true;
+                NavigatePage(_currentPage + 1);
+            }
+        }
 
         #region Cleanup
 
