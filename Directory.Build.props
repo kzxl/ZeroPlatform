@@ -1,9 +1,9 @@
 <Project>
   <PropertyGroup>
-    <Version>3.0.0</Version>
-    <AssemblyVersion>3.0.0.0</AssemblyVersion>
-    <FileVersion>3.0.0.0</FileVersion>
-    <InformationalVersion>3.0.0</InformationalVersion>
+    <Version>3.1.0</Version>
+    <AssemblyVersion>3.1.0.0</AssemblyVersion>
+    <FileVersion>3.1.0.0</FileVersion>
+    <InformationalVersion>3.1.0</InformationalVersion>
     <Authors>Phong Võ, ZeroPlatform Contributors</Authors>
     <Company>ZeroUniverse</Company>
     <Copyright>Copyright © 2026 Phong Võ</Copyright>

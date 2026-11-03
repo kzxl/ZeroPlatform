@@ -4,7 +4,7 @@
 
 # ZeroPlatform: Unified Industrial .NET Ecosystem
 
-[![Release: v3.0.0](https://img.shields.io/badge/Release-v3.0.0-blue.svg)](https://github.com/kzxl/ZeroPlatform/releases)
+[![Release: v3.1.0](https://img.shields.io/badge/Release-v3.1.0-blue.svg)](https://github.com/kzxl/ZeroPlatform/releases)
 [![License: MIT](https://img.shields.io/badge/License-MIT-brightgreen.svg)](LICENSE)
 [![.NET Multi-Targeting](https://img.shields.io/badge/.NET-8.0%20%7C%204.6.2%20%7C%20Standard%202.0-purple.svg)](https://dotnet.microsoft.com/)
 [![CI Build & Verify](https://github.com/kzxl/ZeroPlatform/actions/workflows/ci.yml/badge.svg)](https://github.com/kzxl/ZeroPlatform/actions/workflows/ci.yml)
@@ -287,13 +287,13 @@ dotnet test tests/ZeroPlatform.Tests.Integration/ZeroPlatform.Tests.Integration.
 dotnet run --project samples/ZeroPlatform.Samples.Showcase/ZeroPlatform.Samples.Showcase.csproj -f net8.0-windows
 ```
 
-### 5. Pack All Subsystems as NuGet Packages (v3.0.0)
+### 5. Pack All Subsystems as NuGet Packages (v3.1.0)
 ```bash
 dotnet pack ZeroPlatform.slnx -c Release -o ./dist/packages
 ```
 
 ### 6. Automated CI/CD & NuGet Trusted Publishing
-ZeroPlatform uses **GitHub Actions OIDC Trusted Publishing** (`NuGet/login@v1`) to securely pack and publish all 55 ecosystem packages to [NuGet.org](https://www.nuget.org/profiles/kzxl) without long-lived API keys. Pushing a release tag (e.g. `v3.0.0`) triggers `.github/workflows/publish-packages.yml`.
+ZeroPlatform uses **GitHub Actions OIDC Trusted Publishing** (`NuGet/login@v1`) to securely pack and publish all 55 ecosystem packages to [NuGet.org](https://www.nuget.org/profiles/kzxl) without long-lived API keys. Pushing a release tag (e.g. `v3.1.0`) triggers `.github/workflows/publish-packages.yml`.
 
 ---
 
