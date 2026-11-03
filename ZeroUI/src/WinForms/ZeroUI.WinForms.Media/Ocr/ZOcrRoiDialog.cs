@@ -12,23 +12,23 @@ namespace ZeroUI.WinForms.Media.Ocr
 {
     /// <summary>
     /// Localizable string resources for <see cref="ZOcrRoiDialog"/>.
-    /// Default values are in Standard English.
+    /// Default values strictly adhere to anti-slop standards with clean typography and zero emojis.
     /// </summary>
     public class ZOcrRoiDialogStrings
     {
         public string Title { get; set; } = "ZeroUI - Region of Interest (ROI) Document Selector";
-        public string PrevPage { get; set; } = "◀ Prev";
-        public string NextPage { get; set; } = "Next ▶";
+        public string PrevPage { get; set; } = "Previous";
+        public string NextPage { get; set; } = "Next";
         public string PageIndicatorFormat { get; set; } = "Page {0} / {1}";
-        public string ZoomFit { get; set; } = "⛶ Fit Page";
-        public string ZoomActual { get; set; } = "1:1";
-        public string ClearRoi { get; set; } = "✖ Clear ROI";
-        public string HintDragToSelect { get; set; } = "💡 Drag left mouse on document to select region of interest (ROI)";
-        public string StatusNoSelection { get; set; } = "No region selected (Full page will be extracted by default)";
-        public string StatusSelectedFormat { get; set; } = "✅ Selected ROI: [X={0}, Y={1}, W={2}px, H={3}px]";
+        public string ZoomFit { get; set; } = "Fit Page";
+        public string ZoomActual { get; set; } = "100%";
+        public string ClearRoi { get; set; } = "Clear ROI";
+        public string HintDragToSelect { get; set; } = "Drag on document to select region of interest (ROI)";
+        public string StatusNoSelection { get; set; } = "No region selected (entire page will be extracted by default)";
+        public string StatusSelectedFormat { get; set; } = "Selected ROI: [X={0}, Y={1}, W={2}px, H={3}px]";
         public string ScanAll { get; set; } = "Extract Full Page";
-        public string ScanRoi { get; set; } = "⚡ Extract Selected [ROI]";
-        public string ScanRoiWithDimsFormat { get; set; } = "⚡ Extract Selected [ROI: {0}x{1}]";
+        public string ScanRoi { get; set; } = "Extract ROI";
+        public string ScanRoiWithDimsFormat { get; set; } = "Extract ROI ({0}x{1})";
         public string Cancel { get; set; } = "Cancel";
 
         public string ToolTipZoomOut { get; set; } = "Zoom Out (Ctrl + Wheel Down)";
@@ -42,24 +42,24 @@ namespace ZeroUI.WinForms.Media.Ocr
         public static ZOcrRoiDialogStrings Vietnamese => new ZOcrRoiDialogStrings
         {
             Title = "ZeroUI - Chọn vùng bóc tách dữ liệu (ROI Document Selector)",
-            PrevPage = "◀ Trước",
-            NextPage = "Sau ▶",
+            PrevPage = "Trang trước",
+            NextPage = "Trang sau",
             PageIndicatorFormat = "Trang {0} / {1}",
-            ZoomFit = "⛶ Vừa trang",
-            ZoomActual = "1:1",
-            ClearRoi = "✖ Bỏ chọn vùng",
-            HintDragToSelect = "💡 Giữ chuột trái & kéo trên tài liệu để khoanh vùng bảng hàng hóa",
-            StatusNoSelection = "Chưa chọn vùng (Mặc định sẽ trích xuất toàn bộ trang tài liệu)",
-            StatusSelectedFormat = "✅ Đã khoanh vùng ROI: [X={0}, Y={1}, Rộng={2}px, Cao={3}px]",
+            ZoomFit = "Vừa trang",
+            ZoomActual = "100%",
+            ClearRoi = "Xóa vùng chọn",
+            HintDragToSelect = "Kéo chuột trên tài liệu để khoanh vùng bảng hàng hóa",
+            StatusNoSelection = "Chưa chọn vùng (mặc định sẽ trích xuất toàn bộ trang)",
+            StatusSelectedFormat = "Vùng chọn ROI: [X={0}, Y={1}, Rộng={2}px, Cao={3}px]",
             ScanAll = "Quét toàn bộ trang",
-            ScanRoi = "⚡ Quét vùng chọn [ROI]",
-            ScanRoiWithDimsFormat = "⚡ Quét vùng chọn [ROI: {0}x{1}]",
+            ScanRoi = "Quét vùng chọn ROI",
+            ScanRoiWithDimsFormat = "Quét vùng chọn ROI ({0}x{1})",
             Cancel = "Hủy bỏ",
             ToolTipZoomOut = "Thu nhỏ (Ctrl + Cuộn chuột xuống)",
             ToolTipZoomIn = "Phóng to (Ctrl + Cuộn chuột lên)",
             ToolTipZoomFit = "Thu phóng vừa cửa sổ",
             ToolTipZoomActual = "Kích thước gốc 100%",
-            ToolTipClearRoi = "Bỏ chọn vùng ROI hiện tại (Phím Delete)"
+            ToolTipClearRoi = "Xóa vùng chọn ROI hiện tại (Phím Delete)"
         };
     }
 
@@ -266,7 +266,7 @@ namespace ZeroUI.WinForms.Media.Ocr
             KeyPreview = true;
             KeyDown += ZOcrRoiDialog_KeyDown;
 
-            // 1. Top Toolbar (Height: 44px) - Clean FlowLayout to eliminate button overlap & text truncation
+            // 1. Top Toolbar (Height: 44px) - Clean FlowLayout without slop emojis
             _topBar = new Panel
             {
                 Dock = DockStyle.Top,
@@ -328,20 +328,20 @@ namespace ZeroUI.WinForms.Media.Ocr
 
             _btnZoomOut = new ZButton
             {
-                Text = "➖",
+                Text = "-",
                 ButtonStyle = ZeroButtonStyle.Secondary,
-                Size = new Size(36, 30),
-                Font = new Font("Segoe UI", 9.5f, FontStyle.Bold),
+                Size = new Size(32, 30),
+                Font = new Font("Segoe UI", 11f, FontStyle.Bold),
                 Margin = new Padding(0, 0, 4, 0)
             };
             _btnZoomOut.Click += (s, e) => _ocrViewer.Zoom /= 1.25;
 
             _btnZoomIn = new ZButton
             {
-                Text = "➕",
+                Text = "+",
                 ButtonStyle = ZeroButtonStyle.Secondary,
-                Size = new Size(36, 30),
-                Font = new Font("Segoe UI", 9.5f, FontStyle.Bold),
+                Size = new Size(32, 30),
+                Font = new Font("Segoe UI", 11f, FontStyle.Bold),
                 Margin = new Padding(0, 0, 4, 0)
             };
             _btnZoomIn.Click += (s, e) => _ocrViewer.Zoom *= 1.25;
@@ -350,7 +350,7 @@ namespace ZeroUI.WinForms.Media.Ocr
             {
                 Text = _strings.ZoomFit,
                 ButtonStyle = ZeroButtonStyle.Secondary,
-                Size = new Size(102, 30),
+                Size = new Size(88, 30),
                 Font = new Font("Segoe UI", 9f, FontStyle.Regular),
                 Margin = new Padding(0, 0, 4, 0)
             };
@@ -360,7 +360,7 @@ namespace ZeroUI.WinForms.Media.Ocr
             {
                 Text = _strings.ZoomActual,
                 ButtonStyle = ZeroButtonStyle.Secondary,
-                Size = new Size(46, 30),
+                Size = new Size(54, 30),
                 Font = new Font("Segoe UI", 9f, FontStyle.Regular),
                 Margin = new Padding(0, 0, 8, 0)
             };
@@ -377,7 +377,7 @@ namespace ZeroUI.WinForms.Media.Ocr
             {
                 Text = _strings.ClearRoi,
                 ButtonStyle = ZeroButtonStyle.Secondary,
-                Size = new Size(128, 30),
+                Size = new Size(100, 30),
                 Font = new Font("Segoe UI", 9f, FontStyle.Regular),
                 Margin = new Padding(0, 0, 8, 0)
             };
@@ -409,13 +409,13 @@ namespace ZeroUI.WinForms.Media.Ocr
                 TextAlign = ContentAlignment.MiddleRight,
                 Dock = DockStyle.Fill,
                 ForeColor = ZeroTheme.Palette.TextSecondary,
-                Font = new Font("Segoe UI", 8.5f, FontStyle.Italic)
+                Font = new Font("Segoe UI", 8.5f, FontStyle.Regular)
             };
 
             _topBar.Controls.Add(_lblHint);
             _topBar.Controls.Add(topActions);
 
-            // 2. Bottom Action Bar (Height: 48px) - Spaced buttons with 8px margin
+            // 2. Bottom Action Bar (Height: 48px) - Crisp spaced buttons
             _bottomBar = new Panel
             {
                 Dock = DockStyle.Bottom,
@@ -449,7 +449,7 @@ namespace ZeroUI.WinForms.Media.Ocr
             {
                 Text = _strings.ScanAll,
                 ButtonStyle = ZeroButtonStyle.Secondary,
-                Size = new Size(140, 32),
+                Size = new Size(130, 32),
                 Font = new Font("Segoe UI", 9f, FontStyle.Regular),
                 Margin = new Padding(0, 0, 8, 0)
             };
@@ -475,7 +475,7 @@ namespace ZeroUI.WinForms.Media.Ocr
             {
                 Text = _strings.ScanRoi,
                 ButtonStyle = ZeroButtonStyle.Primary,
-                Size = new Size(175, 32),
+                Size = new Size(135, 32),
                 Font = new Font("Segoe UI", 9f, FontStyle.Bold),
                 Margin = new Padding(0, 0, 8, 0),
                 Enabled = false
@@ -494,7 +494,7 @@ namespace ZeroUI.WinForms.Media.Ocr
             {
                 Text = _strings.Cancel,
                 ButtonStyle = ZeroButtonStyle.Secondary,
-                Size = new Size(80, 32),
+                Size = new Size(76, 32),
                 Font = new Font("Segoe UI", 9f, FontStyle.Regular),
                 Margin = Padding.Empty
             };
