@@ -11,11 +11,72 @@ using ZeroUI.WinForms.Theme;
 namespace ZeroUI.WinForms.Media.Ocr
 {
     /// <summary>
+    /// Localizable string resources for <see cref="ZOcrRoiDialog"/>.
+    /// Default values are in Standard English.
+    /// </summary>
+    public class ZOcrRoiDialogStrings
+    {
+        public string Title { get; set; } = "ZeroUI - Region of Interest (ROI) Document Selector";
+        public string PrevPage { get; set; } = "◀ Prev";
+        public string NextPage { get; set; } = "Next ▶";
+        public string PageIndicatorFormat { get; set; } = "Page {0} / {1}";
+        public string ZoomFit { get; set; } = "⛶ Fit Page";
+        public string ZoomActual { get; set; } = "1:1";
+        public string ClearRoi { get; set; } = "✖ Clear ROI";
+        public string HintDragToSelect { get; set; } = "💡 Drag left mouse on document to select region of interest (ROI)";
+        public string StatusNoSelection { get; set; } = "No region selected (Full page will be extracted by default)";
+        public string StatusSelectedFormat { get; set; } = "✅ Selected ROI: [X={0}, Y={1}, W={2}px, H={3}px]";
+        public string ScanAll { get; set; } = "Extract Full Page";
+        public string ScanRoi { get; set; } = "⚡ Extract Selected [ROI]";
+        public string ScanRoiWithDimsFormat { get; set; } = "⚡ Extract Selected [ROI: {0}x{1}]";
+        public string Cancel { get; set; } = "Cancel";
+
+        public string ToolTipZoomOut { get; set; } = "Zoom Out (Ctrl + Wheel Down)";
+        public string ToolTipZoomIn { get; set; } = "Zoom In (Ctrl + Wheel Up)";
+        public string ToolTipZoomFit { get; set; } = "Fit to window";
+        public string ToolTipZoomActual { get; set; } = "Actual size (100%)";
+        public string ToolTipClearRoi { get; set; } = "Clear current ROI (Delete key)";
+
+        public static ZOcrRoiDialogStrings English => new ZOcrRoiDialogStrings();
+
+        public static ZOcrRoiDialogStrings Vietnamese => new ZOcrRoiDialogStrings
+        {
+            Title = "ZeroUI - Chọn vùng bóc tách dữ liệu (ROI Document Selector)",
+            PrevPage = "◀ Trước",
+            NextPage = "Sau ▶",
+            PageIndicatorFormat = "Trang {0} / {1}",
+            ZoomFit = "⛶ Vừa trang",
+            ZoomActual = "1:1",
+            ClearRoi = "✖ Bỏ chọn vùng",
+            HintDragToSelect = "💡 Giữ chuột trái & kéo trên tài liệu để khoanh vùng bảng hàng hóa",
+            StatusNoSelection = "Chưa chọn vùng (Mặc định sẽ trích xuất toàn bộ trang tài liệu)",
+            StatusSelectedFormat = "✅ Đã khoanh vùng ROI: [X={0}, Y={1}, Rộng={2}px, Cao={3}px]",
+            ScanAll = "Quét toàn bộ trang",
+            ScanRoi = "⚡ Quét vùng chọn [ROI]",
+            ScanRoiWithDimsFormat = "⚡ Quét vùng chọn [ROI: {0}x{1}]",
+            Cancel = "Hủy bỏ",
+            ToolTipZoomOut = "Thu nhỏ (Ctrl + Cuộn chuột xuống)",
+            ToolTipZoomIn = "Phóng to (Ctrl + Cuộn chuột lên)",
+            ToolTipZoomFit = "Thu phóng vừa cửa sổ",
+            ToolTipZoomActual = "Kích thước gốc 100%",
+            ToolTipClearRoi = "Bỏ chọn vùng ROI hiện tại (Phím Delete)"
+        };
+    }
+
+    /// <summary>
     /// Interactive dialog for inspecting document pages (images or multi-page documents),
     /// panning/zooming, and visually selecting a Region of Interest (ROI) for targeted OCR/LLM extraction.
     /// </summary>
     public class ZOcrRoiDialog : Form
     {
+        /// <summary>
+        /// Global default localized strings across all dialog instances.
+        /// Defaults to Standard English.
+        /// </summary>
+        public static ZOcrRoiDialogStrings DefaultStrings { get; set; } = new ZOcrRoiDialogStrings();
+
+        private ZOcrRoiDialogStrings _strings = DefaultStrings;
+
         private readonly ZOcrViewer _ocrViewer;
         private readonly Func<int, Bitmap>? _pageLoader;
         private readonly IReadOnlyList<Bitmap>? _staticPages;
@@ -35,6 +96,7 @@ namespace ZeroUI.WinForms.Media.Ocr
         private ZButton _btnZoom100 = null!;
         private ZButton _btnClearRoi = null!;
         private Label _lblHint = null!;
+        private ToolTip? _topToolTips;
 
         // Bottom Toolbar Controls
         private Panel _bottomBar = null!;
@@ -44,6 +106,20 @@ namespace ZeroUI.WinForms.Media.Ocr
         private ZButton _btnScanRoi = null!;
 
         #region Public Properties
+
+        /// <summary>
+        /// Gets or sets the localized string set for this dialog instance.
+        /// Setting this automatically reloads and refreshes all UI text.
+        /// </summary>
+        public ZOcrRoiDialogStrings Strings
+        {
+            get => _strings;
+            set
+            {
+                _strings = value ?? new ZOcrRoiDialogStrings();
+                ReloadStrings();
+            }
+        }
 
         /// <summary>
         /// Current 1-based page index.
@@ -78,17 +154,19 @@ namespace ZeroUI.WinForms.Media.Ocr
         /// <summary>
         /// Initializes an ROI dialog for a single bitmap document.
         /// </summary>
-        public ZOcrRoiDialog(Bitmap image) : this(new[] { image }, 1)
+        public ZOcrRoiDialog(Bitmap image, ZOcrRoiDialogStrings? strings = null) : this(new[] { image }, 1, strings)
         {
         }
 
         /// <summary>
         /// Initializes an ROI dialog for an in-memory list of document page bitmaps.
         /// </summary>
-        public ZOcrRoiDialog(IReadOnlyList<Bitmap> pages, int initialPage = 1)
+        public ZOcrRoiDialog(IReadOnlyList<Bitmap> pages, int initialPage = 1, ZOcrRoiDialogStrings? strings = null)
         {
             if (pages == null || pages.Count == 0)
-                throw new ArgumentException("Danh sách trang tài liệu không được rỗng.", nameof(pages));
+                throw new ArgumentException("Document page list cannot be empty.", nameof(pages));
+
+            if (strings != null) _strings = strings;
 
             _staticPages = pages;
             _totalPages = pages.Count;
@@ -103,6 +181,7 @@ namespace ZeroUI.WinForms.Media.Ocr
             };
 
             InitializeComponent();
+            ReloadStrings();
             LoadCurrentPage();
         }
 
@@ -112,9 +191,12 @@ namespace ZeroUI.WinForms.Media.Ocr
         /// <param name="pageLoader">Delegate taking 1-based page number and returning page Bitmap.</param>
         /// <param name="totalPages">Total page count.</param>
         /// <param name="initialPage">Initial 1-based page index.</param>
-        public ZOcrRoiDialog(Func<int, Bitmap> pageLoader, int totalPages, int initialPage = 1)
+        /// <param name="strings">Optional custom localized string resources.</param>
+        public ZOcrRoiDialog(Func<int, Bitmap> pageLoader, int totalPages, int initialPage = 1, ZOcrRoiDialogStrings? strings = null)
         {
             _pageLoader = pageLoader ?? throw new ArgumentNullException(nameof(pageLoader));
+            if (strings != null) _strings = strings;
+
             _totalPages = Math.Max(1, totalPages);
             _currentPage = Math.Max(1, Math.Min(initialPage, _totalPages));
 
@@ -127,7 +209,45 @@ namespace ZeroUI.WinForms.Media.Ocr
             };
 
             InitializeComponent();
+            ReloadStrings();
             LoadCurrentPage();
+        }
+
+        #endregion
+
+        #region Localization & Dynamic Reload
+
+        /// <summary>
+        /// Applies and reloads localized string resources into all controls.
+        /// </summary>
+        public void ReloadStrings(ZOcrRoiDialogStrings? customStrings = null)
+        {
+            if (customStrings != null)
+            {
+                _strings = customStrings;
+            }
+
+            Text = _strings.Title;
+            if (_btnPrevPage != null) _btnPrevPage.Text = _strings.PrevPage;
+            if (_btnNextPage != null) _btnNextPage.Text = _strings.NextPage;
+            if (_lblPageIndicator != null) _lblPageIndicator.Text = string.Format(_strings.PageIndicatorFormat, _currentPage, _totalPages);
+            if (_btnZoomFit != null) _btnZoomFit.Text = _strings.ZoomFit;
+            if (_btnZoom100 != null) _btnZoom100.Text = _strings.ZoomActual;
+            if (_btnClearRoi != null) _btnClearRoi.Text = _strings.ClearRoi;
+            if (_lblHint != null) _lblHint.Text = _strings.HintDragToSelect;
+            if (_btnScanAll != null) _btnScanAll.Text = _strings.ScanAll;
+            if (_btnCancel != null) _btnCancel.Text = _strings.Cancel;
+
+            if (_topToolTips != null)
+            {
+                if (_btnZoomOut != null) _topToolTips.SetToolTip(_btnZoomOut, _strings.ToolTipZoomOut);
+                if (_btnZoomIn != null) _topToolTips.SetToolTip(_btnZoomIn, _strings.ToolTipZoomIn);
+                if (_btnZoomFit != null) _topToolTips.SetToolTip(_btnZoomFit, _strings.ToolTipZoomFit);
+                if (_btnZoom100 != null) _topToolTips.SetToolTip(_btnZoom100, _strings.ToolTipZoomActual);
+                if (_btnClearRoi != null) _topToolTips.SetToolTip(_btnClearRoi, _strings.ToolTipClearRoi);
+            }
+
+            UpdateRoiStatus();
         }
 
         #endregion
@@ -136,7 +256,7 @@ namespace ZeroUI.WinForms.Media.Ocr
 
         private void InitializeComponent()
         {
-            Text = "ZeroUI - Chọn vùng bóc tách dữ liệu (ROI Document Selector)";
+            Text = _strings.Title;
             StartPosition = FormStartPosition.CenterParent;
             Size = new Size(1100, 800);
             MinimumSize = new Size(820, 600);
@@ -169,7 +289,7 @@ namespace ZeroUI.WinForms.Media.Ocr
 
             _btnPrevPage = new ZButton
             {
-                Text = "◀ Trước",
+                Text = _strings.PrevPage,
                 ButtonStyle = ZeroButtonStyle.Secondary,
                 Size = new Size(68, 30),
                 Font = new Font("Segoe UI", 9f, FontStyle.Regular),
@@ -180,7 +300,7 @@ namespace ZeroUI.WinForms.Media.Ocr
 
             _lblPageIndicator = new Label
             {
-                Text = $"Trang {_currentPage} / {_totalPages}",
+                Text = string.Format(_strings.PageIndicatorFormat, _currentPage, _totalPages),
                 TextAlign = ContentAlignment.MiddleCenter,
                 Size = new Size(88, 30),
                 Margin = new Padding(0, 0, 4, 0),
@@ -190,7 +310,7 @@ namespace ZeroUI.WinForms.Media.Ocr
 
             _btnNextPage = new ZButton
             {
-                Text = "Sau ▶",
+                Text = _strings.NextPage,
                 ButtonStyle = ZeroButtonStyle.Secondary,
                 Size = new Size(68, 30),
                 Font = new Font("Segoe UI", 9f, FontStyle.Regular),
@@ -228,7 +348,7 @@ namespace ZeroUI.WinForms.Media.Ocr
 
             _btnZoomFit = new ZButton
             {
-                Text = "⛶ Vừa trang",
+                Text = _strings.ZoomFit,
                 ButtonStyle = ZeroButtonStyle.Secondary,
                 Size = new Size(102, 30),
                 Font = new Font("Segoe UI", 9f, FontStyle.Regular),
@@ -238,7 +358,7 @@ namespace ZeroUI.WinForms.Media.Ocr
 
             _btnZoom100 = new ZButton
             {
-                Text = "1:1",
+                Text = _strings.ZoomActual,
                 ButtonStyle = ZeroButtonStyle.Secondary,
                 Size = new Size(46, 30),
                 Font = new Font("Segoe UI", 9f, FontStyle.Regular),
@@ -255,7 +375,7 @@ namespace ZeroUI.WinForms.Media.Ocr
 
             _btnClearRoi = new ZButton
             {
-                Text = "✖ Bỏ chọn vùng",
+                Text = _strings.ClearRoi,
                 ButtonStyle = ZeroButtonStyle.Secondary,
                 Size = new Size(128, 30),
                 Font = new Font("Segoe UI", 9f, FontStyle.Regular),
@@ -276,16 +396,16 @@ namespace ZeroUI.WinForms.Media.Ocr
                 _btnClearRoi
             });
 
-            var topToolTips = new ToolTip();
-            topToolTips.SetToolTip(_btnZoomOut, "Thu nhỏ (Ctrl + Cuộn chuột xuống)");
-            topToolTips.SetToolTip(_btnZoomIn, "Phóng to (Ctrl + Cuộn chuột lên)");
-            topToolTips.SetToolTip(_btnZoomFit, "Thu phóng vừa cửa sổ");
-            topToolTips.SetToolTip(_btnZoom100, "Kích thước gốc 100%");
-            topToolTips.SetToolTip(_btnClearRoi, "Bỏ chọn vùng ROI hiện tại (Phím Delete)");
+            _topToolTips = new ToolTip();
+            _topToolTips.SetToolTip(_btnZoomOut, _strings.ToolTipZoomOut);
+            _topToolTips.SetToolTip(_btnZoomIn, _strings.ToolTipZoomIn);
+            _topToolTips.SetToolTip(_btnZoomFit, _strings.ToolTipZoomFit);
+            _topToolTips.SetToolTip(_btnZoom100, _strings.ToolTipZoomActual);
+            _topToolTips.SetToolTip(_btnClearRoi, _strings.ToolTipClearRoi);
 
             _lblHint = new Label
             {
-                Text = "💡 Giữ chuột trái & kéo trên tài liệu để khoanh vùng bảng hàng hóa",
+                Text = _strings.HintDragToSelect,
                 TextAlign = ContentAlignment.MiddleRight,
                 Dock = DockStyle.Fill,
                 ForeColor = ZeroTheme.Palette.TextSecondary,
@@ -306,7 +426,7 @@ namespace ZeroUI.WinForms.Media.Ocr
 
             _lblStatus = new Label
             {
-                Text = "Chưa chọn vùng (Mặc định sẽ trích xuất toàn bộ trang tài liệu)",
+                Text = _strings.StatusNoSelection,
                 TextAlign = ContentAlignment.MiddleLeft,
                 Dock = DockStyle.Fill,
                 ForeColor = ZeroTheme.Palette.TextSecondary,
@@ -327,7 +447,7 @@ namespace ZeroUI.WinForms.Media.Ocr
 
             _btnScanAll = new ZButton
             {
-                Text = "Quét toàn bộ trang",
+                Text = _strings.ScanAll,
                 ButtonStyle = ZeroButtonStyle.Secondary,
                 Size = new Size(140, 32),
                 Font = new Font("Segoe UI", 9f, FontStyle.Regular),
@@ -353,7 +473,7 @@ namespace ZeroUI.WinForms.Media.Ocr
 
             _btnScanRoi = new ZButton
             {
-                Text = "⚡ Quét vùng chọn [ROI]",
+                Text = _strings.ScanRoi,
                 ButtonStyle = ZeroButtonStyle.Primary,
                 Size = new Size(175, 32),
                 Font = new Font("Segoe UI", 9f, FontStyle.Bold),
@@ -372,7 +492,7 @@ namespace ZeroUI.WinForms.Media.Ocr
 
             _btnCancel = new ZButton
             {
-                Text = "Hủy bỏ",
+                Text = _strings.Cancel,
                 ButtonStyle = ZeroButtonStyle.Secondary,
                 Size = new Size(80, 32),
                 Font = new Font("Segoe UI", 9f, FontStyle.Regular),
@@ -433,7 +553,7 @@ namespace ZeroUI.WinForms.Media.Ocr
                 _ocrViewer.Image = _staticPages[_currentPage - 1];
             }
 
-            _lblPageIndicator.Text = $"Trang {_currentPage} / {_totalPages}";
+            _lblPageIndicator.Text = string.Format(_strings.PageIndicatorFormat, _currentPage, _totalPages);
             _btnPrevPage.Enabled = _currentPage > 1;
             _btnNextPage.Enabled = _currentPage < _totalPages;
 
@@ -445,17 +565,17 @@ namespace ZeroUI.WinForms.Media.Ocr
             if (HasSelectedRoi && _ocrViewer.SelectedRoi.HasValue)
             {
                 var r = _ocrViewer.SelectedRoi.Value;
-                _lblStatus.Text = $"✅ Đã khoanh vùng ROI: [X={(int)r.X}, Y={(int)r.Y}, Rộng={(int)r.Width}px, Cao={(int)r.Height}px]";
+                _lblStatus.Text = string.Format(_strings.StatusSelectedFormat, (int)r.X, (int)r.Y, (int)r.Width, (int)r.Height);
                 _lblStatus.ForeColor = ZeroTheme.Palette.Primary;
                 _btnScanRoi.Enabled = true;
-                _btnScanRoi.Text = $"⚡ Quét vùng chọn [ROI: {(int)r.Width}x{(int)r.Height}]";
+                _btnScanRoi.Text = string.Format(_strings.ScanRoiWithDimsFormat, (int)r.Width, (int)r.Height);
             }
             else
             {
-                _lblStatus.Text = "Chưa chọn vùng (Mặc định sẽ trích xuất toàn bộ trang tài liệu)";
+                _lblStatus.Text = _strings.StatusNoSelection;
                 _lblStatus.ForeColor = ZeroTheme.Palette.TextSecondary;
                 _btnScanRoi.Enabled = false;
-                _btnScanRoi.Text = "⚡ Quét vùng chọn [ROI]";
+                _btnScanRoi.Text = _strings.ScanRoi;
             }
         }
 
@@ -496,7 +616,6 @@ namespace ZeroUI.WinForms.Media.Ocr
         }
 
         #endregion
-
 
         private void ZOcrRoiDialog_KeyDown(object? sender, KeyEventArgs e)
         {
