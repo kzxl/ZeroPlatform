@@ -116,9 +116,9 @@ namespace ZeroUI.WinForms.Documents
 
             _botIcon = new Label
             {
-                Text = "",
-                Font = new Font("Segoe UI Emoji", 14f, FontStyle.Regular),
-                ForeColor = Color.White,
+                Text = "✦",
+                Font = new Font("Segoe UI", 12.5f, FontStyle.Bold),
+                ForeColor = Color.FromArgb(99, 102, 241),
                 AutoSize = true,
                 Location = new Point(12, 10),
                 Visible = _showHeaderIcon
@@ -129,7 +129,7 @@ namespace ZeroUI.WinForms.Documents
             _titleLabel = new Label
             {
                 Text = FormatTitleText(),
-                Font = new Font("Segoe UI", 10f, FontStyle.Bold),
+                Font = new Font("Segoe UI", 10.5f, FontStyle.Bold),
                 ForeColor = Color.FromArgb(241, 245, 249),
                 AutoSize = true,
                 Location = new Point(textLeft, 6)
@@ -138,7 +138,7 @@ namespace ZeroUI.WinForms.Documents
 
             _statusLabel = new Label
             {
-                Text = "Sẵn sàng",
+                Text = "● Sẵn sàng",
                 Font = new Font("Segoe UI", 8.5f, FontStyle.Regular),
                 ForeColor = Color.FromArgb(52, 211, 153),
                 AutoSize = true,
@@ -148,14 +148,14 @@ namespace ZeroUI.WinForms.Documents
 
             _clearButton = new Button
             {
-                Text = "🗑 Clear",
-                Font = new Font("Segoe UI", 8.5f),
+                Text = "↻ Làm mới",
+                Font = new Font("Segoe UI", 8.5f, FontStyle.Bold),
                 ForeColor = Color.FromArgb(148, 163, 184),
                 BackColor = Color.Transparent,
                 FlatStyle = FlatStyle.Flat,
-                Size = new Size(68, 28),
+                Size = new Size(84, 28),
                 Anchor = AnchorStyles.Top | AnchorStyles.Right,
-                Location = new Point(Width - 80, 10),
+                Location = new Point(Width - 96, 10),
                 Cursor = Cursors.Hand
             };
             _clearButton.FlatAppearance.BorderSize = 0;
@@ -209,7 +209,7 @@ namespace ZeroUI.WinForms.Documents
 
             _sendButton = new Button
             {
-                Text = "Gửi ➢",
+                Text = "➤ Gửi",
                 Font = new Font("Segoe UI", 9.5f, FontStyle.Bold),
                 BackColor = Color.FromArgb(79, 70, 229),
                 ForeColor = Color.White,
@@ -308,7 +308,7 @@ namespace ZeroUI.WinForms.Documents
             ZeroTheme.ThemeChanged += OnThemeChanged;
             Resize += (s, e) =>
             {
-                _clearButton.Location = new Point(Width - 80, 10);
+                _clearButton.Location = new Point(Width - 96, 10);
                 UpdateContextBarUI();
                 RebuildAllMessages();
             };
@@ -465,10 +465,10 @@ namespace ZeroUI.WinForms.Documents
                 _streamingState = value;
                 _statusLabel.Text = value switch
                 {
-                    ChatStreamingState.Thinking => "Đang suy nghĩ...",
-                    ChatStreamingState.Streaming => "Đang phản hồi...",
-                    ChatStreamingState.Error => "Lỗi xử lý",
-                    _ => "Sẵn sàng"
+                    ChatStreamingState.Thinking => "● Đang suy nghĩ...",
+                    ChatStreamingState.Streaming => "● Đang phản hồi...",
+                    ChatStreamingState.Error => "● Lỗi xử lý",
+                    _ => "● Sẵn sàng"
                 };
             }
         }

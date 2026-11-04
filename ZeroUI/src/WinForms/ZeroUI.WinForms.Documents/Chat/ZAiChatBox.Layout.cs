@@ -1,6 +1,7 @@
 using System;
 using System.Collections.Specialized;
 using System.Drawing;
+using System.Drawing.Drawing2D;
 using System.Linq;
 using System.Windows.Forms;
 using ZeroUI.Core.AiMl;
@@ -192,9 +193,11 @@ namespace ZeroUI.WinForms.Documents
                 ? "Bạn"
                 : msg.SenderName!;
 
+            string senderTitle = isUser ? $"👤  {userDisplayName}" : $"✦  {(string.IsNullOrWhiteSpace(msg.ModelName) ? _assistantName : msg.ModelName)}";
+
             var senderLabel = new Label
             {
-                Text = isUser ? userDisplayName : (string.IsNullOrWhiteSpace(msg.ModelName) ? _assistantName : msg.ModelName),
+                Text = senderTitle,
                 Font = new Font("Segoe UI", 8.5f, FontStyle.Bold),
                 ForeColor = senderColor,
                 AutoSize = true,
@@ -202,8 +205,6 @@ namespace ZeroUI.WinForms.Documents
             };
             bubble.Controls.Add(senderLabel);
 
-            if (_showReasoning)
-            {
                 var timeLabel = new Label
                 {
                     Text = msg.Timestamp.ToLocalTime().ToString("HH:mm:ss"),
@@ -226,7 +227,6 @@ namespace ZeroUI.WinForms.Documents
                     };
                     bubble.Controls.Add(latencyLabel);
                 }
-            }
 
             // 2. Multi-Block Content (Reasoning + Rich Text + Data Tables + Action Chips)
             Color textFore = isUser
@@ -434,10 +434,56 @@ namespace ZeroUI.WinForms.Documents
                 {
                     if (!string.IsNullOrEmpty(msg.Content))
                     {
-                        Clipboard.SetText(msg.Content);
+                        try { Clipboard.SetText(msg.Content); } catch { }
+                        copyBtn.Text = "✓ Đã chép!";
+                        var resetTimer = new System.Windows.Forms.Timer { Interval = 1500 };
+                        resetTimer.Tick += (ts, te) =>
+                        {
+                            copyBtn.Text = "📋 Sao chép";
+                            resetTimer.Stop();
+                            resetTimer.Dispose();
+                        };
+                        resetTimer.Start();
                     }
                 };
                 footerPanel.Controls.Add(copyBtn);
+
+                if (!string.IsNullOrEmpty(msg.Content) && msg.Content.Contains("|"))
+                {
+                    var copyTableBtn = new Button
+                    {
+                        Text = "📊 Copy bảng",
+                        Font = new Font("Segoe UI", 8f),
+                        ForeColor = copyBtnFore,
+                        BackColor = copyBtnBg,
+                        FlatStyle = FlatStyle.Flat,
+                        Size = new Size(95, 24),
+                        Location = new Point(Math.Max(10, totalBubbleWidth - 192), 3),
+                        Cursor = Cursors.Hand
+                    };
+                    copyTableBtn.FlatAppearance.BorderColor = copyBtnBorder;
+                    copyTableBtn.FlatAppearance.BorderSize = 1;
+                    copyTableBtn.MouseEnter += (s, e) => { copyTableBtn.ForeColor = isDark ? Color.White : Color.FromArgb(15, 23, 42); copyTableBtn.BackColor = isDark ? Color.FromArgb(51, 65, 85) : Color.FromArgb(226, 232, 240); };
+                    copyTableBtn.MouseLeave += (s, e) => { copyTableBtn.ForeColor = copyBtnFore; copyTableBtn.BackColor = copyBtnBg; };
+                    copyTableBtn.Click += (s, e) =>
+                    {
+                        string tableTsv = ExtractMarkdownTableAsTsv(msg.Content);
+                        if (!string.IsNullOrEmpty(tableTsv))
+                        {
+                            try { Clipboard.SetText(tableTsv); } catch { }
+                            copyTableBtn.Text = "✓ Đã chép!";
+                            var resetTimer = new System.Windows.Forms.Timer { Interval = 1500 };
+                            resetTimer.Tick += (ts, te) =>
+                            {
+                                copyTableBtn.Text = "📊 Copy bảng";
+                                resetTimer.Stop();
+                                resetTimer.Dispose();
+                            };
+                            resetTimer.Start();
+                        }
+                    };
+                    footerPanel.Controls.Add(copyTableBtn);
+                }
                 bubble.Controls.Add(footerPanel);
             }
             outFooterPanel = footerPanel;
@@ -454,7 +500,10 @@ namespace ZeroUI.WinForms.Documents
                     : (isDark ? Color.FromArgb(51, 65, 85) : Color.FromArgb(226, 232, 240));
 
                 using var p = new Pen(penColor, 1f);
-                e.Graphics.DrawRectangle(p, 0, 0, bubble.Width - 1, bubble.Height - 1);
+                e.Graphics.SmoothingMode = SmoothingMode.AntiAlias;
+                var rect = new Rectangle(0, 0, bubble.Width - 1, bubble.Height - 1);
+                using var path = CreateRoundedBubblePath(rect, 8);
+                e.Graphics.DrawPath(p, path);
             };
 
             return bubble;
@@ -683,6 +732,39 @@ namespace ZeroUI.WinForms.Documents
                 _messagesContainer.Controls.Remove(emptyLabel);
                 emptyLabel.Dispose();
             }
+        }
+
+        private static GraphicsPath CreateRoundedBubblePath(Rectangle rect, int radius)
+        {
+            var path = new GraphicsPath();
+            int d = radius * 2;
+            path.AddArc(rect.X, rect.Y, d, d, 180, 90);
+            path.AddArc(rect.Right - d, rect.Y, d, d, 270, 90);
+            path.AddArc(rect.Right - d, rect.Bottom - d, d, d, 0, 90);
+            path.AddArc(rect.X, rect.Bottom - d, d, d, 90, 90);
+            path.CloseFigure();
+            return path;
+        }
+
+        private static string ExtractMarkdownTableAsTsv(string markdown)
+        {
+            if (string.IsNullOrWhiteSpace(markdown)) return string.Empty;
+            var lines = markdown.Split(new[] { "\r\n", "\r", "\n" }, StringSplitOptions.None);
+            var sb = new System.Text.StringBuilder();
+            foreach (var rawLine in lines)
+            {
+                string line = rawLine.Trim();
+                if (line.StartsWith("|") && line.EndsWith("|"))
+                {
+                    var parts = line.Split('|');
+                    if (parts.Length <= 2) continue;
+                    var cells = parts.Skip(1).Take(parts.Length - 2).Select(c => c.Trim()).ToList();
+                    if (cells.All(c => c.All(ch => ch == '-' || ch == ':' || ch == ' ')))
+                        continue;
+                    sb.AppendLine(string.Join("\t", cells));
+                }
+            }
+            return sb.ToString().TrimEnd();
         }
 
         public void ScrollToBottom()
