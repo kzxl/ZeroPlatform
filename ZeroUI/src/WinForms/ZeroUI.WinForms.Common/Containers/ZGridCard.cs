@@ -182,6 +182,9 @@ namespace ZeroUI.WinForms.Containers
         [Browsable(false)]
         public List<GridCardRow> Rows => _rows;
 
+        [Browsable(false)]
+        public int HoverRow => _hoverRow;
+
         public void AddColumn(string headerText, int width = 100, HorizontalAlignment alignment = HorizontalAlignment.Left, bool isAlertZero = false)
         {
             _columns.Add(new GridCardColumn(headerText, width, alignment, isAlertZero));

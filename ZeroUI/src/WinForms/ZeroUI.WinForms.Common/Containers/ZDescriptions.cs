@@ -118,6 +118,22 @@ namespace ZeroUI.WinForms.Containers
             Invalidate();
         }
 
+        public int GetItemIndexAt(Point pt)
+        {
+            int count = _items.Count;
+            if (count == 0) return -1;
+            int cols = Math.Max(1, _columns);
+            int rowsPerCol = (count + cols - 1) / cols;
+            int colWidth = Width / cols;
+            if (colWidth <= 0) return -1;
+            int c = pt.X / colWidth;
+            if (c < 0 || c >= cols) return -1;
+            int r = (pt.Y - 4) / _rowHeight;
+            if (r < 0 || r >= rowsPerCol) return -1;
+            int idx = c * rowsPerCol + r;
+            return (idx >= 0 && idx < count) ? idx : -1;
+        }
+
         protected override void OnPaint(PaintEventArgs e)
         {
             var g = e.Graphics;
