@@ -151,6 +151,48 @@ namespace ZeroPrimitives.Text
             SetNeedsComma(true);
         }
 
+        public void WriteNumber(int value)
+        {
+            PrepareValue();
+            WriteNumberRaw(value);
+            SetNeedsComma(true);
+        }
+
+        public void WriteNumber(long value)
+        {
+            PrepareValue();
+            WriteNumberRaw(value);
+            SetNeedsComma(true);
+        }
+
+        public void WriteNumber(decimal value)
+        {
+            PrepareValue();
+            WriteNumberRaw(value);
+            SetNeedsComma(true);
+        }
+
+        public void WriteNumber(double value)
+        {
+            PrepareValue();
+            WriteNumberRaw(value);
+            SetNeedsComma(true);
+        }
+
+        public void WriteBoolean(bool value)
+        {
+            PrepareValue();
+            WriteBytes(value ? "true"u8 : "false"u8);
+            SetNeedsComma(true);
+        }
+
+        public void WriteNull()
+        {
+            PrepareValue();
+            WriteBytes("null"u8);
+            SetNeedsComma(true);
+        }
+
         public void WriteRaw(ReadOnlySpan<byte> utf8Json)
         {
             PrepareValue();
@@ -279,6 +321,9 @@ namespace ZeroPrimitives.Text
 
         private void WriteNumberRaw(double val)
         {
+            if (double.IsNaN(val) || double.IsInfinity(val))
+                throw new ArgumentException("Non-finite floating-point values are not valid in RFC 8259 JSON.", nameof(val));
+
 #if NET8_0_OR_GREATER
             EnsureCapacity(32);
             if (val.TryFormat(_buffer.Slice(_pos), out int written, default, CultureInfo.InvariantCulture))

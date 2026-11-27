@@ -4,6 +4,12 @@ All notable changes to `ZeroPrimitives.Core` are documented in this file.
 
 ## Unreleased
 
+- Harden `FastDateParser` for full ISO 8601 fractional seconds/timezone offsets, compact `yyyyMMdd`, day-first single-digit `d/M/yyyy`, and UTF-8 `ReadOnlySpan<byte>` parsing (`TryParse`, `TryParseDateTimeOffset`).
+- Fix UTF-8 multi-byte rune-boundary truncation in `FixedString32`/`FixedString64`, add `TryCreate` overloads, and introduce 128-byte `FixedString128`.
+- Harden `FastNumberParser` against `Int64` complex-path overflow and unbounded `stackalloc` in extended decimals, add accounting parentheses negative support `(x)`, and fix UTF-8 multi-byte currency decoding on `ReadOnlySpan<byte>` overloads.
+- Add JSON string unescaping (`\uXXXX` & standard escapes) in `FastJsonReader.GetString`, plus `TryGetUnescapedString`, `ValueEquals`, and `Skip`.
+- Reject non-finite `double` (`NaN`/`Infinity`) in `FastJsonWriter` for RFC 8259 compliance and add array-element value overloads.
+- Fix `FastConvert.AsNullableBool` default fallback on unrecognized strings and add bounds-checked `FastCsvParser.TryUnquote`.
 - FastBinary delegates to BinaryPrimitives (single-instruction loads/stores); short spans now throw ArgumentOutOfRangeException instead of IndexOutOfRangeException.
 - Remove legacy-TFM intermediate string/array allocations in SpanWriter UTF-8 writes, Uuid7.ToString, AlphaSequence.Increment, and FastHash (ArrayPool UTF-8 encoding + FastHex uppercase formatting).
 - Add safe bounds-checked VarIntCodec.GetEncodedLength and TryWriteVarUInt32/TryWriteVarInt32/TryWriteVarUInt64/TryWriteVarInt64 APIs.

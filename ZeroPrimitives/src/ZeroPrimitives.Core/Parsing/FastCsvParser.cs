@@ -23,15 +23,33 @@ namespace ZeroPrimitives.Parsing
         /// </summary>
         public static ReadOnlySpan<char> Unquote(ReadOnlySpan<char> cell, Span<char> buffer, out int written)
         {
-            written = 0;
+            if (!TryUnquote(cell, buffer, out ReadOnlySpan<char> unquoted))
+            {
+                throw new ArgumentException("Destination buffer is too small.", nameof(buffer));
+            }
+            written = unquoted.Length;
+            return unquoted;
+        }
+
+        /// <summary>
+        /// Attempts to unescape a quoted CSV cell into <paramref name="buffer"/> without throwing on insufficient space.
+        /// </summary>
+        public static bool TryUnquote(ReadOnlySpan<char> cell, Span<char> buffer, out ReadOnlySpan<char> result)
+        {
             if (cell.Length >= 2 && cell[0] == '"' && cell[cell.Length - 1] == '"')
             {
-                cell = cell.Slice(1, cell.Length - 2);
+                ReadOnlySpan<char> inner = cell.Slice(1, cell.Length - 2);
                 int outIdx = 0;
-                for (int i = 0; i < cell.Length; i++)
+                for (int i = 0; i < inner.Length; i++)
                 {
-                    char c = cell[i];
-                    if (c == '"' && i + 1 < cell.Length && cell[i + 1] == '"')
+                    if (outIdx >= buffer.Length)
+                    {
+                        result = default;
+                        return false;
+                    }
+
+                    char c = inner[i];
+                    if (c == '"' && i + 1 < inner.Length && inner[i + 1] == '"')
                     {
                         buffer[outIdx++] = '"';
                         i++; // Skip second quote
@@ -41,12 +59,12 @@ namespace ZeroPrimitives.Parsing
                         buffer[outIdx++] = c;
                     }
                 }
-                written = outIdx;
-                return buffer.Slice(0, outIdx);
+                result = buffer.Slice(0, outIdx);
+                return true;
             }
 
-            written = cell.Length;
-            return cell;
+            result = cell;
+            return true;
         }
 
         public readonly ref struct RowEnumerable

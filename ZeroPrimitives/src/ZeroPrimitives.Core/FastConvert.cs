@@ -288,13 +288,32 @@ namespace ZeroPrimitives
 
             if (value is bool b) return b;
             if (value is int i) return i != 0;
+            if (value is long l) return l != 0;
+            if (value is short s) return s != 0;
             if (value is byte by) return by != 0;
 
             if (value is string str)
             {
                 var span = SpanTextOps.TrimAsciiWhitespace(str.AsSpan());
                 if (span.IsEmpty) return defaultValue;
-                return AsBool(str, false);
+
+                if (span.Equals("true".AsSpan(), StringComparison.OrdinalIgnoreCase) ||
+                    span.Equals("1".AsSpan(), StringComparison.Ordinal) ||
+                    span.Equals("yes".AsSpan(), StringComparison.OrdinalIgnoreCase) ||
+                    span.Equals("y".AsSpan(), StringComparison.OrdinalIgnoreCase))
+                {
+                    return true;
+                }
+
+                if (span.Equals("false".AsSpan(), StringComparison.OrdinalIgnoreCase) ||
+                    span.Equals("0".AsSpan(), StringComparison.Ordinal) ||
+                    span.Equals("no".AsSpan(), StringComparison.OrdinalIgnoreCase) ||
+                    span.Equals("n".AsSpan(), StringComparison.OrdinalIgnoreCase))
+                {
+                    return false;
+                }
+
+                return defaultValue;
             }
 
             return defaultValue;

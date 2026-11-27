@@ -1,6 +1,8 @@
 using System;
+using System.Buffers;
 using System.Globalization;
 using System.Runtime.CompilerServices;
+using System.Text;
 using ZeroPrimitives.Text;
 
 namespace ZeroPrimitives.Parsing
@@ -77,8 +79,7 @@ namespace ZeroPrimitives.Parsing
 
         private static unsafe bool TryParseInt32Complex(ReadOnlySpan<char> span, out int result, int defaultValue)
         {
-            span = SpanTextOps.CleanCurrency(span, out bool hasVnCurrency);
-            if (span.IsEmpty)
+            if (!TryCleanAccountingCurrency(span, out span, out bool hasVnCurrency, out bool isParenthesizedNeg))
             {
                 result = defaultValue;
                 return false;
@@ -91,14 +92,16 @@ namespace ZeroPrimitives.Parsing
                 char* ptr = p;
                 char* end = p + span.Length;
 
-                bool negative = false;
+                bool negative = isParenthesizedNeg;
                 if (*ptr == '-')
                 {
+                    if (isParenthesizedNeg) { result = defaultValue; return false; }
                     negative = true;
                     ptr++;
                 }
                 else if (*ptr == '+')
                 {
+                    if (isParenthesizedNeg) { result = defaultValue; return false; }
                     ptr++;
                 }
 
@@ -223,8 +226,7 @@ namespace ZeroPrimitives.Parsing
 
         private static unsafe bool TryParseInt64Complex(ReadOnlySpan<char> span, out long result, long defaultValue)
         {
-            span = SpanTextOps.CleanCurrency(span, out bool hasVnCurrency);
-            if (span.IsEmpty)
+            if (!TryCleanAccountingCurrency(span, out span, out bool hasVnCurrency, out bool isParenthesizedNeg))
             {
                 result = defaultValue;
                 return false;
@@ -237,14 +239,16 @@ namespace ZeroPrimitives.Parsing
                 char* ptr = p;
                 char* end = p + span.Length;
 
-                bool negative = false;
+                bool negative = isParenthesizedNeg;
                 if (*ptr == '-')
                 {
+                    if (isParenthesizedNeg) { result = defaultValue; return false; }
                     negative = true;
                     ptr++;
                 }
                 else if (*ptr == '+')
                 {
+                    if (isParenthesizedNeg) { result = defaultValue; return false; }
                     ptr++;
                 }
 
@@ -254,7 +258,8 @@ namespace ZeroPrimitives.Parsing
                     return false;
                 }
 
-                long acc = 0;
+                const ulong MaxInt64Div10 = 922337203685477580UL;
+                ulong acc = 0;
                 bool hasDigits = false;
 
                 while (ptr < end)
@@ -262,7 +267,13 @@ namespace ZeroPrimitives.Parsing
                     char c = *ptr;
                     if (c >= '0' && c <= '9')
                     {
-                        acc = (acc * 10) + (c - '0');
+                        ulong digit = (ulong)(c - '0');
+                        if (acc > MaxInt64Div10 || (acc == MaxInt64Div10 && digit > (ulong)(negative ? 8 : 7)))
+                        {
+                            result = defaultValue;
+                            return false;
+                        }
+                        acc = (acc * 10) + digit;
                         hasDigits = true;
                     }
                     else if (decimalSep != '\0' && c == decimalSep)
@@ -286,7 +297,7 @@ namespace ZeroPrimitives.Parsing
                     return false;
                 }
 
-                result = negative ? -acc : acc;
+                result = negative ? unchecked((long)(0UL - acc)) : unchecked((long)acc);
                 return true;
             }
         }
@@ -298,8 +309,7 @@ namespace ZeroPrimitives.Parsing
         [MethodImpl(MethodImplOptions.AggressiveInlining)]
         public static unsafe bool TryParseDecimal(ReadOnlySpan<char> span, out decimal result, decimal defaultValue = 0)
         {
-            span = SpanTextOps.CleanCurrency(span, out bool hasVnCurrency);
-            if (span.IsEmpty)
+            if (!TryCleanAccountingCurrency(span, out span, out bool hasVnCurrency, out bool isParenthesizedNeg))
             {
                 result = defaultValue;
                 return false;
@@ -312,14 +322,16 @@ namespace ZeroPrimitives.Parsing
                 char* ptr = p;
                 char* end = p + span.Length;
 
-                bool negative = false;
+                bool negative = isParenthesizedNeg;
                 if (*ptr == '-')
                 {
+                    if (isParenthesizedNeg) { result = defaultValue; return false; }
                     negative = true;
                     ptr++;
                 }
                 else if (*ptr == '+')
                 {
+                    if (isParenthesizedNeg) { result = defaultValue; return false; }
                     ptr++;
                 }
 
@@ -335,16 +347,28 @@ namespace ZeroPrimitives.Parsing
                     if (c >= '0' && c <= '9')
                     {
                         hasDigits = true;
-                        digitCount++;
+                        uint digit = (uint)(c - '0');
+                        if (acc != 0 || digit != 0)
+                        {
+                            digitCount++;
+                        }
+
                         if (digitCount <= 18) // Fits in 64-bit integer register without overflow
                         {
-                            acc = (acc * 10) + (ulong)(c - '0');
-                            if (afterDecimal) scale++;
+                            acc = (acc * 10) + digit;
+                            if (afterDecimal)
+                            {
+                                scale++;
+                                if (scale > 28)
+                                {
+                                    return TryParseDecimalExtended(span, decimalSep, thousandSep, isParenthesizedNeg, out result, defaultValue);
+                                }
+                            }
                         }
-                        else if (digitCount <= 28)
+                        else
                         {
-                            // Extreme precision fallback (> 18 digits)
-                            return TryParseDecimalExtended(span, decimalSep, thousandSep, out result, defaultValue);
+                            // Extreme precision fallback (> 18 significant digits)
+                            return TryParseDecimalExtended(span, decimalSep, thousandSep, isParenthesizedNeg, out result, defaultValue);
                         }
                     }
                     else if (decimalSep != '\0' && c == decimalSep)
@@ -368,8 +392,6 @@ namespace ZeroPrimitives.Parsing
                     return false;
                 }
 
-                if (scale > 28) scale = 28;
-
                 int lo = (int)(acc & 0xFFFFFFFF);
                 int mid = (int)(acc >> 32);
                 result = new decimal(lo, mid, 0, negative, (byte)scale);
@@ -377,36 +399,96 @@ namespace ZeroPrimitives.Parsing
             }
         }
 
-        private static bool TryParseDecimalExtended(ReadOnlySpan<char> span, char decimalSep, char thousandSep, out decimal result, decimal defaultValue)
+        private static bool TryParseDecimalExtended(
+            ReadOnlySpan<char> span,
+            char decimalSep,
+            char thousandSep,
+            bool isParenthesizedNegative,
+            out decimal result,
+            decimal defaultValue)
         {
-            Span<char> clean = stackalloc char[span.Length];
-            int cleanLen = 0;
+            int maxLen = span.Length + (isParenthesizedNegative ? 1 : 0);
+            char[]? rented = null;
+            Span<char> clean = maxLen <= 128
+                ? stackalloc char[maxLen]
+                : (rented = ArrayPool<char>.Shared.Rent(maxLen));
 
-            for (int i = 0; i < span.Length; i++)
+            try
             {
-                char c = span[i];
-                if ((c >= '0' && c <= '9') || c == '-' || c == '+')
+                int cleanLen = 0;
+                if (isParenthesizedNegative)
                 {
-                    clean[cleanLen++] = c;
+                    clean[cleanLen++] = '-';
                 }
-                else if (decimalSep != '\0' && c == decimalSep)
-                {
-                    clean[cleanLen++] = '.';
-                }
-            }
 
-            if (cleanLen == 0)
-            {
+                for (int i = 0; i < span.Length; i++)
+                {
+                    char c = span[i];
+                    if ((c >= '0' && c <= '9') || c == '-' || c == '+')
+                    {
+                        clean[cleanLen++] = c;
+                    }
+                    else if (decimalSep != '\0' && c == decimalSep)
+                    {
+                        clean[cleanLen++] = '.';
+                    }
+                }
+
+                if (cleanLen == 0 || (isParenthesizedNegative && cleanLen == 1))
+                {
+                    result = defaultValue;
+                    return false;
+                }
+
+#if NET8_0_OR_GREATER
+                if (decimal.TryParse(clean.Slice(0, cleanLen), NumberStyles.Float, CultureInfo.InvariantCulture, out result))
+                    return true;
+#else
+                string s = clean.Slice(0, cleanLen).ToString();
+                if (decimal.TryParse(s, NumberStyles.Float, CultureInfo.InvariantCulture, out result))
+                    return true;
+#endif
                 result = defaultValue;
                 return false;
             }
+            finally
+            {
+                if (rented != null)
+                {
+                    ArrayPool<char>.Shared.Return(rented);
+                }
+            }
+        }
 
-#if NET8_0_OR_GREATER
-            return decimal.TryParse(clean.Slice(0, cleanLen), NumberStyles.Float, CultureInfo.InvariantCulture, out result);
-#else
-            string s = clean.Slice(0, cleanLen).ToString();
-            return decimal.TryParse(s, NumberStyles.Float, CultureInfo.InvariantCulture, out result);
-#endif
+        [MethodImpl(MethodImplOptions.AggressiveInlining)]
+        private static bool TryCleanAccountingCurrency(
+            ReadOnlySpan<char> span,
+            out ReadOnlySpan<char> cleaned,
+            out bool hasVnCurrency,
+            out bool isParenthesizedNegative)
+        {
+            isParenthesizedNegative = false;
+            span = SpanTextOps.CleanCurrency(span, out hasVnCurrency);
+            if (span.IsEmpty)
+            {
+                cleaned = span;
+                return false;
+            }
+
+            if (span.Length >= 2 && span[0] == '(' && span[span.Length - 1] == ')')
+            {
+                isParenthesizedNegative = true;
+                span = SpanTextOps.CleanCurrency(span.Slice(1, span.Length - 2), out bool innerVn);
+                hasVnCurrency |= innerVn;
+                if (span.IsEmpty || span[0] == '-' || span[0] == '+')
+                {
+                    cleaned = default;
+                    return false;
+                }
+            }
+
+            cleaned = span;
+            return true;
         }
 
         /// <summary>
@@ -657,19 +739,19 @@ namespace ZeroPrimitives.Parsing
             if (span.Length <= 64)
             {
                 Span<char> chars = stackalloc char[span.Length];
-                for (int i = 0; i < span.Length; i++) chars[i] = (char)span[i];
-                return TryParseDecimal(chars, out result);
+                int charLen = DecodeUtf8ToChars(span, chars);
+                return TryParseDecimal(chars.Slice(0, charLen), out result);
             }
 
-            char[] rented = System.Buffers.ArrayPool<char>.Shared.Rent(span.Length);
+            char[] rented = ArrayPool<char>.Shared.Rent(span.Length);
             try
             {
-                for (int i = 0; i < span.Length; i++) rented[i] = (char)span[i];
-                return TryParseDecimal(rented.AsSpan(0, span.Length), out result);
+                int charLen = DecodeUtf8ToChars(span, rented.AsSpan());
+                return TryParseDecimal(rented.AsSpan(0, charLen), out result);
             }
             finally
             {
-                System.Buffers.ArrayPool<char>.Shared.Return(rented);
+                ArrayPool<char>.Shared.Return(rented);
             }
         }
 
@@ -685,20 +767,52 @@ namespace ZeroPrimitives.Parsing
             if (span.Length <= 64)
             {
                 Span<char> chars = stackalloc char[span.Length];
-                for (int i = 0; i < span.Length; i++) chars[i] = (char)span[i];
-                return TryParseDouble(chars, out result);
+                int charLen = DecodeUtf8ToChars(span, chars);
+                return TryParseDouble(chars.Slice(0, charLen), out result);
             }
 
-            char[] rented = System.Buffers.ArrayPool<char>.Shared.Rent(span.Length);
+            char[] rented = ArrayPool<char>.Shared.Rent(span.Length);
             try
             {
-                for (int i = 0; i < span.Length; i++) rented[i] = (char)span[i];
-                return TryParseDouble(rented.AsSpan(0, span.Length), out result);
+                int charLen = DecodeUtf8ToChars(span, rented.AsSpan());
+                return TryParseDouble(rented.AsSpan(0, charLen), out result);
             }
             finally
             {
-                System.Buffers.ArrayPool<char>.Shared.Return(rented);
+                ArrayPool<char>.Shared.Return(rented);
             }
+        }
+
+        private static unsafe int DecodeUtf8ToChars(ReadOnlySpan<byte> utf8, Span<char> destination)
+        {
+            bool hasNonAscii = false;
+            for (int i = 0; i < utf8.Length; i++)
+            {
+                if (utf8[i] >= 0x80)
+                {
+                    hasNonAscii = true;
+                    break;
+                }
+            }
+
+            if (!hasNonAscii)
+            {
+                for (int i = 0; i < utf8.Length; i++)
+                {
+                    destination[i] = (char)utf8[i];
+                }
+                return utf8.Length;
+            }
+
+#if NET8_0_OR_GREATER
+            return Encoding.UTF8.GetChars(utf8, destination);
+#else
+            fixed (byte* src = utf8)
+            fixed (char* dst = destination)
+            {
+                return Encoding.UTF8.GetChars(src, utf8.Length, dst, destination.Length);
+            }
+#endif
         }
 
         #endregion
