@@ -160,13 +160,13 @@ namespace ZeroPrimitives.Simd
                 if (Vector.IsHardwareAccelerated && length >= Vector<byte>.Count)
                 {
                     int vCount = Vector<byte>.Count;
-                    Vector<byte> vMin = *(Vector<byte>*)p;
+                    Vector<byte> vMin = Unsafe.ReadUnaligned<Vector<byte>>(p);
                     Vector<byte> vMax = vMin;
 
                     i = vCount;
                     while (i <= length - vCount)
                     {
-                        Vector<byte> vCurr = *(Vector<byte>*)(p + i);
+                        Vector<byte> vCurr = Unsafe.ReadUnaligned<Vector<byte>>(p + i);
                         vMin = Vector.Min(vMin, vCurr);
                         vMax = Vector.Max(vMax, vCurr);
                         i += vCount;
@@ -231,8 +231,8 @@ namespace ZeroPrimitives.Simd
 
                     while (i <= length - vCount)
                     {
-                        Vector<float> va = *(Vector<float>*)(pA + i);
-                        Vector<float> vb = *(Vector<float>*)(pB + i);
+                        Vector<float> va = Unsafe.ReadUnaligned<Vector<float>>(pA + i);
+                        Vector<float> vb = Unsafe.ReadUnaligned<Vector<float>>(pB + i);
                         vSum += va * vb;
                         i += vCount;
                     }

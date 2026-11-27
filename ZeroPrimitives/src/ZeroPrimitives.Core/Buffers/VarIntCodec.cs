@@ -35,6 +35,13 @@ namespace ZeroPrimitives.Buffers
             for (int i = 0; i < source.Length && i < 5; i++)
             {
                 byte b = source[i];
+                if (i == 4 && (b & 0xF0) != 0)
+                {
+                    value = 0;
+                    bytesRead = 0;
+                    return false;
+                }
+
                 value |= (uint)(b & 0x7F) << shift;
                 bytesRead++;
 
@@ -103,6 +110,13 @@ namespace ZeroPrimitives.Buffers
             for (int i = 0; i < source.Length && i < 10; i++)
             {
                 byte b = source[i];
+                if (i == 9 && (b & 0xFE) != 0)
+                {
+                    value = 0;
+                    bytesRead = 0;
+                    return false;
+                }
+
                 value |= (ulong)(b & 0x7F) << shift;
                 bytesRead++;
 

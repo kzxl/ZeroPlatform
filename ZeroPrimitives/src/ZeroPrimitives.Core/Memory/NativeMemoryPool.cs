@@ -156,7 +156,9 @@ namespace ZeroPrimitives.Memory
             if (minimumBytes > MaxBucketSize)
             {
                 NativeMemoryTracker.TrackAlloc(minimumBytes);
-                return NativeMemoryBlock.Allocate(minimumBytes);
+                NativeMemoryBlock unpooledBlock = NativeMemoryBlock.Allocate(minimumBytes);
+                unpooledBlock.EnableTrackerRelease(minimumBytes);
+                return unpooledBlock;
             }
 
             int bucketIndex = SelectBucketIndex(minimumBytes);

@@ -33,14 +33,16 @@ namespace ZeroPrimitives.Simd
             if (width <= 0 || height <= 0)
                 return;
 
-            int uvWidth = (width + 1) / 2;
-            int uvHeight = (height + 1) / 2;
-            int requiredY = width * height;
-            int requiredUv = uvWidth * uvHeight;
-            int requiredDst = width * height * 3;
+            long uvWidthL = (width + 1L) / 2;
+            long uvHeightL = (height + 1L) / 2;
+            long requiredY = (long)width * height;
+            long requiredUv = uvWidthL * uvHeightL;
+            long requiredDst = requiredY * 3;
 
             if (yPlane.Length < requiredY || uPlane.Length < requiredUv || vPlane.Length < requiredUv || rgbDestination.Length < requiredDst)
                 throw new ArgumentException("Input plane or destination buffer is too small for the specified image dimensions.");
+
+            int uvWidth = (int)uvWidthL;
 
 
             fixed (byte* pY = yPlane)
@@ -147,14 +149,16 @@ namespace ZeroPrimitives.Simd
             if (width <= 0 || height <= 0)
                 return;
 
-            int uvStride = ((width + 1) / 2) * 2;
-            int uvHeight = (height + 1) / 2;
-            int requiredY = width * height;
-            int requiredUv = uvStride * uvHeight;
-            int requiredDst = width * height * 3;
+            long uvStrideL = ((width + 1L) / 2) * 2;
+            long uvHeightL = (height + 1L) / 2;
+            long requiredY = (long)width * height;
+            long requiredUv = uvStrideL * uvHeightL;
+            long requiredDst = requiredY * 3;
 
             if (yPlane.Length < requiredY || uvPlane.Length < requiredUv || rgbDestination.Length < requiredDst)
                 throw new ArgumentException("Input plane or destination buffer is too small for the specified image dimensions.");
+
+            int uvStride = (int)uvStrideL;
 
 
             fixed (byte* pY = yPlane)

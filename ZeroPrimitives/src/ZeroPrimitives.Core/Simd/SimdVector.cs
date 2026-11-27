@@ -60,9 +60,9 @@ namespace ZeroPrimitives.Simd
                     int limit = length - step;
                     for (; i <= limit; i += step)
                     {
-                        var va = *(Vector<float>*)(pA + i);
-                        var vb = *(Vector<float>*)(pB + i);
-                        *(Vector<float>*)(pDst + i) = va + vb;
+                        var va = Unsafe.ReadUnaligned<Vector<float>>(pA + i);
+                        var vb = Unsafe.ReadUnaligned<Vector<float>>(pB + i);
+                        Unsafe.WriteUnaligned(pDst + i, va + vb);
                     }
                 }
 #endif
@@ -120,9 +120,9 @@ namespace ZeroPrimitives.Simd
                     int limit = length - step;
                     for (; i <= limit; i += step)
                     {
-                        var va = *(Vector<float>*)(pA + i);
-                        var vb = *(Vector<float>*)(pB + i);
-                        *(Vector<float>*)(pDst + i) = va - vb;
+                        var va = Unsafe.ReadUnaligned<Vector<float>>(pA + i);
+                        var vb = Unsafe.ReadUnaligned<Vector<float>>(pB + i);
+                        Unsafe.WriteUnaligned(pDst + i, va - vb);
                     }
                 }
 #endif
@@ -180,9 +180,9 @@ namespace ZeroPrimitives.Simd
                     int limit = length - step;
                     for (; i <= limit; i += step)
                     {
-                        var va = *(Vector<float>*)(pA + i);
-                        var vb = *(Vector<float>*)(pB + i);
-                        *(Vector<float>*)(pDst + i) = va * vb;
+                        var va = Unsafe.ReadUnaligned<Vector<float>>(pA + i);
+                        var vb = Unsafe.ReadUnaligned<Vector<float>>(pB + i);
+                        Unsafe.WriteUnaligned(pDst + i, va * vb);
                     }
                 }
 #endif
@@ -243,10 +243,10 @@ namespace ZeroPrimitives.Simd
                     int limit = length - step;
                     for (; i <= limit; i += step)
                     {
-                        var va = *(Vector<float>*)(pA + i);
-                        var vb = *(Vector<float>*)(pB + i);
-                        var vc = *(Vector<float>*)(pC + i);
-                        *(Vector<float>*)(pDst + i) = (va * vb) + vc;
+                        var va = Unsafe.ReadUnaligned<Vector<float>>(pA + i);
+                        var vb = Unsafe.ReadUnaligned<Vector<float>>(pB + i);
+                        var vc = Unsafe.ReadUnaligned<Vector<float>>(pC + i);
+                        Unsafe.WriteUnaligned(pDst + i, (va * vb) + vc);
                     }
                 }
 #endif
@@ -304,8 +304,8 @@ namespace ZeroPrimitives.Simd
                     int limit = length - step;
                     for (; i <= limit; i += step)
                     {
-                        var v = *(Vector<float>*)(pSrc + i);
-                        *(Vector<float>*)(pDst + i) = v * vs;
+                        var v = Unsafe.ReadUnaligned<Vector<float>>(pSrc + i);
+                        Unsafe.WriteUnaligned(pDst + i, v * vs);
                     }
                 }
 #endif
@@ -368,9 +368,9 @@ namespace ZeroPrimitives.Simd
                     int limit = length - step;
                     for (; i <= limit; i += step)
                     {
-                        var v = *(Vector<float>*)(pSrc + i);
+                        var v = Unsafe.ReadUnaligned<Vector<float>>(pSrc + i);
                         var clamped = Vector.Min(Vector.Max(v, vMin), vMax);
-                        *(Vector<float>*)(pDst + i) = clamped;
+                        Unsafe.WriteUnaligned(pDst + i, clamped);
                     }
                 }
 #endif

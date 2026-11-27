@@ -16,6 +16,8 @@ namespace ZeroPrimitives.Memory
         private int _length;
         private readonly Action<NativeMemoryBlock>? _recycleCallback;
         private readonly bool _ownsMemory;
+        private bool _trackFreeOnRelease;
+        private int _trackedBytes;
         private int _disposed;
 
         /// <summary>
@@ -169,6 +171,12 @@ namespace ZeroPrimitives.Memory
         [MethodImpl(MethodImplOptions.AggressiveInlining)]
         internal byte* DangerousGetPointer() => _pointer;
 
+        internal void EnableTrackerRelease(int trackedBytes)
+        {
+            _trackFreeOnRelease = true;
+            _trackedBytes = trackedBytes;
+        }
+
         /// <summary>
         /// Explicitly frees the underlying native unmanaged memory regardless of disposal state.
         /// Used by pool allocators during pool shutdown.
@@ -213,6 +221,11 @@ namespace ZeroPrimitives.Memory
                 Marshal.FreeHGlobal((IntPtr)_pointer);
 #endif
                 _pointer = null;
+                if (_trackFreeOnRelease)
+                {
+                    NativeMemoryTracker.TrackFree(_trackedBytes);
+                    _trackFreeOnRelease = false;
+                }
             }
 
             GC.SuppressFinalize(this);
@@ -231,6 +244,11 @@ namespace ZeroPrimitives.Memory
                 Marshal.FreeHGlobal((IntPtr)_pointer);
 #endif
                 _pointer = null;
+                if (_trackFreeOnRelease)
+                {
+                    NativeMemoryTracker.TrackFree(_trackedBytes);
+                    _trackFreeOnRelease = false;
+                }
             }
         }
     }

@@ -1,6 +1,7 @@
 using System;
 using System.Buffers;
 using System.Runtime.CompilerServices;
+using ZeroPrimitives.Internal;
 
 namespace ZeroPrimitives.Buffers
 {
@@ -64,7 +65,7 @@ namespace ZeroPrimitives.Buffers
             _rentedArray = null;
             if (array != null)
             {
-                ArrayPool<T>.Shared.Return(array, clearArray: false);
+                ArrayPool<T>.Shared.Return(array, clearArray: TypeTraits<T>.ContainsReferences);
             }
         }
     }

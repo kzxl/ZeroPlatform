@@ -415,11 +415,39 @@ namespace ZeroPrimitives.Parsing
         [MethodImpl(MethodImplOptions.AggressiveInlining)]
         public static bool TryParseDouble(ReadOnlySpan<char> span, out double result, double defaultValue = 0)
         {
-            if (TryParseDecimal(span, out var dec, (decimal)defaultValue))
+            span = SpanTextOps.TrimAsciiWhitespace(span);
+            if (span.IsEmpty)
+            {
+                result = defaultValue;
+                return false;
+            }
+
+            if (span.IndexOf('e') >= 0 || span.IndexOf('E') >= 0)
+            {
+#if NET8_0_OR_GREATER
+                if (double.TryParse(span, NumberStyles.Float, CultureInfo.InvariantCulture, out result))
+                    return true;
+#else
+                if (double.TryParse(span.ToString(), NumberStyles.Float, CultureInfo.InvariantCulture, out result))
+                    return true;
+#endif
+                result = defaultValue;
+                return false;
+            }
+
+            if (TryParseDecimal(span, out var dec, 0m))
             {
                 result = (double)dec;
                 return true;
             }
+
+#if NET8_0_OR_GREATER
+            if (double.TryParse(span, NumberStyles.Float, CultureInfo.InvariantCulture, out result))
+                return true;
+#else
+            if (double.TryParse(span.ToString(), NumberStyles.Float, CultureInfo.InvariantCulture, out result))
+                return true;
+#endif
 
             result = defaultValue;
             return false;

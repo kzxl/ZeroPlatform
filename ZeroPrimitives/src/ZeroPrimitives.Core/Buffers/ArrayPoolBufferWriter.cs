@@ -147,7 +147,7 @@ namespace ZeroPrimitives.Buffers
                 T[] toReturn = _buffer;
                 _buffer = null;
                 _index = 0;
-                _pool.Return(toReturn);
+                _pool.Return(toReturn, clearArray: TypeTraits<T>.ContainsReferences);
             }
         }
 
@@ -197,7 +197,7 @@ namespace ZeroPrimitives.Buffers
 
             T[] oldBuffer = _buffer;
             _buffer = newBuffer;
-            _pool.Return(oldBuffer);
+            _pool.Return(oldBuffer, clearArray: TypeTraits<T>.ContainsReferences);
         }
     }
 }

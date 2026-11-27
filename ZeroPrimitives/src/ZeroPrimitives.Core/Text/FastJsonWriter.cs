@@ -12,11 +12,12 @@ namespace ZeroPrimitives.Text
     /// </summary>
     public ref struct FastJsonWriter
     {
+        private const int MaxDepth = 63;
         private Span<byte> _buffer;
         private byte[]? _arrayToReturnToPool;
         private int _pos;
         private int _depth;
-        private uint _stateBitmask; // Bit per depth: 0 = start of container (no comma), 1 = has elements (needs comma)
+        private ulong _stateBitmask; // Bit per depth: 0 = start of container (no comma), 1 = has elements (needs comma)
 
         public FastJsonWriter(Span<byte> initialBuffer)
         {
@@ -51,6 +52,8 @@ namespace ZeroPrimitives.Text
         [MethodImpl(MethodImplOptions.AggressiveInlining)]
         public void WriteStartObject()
         {
+            if (_depth >= MaxDepth)
+                throw new InvalidOperationException($"FastJsonWriter maximum nesting depth of {MaxDepth} exceeded.");
             PrepareValue();
             WriteByte((byte)'{');
             _depth++;
@@ -68,6 +71,8 @@ namespace ZeroPrimitives.Text
         [MethodImpl(MethodImplOptions.AggressiveInlining)]
         public void WriteStartArray()
         {
+            if (_depth >= MaxDepth)
+                throw new InvalidOperationException($"FastJsonWriter maximum nesting depth of {MaxDepth} exceeded.");
             PrepareValue();
             WriteByte((byte)'[');
             _depth++;
@@ -166,7 +171,7 @@ namespace ZeroPrimitives.Text
         private bool NeedsComma()
         {
             if (_depth == 0) return false;
-            return ((_stateBitmask >> _depth) & 1) != 0;
+            return ((_stateBitmask >> _depth) & 1UL) != 0;
         }
 
         [MethodImpl(MethodImplOptions.AggressiveInlining)]
@@ -174,9 +179,9 @@ namespace ZeroPrimitives.Text
         {
             if (_depth == 0) return;
             if (needsComma)
-                _stateBitmask |= (1u << _depth);
+                _stateBitmask |= (1UL << _depth);
             else
-                _stateBitmask &= ~(1u << _depth);
+                _stateBitmask &= ~(1UL << _depth);
         }
 
         private void WriteEscapedString(ReadOnlySpan<char> str)
@@ -203,6 +208,22 @@ namespace ZeroPrimitives.Text
                         else if (c < 128)
                         {
                             WriteByte((byte)c);
+                        }
+                        else if (char.IsHighSurrogate(c) && i + 1 < str.Length && char.IsLowSurrogate(str[i + 1]))
+                        {
+                            int cp = char.ConvertToUtf32(c, str[i + 1]);
+                            i++;
+                            WriteByte((byte)(0xF0 | (cp >> 18)));
+                            WriteByte((byte)(0x80 | ((cp >> 12) & 0x3F)));
+                            WriteByte((byte)(0x80 | ((cp >> 6) & 0x3F)));
+                            WriteByte((byte)(0x80 | (cp & 0x3F)));
+                        }
+                        else if (char.IsSurrogate(c))
+                        {
+                            ushort code = (ushort)c;
+                            WriteBytes("\\u"u8);
+                            WriteHexByte((byte)(code >> 8));
+                            WriteHexByte((byte)(code & 0xFF));
                         }
                         else if (c < 0x800)
                         {
