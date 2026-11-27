@@ -6,8 +6,8 @@
     <Nullable>enable</Nullable>
     <Authors>Phong Võ (kzxl)</Authors>
     <Company>ZeroUniverse</Company>
-    <Description>Pure C# ultra-fast, zero-allocation primitive conversions, low-level span/pointer number parsers, Uuid7, FastUlid, hardware CRC32C, FastHex, SpanSplitter, BitOps, ByteRingBuffer, and compiled object mapping for high-throughput .NET applications.</Description>
-    <PackageTags>primitives;safeconvert;fastconvert;uuid7;ulid;span;zero-allocation;hex;rfid;crc32c;simd;parsing;high-performance;mapper;zeroplatform</PackageTags>
+    <Description>Pure C# zero-dependency Tier-0A primitives for industrial automation and enterprise ERP: zero-allocation span/UTF-8 parsing and formatting, DecimalMath, ProportionalAllocator, ScaledInt64, CompactDate, DateRange, Uuid7 (with SQL Server ordering), FastUlid, SnowflakeId, StringInternPool, FastCsvWriter, FastJsonReader/Writer, FastBase64/Base32/Hex, FastXxHash64, CheckDigit, hardware CRC32C, SIMD aggregations, and compiled object mapping.</Description>
+    <PackageTags>primitives;erp;zero-allocation;fastconvert;decimal;uuid7;ulid;snowflake;compact-date;daterange;span;hex;base64;base32;csv;json;xxhash;crc32c;checkdigit;simd;parsing;mapper;zeroplatform</PackageTags>
     <PackageLicenseExpression>MIT</PackageLicenseExpression>
     <RepositoryUrl>https://github.com/kzxl/ZeroPlatform.git</RepositoryUrl>
     <RepositoryType>git</RepositoryType>

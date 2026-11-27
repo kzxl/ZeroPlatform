@@ -4,7 +4,7 @@
 [![NuGet Version](https://img.shields.io/badge/nuget-v3.1.2-blue.svg)](https://www.nuget.org/packages/ZeroPrimitives.Core/)
 [![License: MIT](https://img.shields.io/badge/License-MIT-blue.svg)](LICENSE)
 [![Zero External Dependencies](https://img.shields.io/badge/Dependencies-0%20External-brightgreen.svg)]()
-[![Tests: 281 Passed](https://img.shields.io/badge/Tests-281%20Passed%20(100%25)-brightgreen.svg)]()
+[![Tests: 349 Passed](https://img.shields.io/badge/Tests-349%20Passed%20(100%25)-brightgreen.svg)]()
 [![Multi-Targeting](https://img.shields.io/badge/.NET-8.0%20%7C%204.6.2%20%7C%20Standard%202.0-orange.svg)]()
 
 > **Architectural Standard**: 100% Pure C#, Zero External Dependencies, Multi-Targeting across `.NET 8.0`, `.NET Framework 4.6.2`, and `.NET Standard 2.0`.
@@ -88,7 +88,25 @@ It replaces slow legacy conversion methods (`Convert.To*`, `value.ToString()`, `
 
 ### 15. SIMD Vector Comparison & Aggregation Kernels (`SimdComparison`, `SimdAggregations`)
 - **`SimdComparison`**: 256-bit AVX2 / AVX-512 hardware-accelerated vectorized comparisons (`GreaterThan`, `LessThan`, `Equal`, `GreaterThanOrEqual`, `LessThanOrEqual`). Extracts register bitmasks and decodes matching indices via hardware `BitOperations.TrailingZeroCount` (TZCNT) with zero branch mispredictions.
-- **`SimdAggregations`**: Single-pass vectorized Min, Max, Mean, Variance, and Sum computation over continuous primitive spans, saturating CPU memory bus bandwidth without heap allocations.
+- **`SimdAggregations`**: Single-pass vectorized Min, Max, Mean, Variance, and Sum computation over `float`/`double`, plus exact AVX2/SIMD `Sum` and `MinMax` over `long`, widened `int`, and 8-byte `ScaledInt64` fixed-point spans.
+
+### 16. Precision Numerics & Exact-Sum ERP Allocation (`DecimalMath`, `ProportionalAllocator`, `ScaledInt64`)
+- **`DecimalMath`**: Uniform 6-mode `RoundingMode` (`HalfToEven`, `HalfAwayFromZero`, `TowardZero`, `AwayFromZero`, `TowardPositiveInfinity`, `TowardNegativeInfinity`) across `net462`/`netstandard2.0`/`net8.0`, `RoundToStep`, `Normalize`, `GetScale`, `SafeDivide`, `Percentage`, and `WeightedAverage`.
+- **`ProportionalAllocator`**: Zero-allocation Largest Remainder (Hamilton) allocation for `decimal` and 128-bit `long` spans guaranteeing `Sum(destination) == total` across invoice lines, taxes, discounts, and cost allocations.
+- **`ScaledInt64`**: 8-byte fixed-point Q4 type (`ScaleFactor = 10,000`) for dense columnar financial/inventory analytics with checked overflow and SIMD reduction support.
+
+### 17. Compact Calendar Dates, Intervals & Distributed IDs (`CompactDate`, `DateRange`, `Uuid7`, `FastUlid`, `SnowflakeId`)
+- **`CompactDate` & `DateRange`**: 4-byte `DateOnly` polyfill (`0001-01-01`..`9999-12-31`) and half-open `[Start, EndExclusive)` calendar ranges with `Contains`, `Overlaps`, `TryIntersect`, `TryUnion`, `Subtract`, and `SplitByMonth`; plus `DateTimeExtensions` half-open SQL boundaries (`StartOfNextDay/Month/Quarter/Year`, `EndOfDaySql`).
+- **`Uuid7`, `FastUlid` & `SnowflakeId`**: RFC 9562 `Uuid7` and Crockford `FastUlid` with SQL Server `UNIQUEIDENTIFIER` sort-order mapping (`ToSqlServerGuid`/`FromSqlServerGuid`) and timestamp range bounds, alongside 8-byte `BIGINT`-native `SnowflakeId` + monotonic `SnowflakeGenerator`.
+
+### 18. Enterprise Codecs, Dedup & Deterministic Hashing (`FastBase64`, `FastBase32`, `StringInternPool`, `FastCsvWriter`, `NaturalStringComparer`, `FastXxHash64`, `CheckDigit`, `ValueResult`)
+- **`FastBase64` & `FastBase32`**: Zero-allocation RFC 4648 Base64/Base64Url and Crockford/RFC 4648 Base32 codecs across `char` and UTF-8 `byte` spans.
+- **`StringInternPool` & `NaturalStringComparer`**: Bounded thread-safe span-lookup (`char` & UTF-8) string deduplication pool for repetitive master-data codes, and zero-allocation alphanumeric natural ordering (`INV-2 < INV-10`).
+- **`FastCsvWriter` & `FixedString128`**: RFC 4180 UTF-8 CSV streaming writer with BOM and optional formula-injection neutralization (`=`, `+`, `-`, `@`, `\t`, `\r`), plus rune-safe `FixedString32/64/128`.
+- **`FastXxHash64`, `CheckDigit` & `ValueResult<T, TError>`**: Deterministic cross-process `xxHash64` (`XxHash64State`), international check-digit validators (Luhn, GS1 GTIN/EAN/SSCC, ISO 7064 Mod 97-10 / IBAN, Damm), and allocation-free batch validation results.
+
+> [!NOTE]
+> **Tier-0A Purity (`ZP0001`–`ZP0006`)**: Domain-specific and higher-tier types (`VnFinancialRounding`, `FastGs1Parser`, `SimdColorConverter`, `SpscQueue<T>`, `SharedMemoryRingBuffer`, `FastTableBinary`, `FastTableMapper`) are marked `[Obsolete]` in `3.x` for removal in `4.0.0`, delegating to the application layer, `ZeroRfid`, `ZeroGraphics`, `ZeroConcurrency`, and `ZeroData`.
 
 ---
 

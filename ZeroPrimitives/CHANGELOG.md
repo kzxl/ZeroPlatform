@@ -4,6 +4,9 @@ All notable changes to `ZeroPrimitives.Core` are documented in this file.
 
 ## Unreleased
 
+- Add `ZeroPrimitives.Core.Identifiers.SnowflakeId` (64-bit `BIGINT`-native distributed ID) and thread-safe monotonic `SnowflakeGenerator`.
+- Add `ZeroPrimitives.Cryptography.CheckDigit` (Luhn Mod-10, GS1 GTIN/EAN/SSCC Mod-10, ISO 7064 Mod 97-10 / IBAN, and Damm quasigroup) and `FastXxHash64` / `XxHash64State` (deterministic cross-process hashing with normalized `decimal` support).
+- Add zero-allocation `FastBase64` (standard + Base64Url) and `FastBase32` (Crockford + RFC 4648), `NaturalStringComparer`, `ValueResult<T, TError>`, and `ScaledInt64` (8-byte fixed-point Q4) with SIMD `SimdAggregations.Sum` / `MinMax` over `long`, `int` (widened), and `ScaledInt64`.
 - Add `ZeroPrimitives.Numerics.DecimalMath` (`RoundingMode`, `Round`, `RoundToStep`, `Normalize`, `GetScale`, `SafeDivide`, `Percentage`, `WeightedAverage`) and `ProportionalAllocator` (Largest Remainder exact-sum allocation for `decimal` and `long`).
 - Add `ZeroPrimitives.Time.CompactDate` (4-byte `DateOnly` polyfill) and `DateRange` (half-open `[Start, EndExclusive)` calendar intervals with `TryIntersect`, `TryUnion`, `Subtract`, `SplitByMonth`).
 - Add bounded span-lookup `StringInternPool` (`GetOrAdd` / `GetOrAddUtf8`) and RFC 4180 UTF-8 `FastCsvWriter` with optional formula-injection neutralization.

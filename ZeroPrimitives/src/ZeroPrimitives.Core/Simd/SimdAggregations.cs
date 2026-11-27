@@ -1,5 +1,7 @@
 using System;
 using System.Runtime.CompilerServices;
+using System.Runtime.InteropServices;
+using ZeroPrimitives.Numerics;
 #if NET8_0_OR_GREATER
 using System.Runtime.Intrinsics;
 #else
@@ -462,6 +464,143 @@ namespace ZeroPrimitives.Simd
 
             min = localMin;
             max = localMax;
+        }
+
+        /// <summary>
+        /// Computes exact 64-bit integer sum over <paramref name="src"/> using SIMD vector accumulation.
+        /// </summary>
+        public static long Sum(ReadOnlySpan<long> src)
+        {
+            int length = src.Length;
+            if (length == 0) return 0L;
+
+            long sum = 0L;
+            fixed (long* pSrc = src)
+            {
+                int i = 0;
+
+#if NET8_0_OR_GREATER
+                if (Vector256.IsHardwareAccelerated && length >= Vector256<long>.Count)
+                {
+                    int step = Vector256<long>.Count;
+                    int limit = length - step;
+                    var vAcc = Vector256<long>.Zero;
+
+                    for (; i <= limit; i += step)
+                    {
+                        vAcc += Vector256.Load(pSrc + i);
+                    }
+
+                    for (int k = 0; k < step; k++)
+                    {
+                        sum += vAcc.GetElement(k);
+                    }
+                }
+#else
+                if (Vector.IsHardwareAccelerated && length >= Vector<long>.Count)
+                {
+                    int step = Vector<long>.Count;
+                    int limit = length - step;
+                    var vAcc = Vector<long>.Zero;
+
+                    for (; i <= limit; i += step)
+                    {
+                        vAcc += Unsafe.ReadUnaligned<Vector<long>>(pSrc + i);
+                    }
+
+                    for (int k = 0; k < step; k++)
+                    {
+                        sum += vAcc[k];
+                    }
+                }
+#endif
+
+                for (; i < length; i++)
+                {
+                    sum += pSrc[i];
+                }
+            }
+
+            return sum;
+        }
+
+        /// <summary>
+        /// Computes exact 64-bit widened sum over 32-bit integers without 32-bit overflow.
+        /// </summary>
+        public static long Sum(ReadOnlySpan<int> src)
+        {
+            int length = src.Length;
+            if (length == 0) return 0L;
+
+            long sum = 0L;
+            fixed (int* pSrc = src)
+            {
+                int i = 0;
+
+#if NET8_0_OR_GREATER
+                if (Vector256.IsHardwareAccelerated && length >= Vector256<int>.Count)
+                {
+                    int step = Vector256<int>.Count;
+                    int limit = length - step;
+                    var vAccLo = Vector256<long>.Zero;
+                    var vAccHi = Vector256<long>.Zero;
+
+                    for (; i <= limit; i += step)
+                    {
+                        var vInt = Vector256.Load(pSrc + i);
+                        var (lo, hi) = Vector256.Widen(vInt);
+                        vAccLo += lo;
+                        vAccHi += hi;
+                    }
+
+                    var vAcc = vAccLo + vAccHi;
+                    for (int k = 0; k < Vector256<long>.Count; k++)
+                    {
+                        sum += vAcc.GetElement(k);
+                    }
+                }
+#else
+                long s0 = 0L, s1 = 0L, s2 = 0L, s3 = 0L;
+                int limit4 = length - 4;
+                for (; i <= limit4; i += 4)
+                {
+                    s0 += pSrc[i];
+                    s1 += pSrc[i + 1];
+                    s2 += pSrc[i + 2];
+                    s3 += pSrc[i + 3];
+                }
+                sum = s0 + s1 + s2 + s3;
+#endif
+
+                for (; i < length; i++)
+                {
+                    sum += pSrc[i];
+                }
+            }
+
+            return sum;
+        }
+
+        /// <summary>
+        /// Computes exact SIMD sum over a contiguous span of 8-byte <see cref="ScaledInt64"/> fixed-point values without copy or allocation.
+        /// </summary>
+        [MethodImpl(MethodImplOptions.AggressiveInlining)]
+        public static ScaledInt64 Sum(ReadOnlySpan<ScaledInt64> src)
+        {
+            ReadOnlySpan<long> raw = MemoryMarshal.Cast<ScaledInt64, long>(src);
+            return ScaledInt64.FromRaw(Sum(raw));
+        }
+
+        /// <summary>
+        /// Computes minimum and maximum over <see cref="ScaledInt64"/> values in a single vectorized pass.
+        /// </summary>
+        [MethodImpl(MethodImplOptions.AggressiveInlining)]
+        public static void MinMax(ReadOnlySpan<ScaledInt64> src, out ScaledInt64 min, out ScaledInt64 max)
+        {
+            ReadOnlySpan<long> raw = MemoryMarshal.Cast<ScaledInt64, long>(src);
+            MinMax(raw, out long rMin, out long rMax);
+            min = ScaledInt64.FromRaw(rMin);
+            max = ScaledInt64.FromRaw(rMax);
         }
 
         #endregion
