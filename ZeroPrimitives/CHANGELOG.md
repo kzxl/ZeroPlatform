@@ -2,6 +2,10 @@
 
 All notable changes to `ZeroPrimitives.Core` are documented in this file.
 
+## Unreleased
+
+- No changes yet.
+
 ## 3.1.2 — 2026-11-27
 
 - **D-01**: Replace unaligned `*(Vector<T>*)` pointer dereferences in `SimdVector` and `SimdOps` with `Unsafe.ReadUnaligned` and `Unsafe.WriteUnaligned`.
