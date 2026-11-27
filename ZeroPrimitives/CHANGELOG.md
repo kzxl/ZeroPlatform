@@ -9,6 +9,14 @@ All notable changes to `ZeroPrimitives.Core` are documented in this file.
 - Add safe bounds-checked VarIntCodec.GetEncodedLength and TryWriteVarUInt32/TryWriteVarInt32/TryWriteVarUInt64/TryWriteVarInt64 APIs.
 - Enable XML documentation, snupkg symbol packages with embedded SourceLink, package validation against baseline 3.1.2, NativeAOT/trimming compatibility on net8.0+, and dev prerelease suffix for CI packs.
 
+### Deprecated
+- `ZP0001`: `VnFinancialRounding` (move to application/ERP layer; removal in `4.0.0`).
+- `ZP0002`: `FastGs1Parser` and `Gs1Element` (moving to `ZeroRfid`; removal in `4.0.0`).
+- `ZP0003`: `SimdColorConverter` (moving to `ZeroGraphics.Imaging`/`ZeroVideo`; removal in `4.0.0`).
+- `ZP0004`: `SpscQueue<T>` (use `ZeroConcurrency.DataPlane.ZeroRingBuffer`; removal in `4.0.0`).
+- `ZP0005`: `SharedMemoryRingBuffer` (use `ZeroConcurrency.Ipc.ZeroMmfRingBuffer`; removal in `4.0.0`).
+- `ZP0006`: `FastTableBinary` and `FastTableMapper` (moving to `ZeroData.Core`; removal in `4.0.0`).
+
 ## 3.1.2 — 2026-11-27
 
 - **D-01**: Replace unaligned `*(Vector<T>*)` pointer dereferences in `SimdVector` and `SimdOps` with `Unsafe.ReadUnaligned` and `Unsafe.WriteUnaligned`.

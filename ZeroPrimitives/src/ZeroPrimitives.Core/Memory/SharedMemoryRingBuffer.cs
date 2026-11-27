@@ -16,6 +16,7 @@ namespace ZeroPrimitives.Memory
     /// between C# processes or between C# and Python AI processes with ZERO socket overhead and ZERO GC pause.
     /// </para>
     /// </summary>
+    [Obsolete("ZP0005: SharedMemoryRingBuffer duplicates ZeroConcurrency IPC primitives. Use ZeroConcurrency.Ipc.ZeroMmfRingBuffer instead. Will be removed in ZeroPrimitives 4.0.0.")]
     public sealed unsafe class SharedMemoryRingBuffer : IDisposable
     {
         private const uint MagicNumber = 0x5A45524F; // "ZERO"

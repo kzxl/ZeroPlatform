@@ -30,6 +30,7 @@ namespace ZeroPrimitives.Concurrency
     /// Uses unsigned 32-bit (uint) modular sequence arithmetic to guarantee perpetual wrap-around safety (zero integer overflow bugs even after billions of operations).
     /// </summary>
     /// <typeparam name="T">Element type.</typeparam>
+    [Obsolete("ZP0004: SpscQueue<T> duplicates ZeroConcurrency primitives. Use ZeroConcurrency.DataPlane.ZeroRingBuffer instead. Will be removed in ZeroPrimitives 4.0.0.")]
     public sealed class SpscQueue<T>
     {
         private readonly T[] _buffer;

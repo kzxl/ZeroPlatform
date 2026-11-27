@@ -7,6 +7,7 @@ namespace ZeroPrimitives.Parsing
     /// Represents a parsed GS1 Application Identifier (AI) and its associated value.
     /// Zero heap allocation.
     /// </summary>
+    [Obsolete("ZP0002: GS1 barcode domain parsing does not belong in Tier-0A primitives. Moving to ZeroRfid. Will be removed in ZeroPrimitives 4.0.0.")]
     public readonly ref struct Gs1Element
     {
         public readonly ReadOnlySpan<char> Ai;
@@ -62,6 +63,7 @@ namespace ZeroPrimitives.Parsing
     /// Zero-allocation, high-throughput GS1-128 and GS1 DataMatrix barcode parser.
     /// Supports both raw FNC1-delimited streams (ASCII 29 / \u001d) and human-readable bracketed format "(01)...(17)...".
     /// </summary>
+    [Obsolete("ZP0002: GS1 barcode domain parsing does not belong in Tier-0A primitives. Moving to ZeroRfid. Will be removed in ZeroPrimitives 4.0.0.")]
     public ref struct FastGs1Parser
     {
         private ReadOnlySpan<char> _remaining;

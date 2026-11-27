@@ -14,6 +14,7 @@ namespace ZeroPrimitives.Mapping
     /// - Fast deserialization using <see cref="DataTable.BeginLoadData"/>
     /// - Backwards-compatible fallback for legacy BinaryFormatter payloads
     /// </summary>
+    [Obsolete("ZP0006: ADO.NET DataTable binary serialization couples Tier-0A primitives to System.Data. Moving to ZeroData.Core. Will be removed in ZeroPrimitives 4.0.0.")]
     public static class FastTableBinary
     {
         private const byte MagicZ = 0x5A; // 'Z'

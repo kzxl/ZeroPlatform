@@ -7,6 +7,7 @@ namespace ZeroPrimitives.Finance
     /// Financial calculations and rounding rules according to Vietnamese Accounting Standards (VAS &amp; Circular 200/2014/TT-BTC).
     /// Provides banker's rounding, commercial rounding (AwayFromZero), and VAT line-item reconciliation.
     /// </summary>
+    [Obsolete("ZP0001: Regional VAS accounting logic does not belong in Tier-0A primitives. Move to the application or ERP layer. Will be removed in ZeroPrimitives 4.0.0.")]
     public static class VnFinancialRounding
     {
         /// <summary>

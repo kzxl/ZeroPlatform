@@ -13,6 +13,7 @@ namespace ZeroPrimitives.Mapping
     /// Compiles Expression Trees into native IL delegates to project IDataReader, IDataRecord, DataTable, and DataRow
     /// into strongly-typed DTOs/POCOs with zero runtime reflection and automatic type coercion via FastConvert.
     /// </summary>
+    [Obsolete("ZP0006: ADO.NET DataTable mapping couples Tier-0A primitives to System.Data. Moving to ZeroData.Core. Will be removed in ZeroPrimitives 4.0.0.")]
 #if NET8_0_OR_GREATER
     [RequiresUnreferencedCode("FastTableMapper uses reflection over target DTO properties, which may be trimmed.")]
     [RequiresDynamicCode("FastTableMapper compiles expression trees and MakeGenericMethod calls at runtime.")]

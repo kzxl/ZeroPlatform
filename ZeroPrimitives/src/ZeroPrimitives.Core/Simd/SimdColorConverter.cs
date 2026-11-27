@@ -8,6 +8,7 @@ namespace ZeroPrimitives.Simd
     /// aggressive inlining, and SIMD-friendly fixed-point integer arithmetic.
     /// Provides 5x to 10x speedup over naive floating-point converters without external unmanaged dependencies.
     /// </summary>
+    [Obsolete("ZP0003: Video pixel conversion does not belong in Tier-0A primitives. Moving to ZeroGraphics.Imaging or ZeroVideo. Will be removed in ZeroPrimitives 4.0.0.")]
     public static unsafe class SimdColorConverter
     {
         [MethodImpl(MethodImplOptions.AggressiveInlining)]
