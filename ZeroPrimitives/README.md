@@ -1,10 +1,10 @@
 # ZeroPrimitives
 
 [![ZeroPlatform Tier](https://img.shields.io/badge/ZeroPlatform-Tier%200%20(Core%20Foundation)-0284c7.svg)](https://github.com/kzxl/ZeroPlatform)
-[![NuGet Version](https://img.shields.io/badge/nuget-v1.8.0-blue.svg)](https://www.nuget.org/packages/ZeroPrimitives.Core/)
+[![NuGet Version](https://img.shields.io/badge/nuget-v3.1.2-blue.svg)](https://www.nuget.org/packages/ZeroPrimitives.Core/)
 [![License: MIT](https://img.shields.io/badge/License-MIT-blue.svg)](LICENSE)
 [![Zero External Dependencies](https://img.shields.io/badge/Dependencies-0%20External-brightgreen.svg)]()
-[![Tests: 266 Passed](https://img.shields.io/badge/Tests-266%20Passed%20(100%25)-brightgreen.svg)]()
+[![Tests: 281 Passed](https://img.shields.io/badge/Tests-281%20Passed%20(100%25)-brightgreen.svg)]()
 [![Multi-Targeting](https://img.shields.io/badge/.NET-8.0%20%7C%204.6.2%20%7C%20Standard%202.0-orange.svg)]()
 
 > **Architectural Standard**: 100% Pure C#, Zero External Dependencies, Multi-Targeting across `.NET 8.0`, `.NET Framework 4.6.2`, and `.NET Standard 2.0`.
@@ -255,6 +255,12 @@ Conducted on AMD/Intel x64 Architecture (12 Cores, .NET 8.0 Release mode):
 - **.NET 8.0+** (High-throughput cloud services, edge AI, IoT, and IPC)
 - **.NET Framework 4.6.2+** (Enterprise WinForms / WPF applications)
 - **.NET Standard 2.0** (Universal cross-platform compatibility)
+
+---
+
+## Versioning
+
+`ZeroPrimitives.Core` is independently versioned inside the `ZeroPlatform` monorepo and published via `primitives-v*` tags. See [CHANGELOG.md](CHANGELOG.md) for unreleased and published changes.
 
 ---
 
