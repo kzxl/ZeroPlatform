@@ -66,6 +66,51 @@ namespace ZeroPrimitives.Extensions
         public static DateTime? EndOfDay(this DateTime? date)
             => date.HasValue ? date.Value.EndOfDay() : (DateTime?)null;
 
+        /// <summary>
+        /// Returns midnight of the next day (exclusive upper bound for half-open <c>[Start, End)</c> SQL queries).
+        /// </summary>
+        public static DateTime StartOfNextDay(this DateTime date)
+            => StartOfDay(date).AddDays(1);
+
+        public static DateTime? StartOfNextDay(this DateTime? date)
+            => date.HasValue ? date.Value.StartOfNextDay() : (DateTime?)null;
+
+        /// <summary>
+        /// Returns midnight of the first day of the next month (exclusive upper bound for half-open <c>[Start, End)</c> SQL queries).
+        /// </summary>
+        public static DateTime StartOfNextMonth(this DateTime date)
+            => StartOfMonth(date).AddMonths(1);
+
+        public static DateTime? StartOfNextMonth(this DateTime? date)
+            => date.HasValue ? date.Value.StartOfNextMonth() : (DateTime?)null;
+
+        /// <summary>
+        /// Returns midnight of the first day of the next quarter (exclusive upper bound for half-open <c>[Start, End)</c> SQL queries).
+        /// </summary>
+        public static DateTime StartOfNextQuarter(this DateTime date)
+            => StartOfQuarter(date).AddMonths(3);
+
+        public static DateTime? StartOfNextQuarter(this DateTime? date)
+            => date.HasValue ? date.Value.StartOfNextQuarter() : (DateTime?)null;
+
+        /// <summary>
+        /// Returns midnight of January 1st of the next year (exclusive upper bound for half-open <c>[Start, End)</c> SQL queries).
+        /// </summary>
+        public static DateTime StartOfNextYear(this DateTime date)
+            => StartOfYear(date).AddYears(1);
+
+        public static DateTime? StartOfNextYear(this DateTime? date)
+            => date.HasValue ? date.Value.StartOfNextYear() : (DateTime?)null;
+
+        /// <summary>
+        /// Returns <c>23:59:59.997</c>, the maximum precision representable in SQL Server <c>DATETIME</c> without rounding into the next day.
+        /// </summary>
+        public static DateTime EndOfDaySql(this DateTime date)
+            => new DateTime(date.Year, date.Month, date.Day, 23, 59, 59, 997, date.Kind);
+
+        public static DateTime? EndOfDaySql(this DateTime? date)
+            => date.HasValue ? date.Value.EndOfDaySql() : (DateTime?)null;
+
         // Legacy aliases
         public static DateTime FirstDayOfMonth(this DateTime date) => StartOfMonth(date);
         public static DateTime? FirstDayOfMonth(this DateTime? date) => StartOfMonth(date);

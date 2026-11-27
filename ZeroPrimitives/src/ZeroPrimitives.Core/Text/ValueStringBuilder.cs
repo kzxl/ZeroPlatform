@@ -156,7 +156,15 @@ namespace ZeroPrimitives.Text
             value.TryFormat(_chars.Slice(_pos), out charsWritten, default, CultureInfo.InvariantCulture);
             _pos += charsWritten;
 #else
-            Append(value.ToString(CultureInfo.InvariantCulture));
+            Span<char> dest = _chars.Slice(_pos);
+            if (FastFormat.TryFormatDecimal(value, dest, out int charsWritten))
+            {
+                _pos += charsWritten;
+                return;
+            }
+            Grow(40);
+            FastFormat.TryFormatDecimal(value, _chars.Slice(_pos), out charsWritten);
+            _pos += charsWritten;
 #endif
         }
 

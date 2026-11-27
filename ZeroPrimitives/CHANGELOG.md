@@ -4,6 +4,12 @@ All notable changes to `ZeroPrimitives.Core` are documented in this file.
 
 ## Unreleased
 
+- Add `ZeroPrimitives.Numerics.DecimalMath` (`RoundingMode`, `Round`, `RoundToStep`, `Normalize`, `GetScale`, `SafeDivide`, `Percentage`, `WeightedAverage`) and `ProportionalAllocator` (Largest Remainder exact-sum allocation for `decimal` and `long`).
+- Add `ZeroPrimitives.Time.CompactDate` (4-byte `DateOnly` polyfill) and `DateRange` (half-open `[Start, EndExclusive)` calendar intervals with `TryIntersect`, `TryUnion`, `Subtract`, `SplitByMonth`).
+- Add bounded span-lookup `StringInternPool` (`GetOrAdd` / `GetOrAddUtf8`) and RFC 4180 UTF-8 `FastCsvWriter` with optional formula-injection neutralization.
+- Add `Uuid7` and `FastUlid` SQL Server `UNIQUEIDENTIFIER` sort-order mapping (`ToSqlServerGuid`, `FromSqlServerGuid`), plus `Uuid7.MinValueForTimestamp`/`MaxValueForTimestamp`, `TryFormatUtf8`, and `TryParse(ReadOnlySpan<byte>)`.
+- Extend `FastFormat` with zero-allocation `TryFormatDecimal`/`Utf8`, `TryFormatDecimalGrouped`, `TryFormatIsoDate`/`IsoDateTime`/`Date`, `TryFormatGuid`/`Utf8`, `TryFormatInt32Utf8`, and `TryFormatUInt64`/`Utf8` (wired into `FastJsonWriter` and `ValueStringBuilder` on legacy TFMs).
+- Add SQL-safe half-open boundary helpers (`StartOfNextDay/Month/Quarter/Year`, `EndOfDaySql`) to `DateTimeExtensions`.
 - Harden `FastDateParser` for full ISO 8601 fractional seconds/timezone offsets, compact `yyyyMMdd`, day-first single-digit `d/M/yyyy`, and UTF-8 `ReadOnlySpan<byte>` parsing (`TryParse`, `TryParseDateTimeOffset`).
 - Fix UTF-8 multi-byte rune-boundary truncation in `FixedString32`/`FixedString64`, add `TryCreate` overloads, and introduce 128-byte `FixedString128`.
 - Harden `FastNumberParser` against `Int64` complex-path overflow and unbounded `stackalloc` in extended decimals, add accounting parentheses negative support `(x)`, and fix UTF-8 multi-byte currency decoding on `ReadOnlySpan<byte>` overloads.

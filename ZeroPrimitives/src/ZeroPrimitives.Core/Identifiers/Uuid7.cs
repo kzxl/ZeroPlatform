@@ -172,6 +172,87 @@ namespace ZeroPrimitives.Core.Identifiers
         }
 
         /// <summary>
+        /// Converts this UUIDv7 into a <see cref="Guid"/> whose bytes are permuted to match SQL Server <c>UNIQUEIDENTIFIER</c> (<c>SqlGuid</c>) sort order,
+        /// preventing clustered B-Tree index fragmentation.
+        /// </summary>
+        public Guid ToSqlServerGuid()
+        {
+            Span<byte> raw = stackalloc byte[16];
+            BinaryPrimitives.WriteUInt64BigEndian(raw.Slice(0, 8), _high);
+            BinaryPrimitives.WriteUInt64BigEndian(raw.Slice(8, 8), _low);
+            return EncodeSqlServerGuid(raw);
+        }
+
+        /// <summary>
+        /// Reconstructs the original <see cref="Uuid7"/> from a SQL Server ordered <see cref="Guid"/> created by <see cref="ToSqlServerGuid"/>.
+        /// </summary>
+        public static Uuid7 FromSqlServerGuid(Guid sqlGuid)
+        {
+            Span<byte> raw = stackalloc byte[16];
+            DecodeSqlServerGuid(sqlGuid, raw);
+            return new Uuid7(raw);
+        }
+
+        internal static Guid EncodeSqlServerGuid(ReadOnlySpan<byte> raw)
+        {
+            // SqlGuid compares bytes in order: [10..15], [8..9], [6..7], [4..5], [0..3]
+            // Place chronological MSB raw[0..5] into g[10..15] and raw[6..7] into g[8..9].
+#if NET8_0_OR_GREATER
+            Span<byte> g = stackalloc byte[16];
+            g[10] = raw[0]; g[11] = raw[1]; g[12] = raw[2]; g[13] = raw[3]; g[14] = raw[4]; g[15] = raw[5];
+            g[8] = raw[6];  g[9] = raw[7];
+            g[6] = raw[8];  g[7] = raw[9];
+            g[4] = raw[10]; g[5] = raw[11];
+            g[0] = raw[12]; g[1] = raw[13]; g[2] = raw[14]; g[3] = raw[15];
+            return new Guid(g);
+#else
+            int a = raw[12] | (raw[13] << 8) | (raw[14] << 16) | (raw[15] << 24);
+            short b = (short)(raw[10] | (raw[11] << 8));
+            short c = (short)(raw[8] | (raw[9] << 8));
+            return new Guid(a, b, c, raw[6], raw[7], raw[0], raw[1], raw[2], raw[3], raw[4], raw[5]);
+#endif
+        }
+
+        internal static void DecodeSqlServerGuid(Guid sqlGuid, Span<byte> raw)
+        {
+            Span<byte> g = stackalloc byte[16];
+#if NET8_0_OR_GREATER
+            sqlGuid.TryWriteBytes(g);
+#else
+            sqlGuid.ToByteArray().AsSpan().CopyTo(g);
+#endif
+            raw[0] = g[10]; raw[1] = g[11]; raw[2] = g[12]; raw[3] = g[13]; raw[4] = g[14]; raw[5] = g[15];
+            raw[6] = g[8];  raw[7] = g[9];
+            raw[8] = g[6];  raw[9] = g[7];
+            raw[10] = g[4]; raw[11] = g[5];
+            raw[12] = g[0]; raw[13] = g[1]; raw[14] = g[2]; raw[15] = g[3];
+        }
+
+        /// <summary>
+        /// Returns the minimum possible <see cref="Uuid7"/> value for a given UTC millisecond timestamp (useful for primary-key range queries).
+        /// </summary>
+        public static Uuid7 MinValueForTimestamp(long unixTimeMs)
+        {
+            if (unixTimeMs < 0 || unixTimeMs > 0x0000FFFFFFFFFFFFL)
+                throw new ArgumentOutOfRangeException(nameof(unixTimeMs), "Timestamp must fit within 48 bits.");
+            ulong high = ((ulong)unixTimeMs << 16) | 0x7000UL;
+            ulong low = 0x8000000000000000UL;
+            return new Uuid7(high, low);
+        }
+
+        /// <summary>
+        /// Returns the maximum possible <see cref="Uuid7"/> value for a given UTC millisecond timestamp (useful for primary-key range queries).
+        /// </summary>
+        public static Uuid7 MaxValueForTimestamp(long unixTimeMs)
+        {
+            if (unixTimeMs < 0 || unixTimeMs > 0x0000FFFFFFFFFFFFL)
+                throw new ArgumentOutOfRangeException(nameof(unixTimeMs), "Timestamp must fit within 48 bits.");
+            ulong high = ((ulong)unixTimeMs << 16) | 0x7FFFUL;
+            ulong low = 0xBFFFFFFFFFFFFFFFUL;
+            return new Uuid7(high, low);
+        }
+
+        /// <summary>
         /// Writes the 16 raw big-endian bytes into the destination span.
         /// </summary>
         public bool TryWriteBytes(Span<byte> destination)
@@ -228,6 +309,48 @@ namespace ZeroPrimitives.Core.Identifiers
             if (fmt == 'P') destination[dstIdx++] = ')';
 
             charsWritten = dstIdx;
+            return true;
+        }
+
+        /// <summary>
+        /// Formats this UUIDv7 as ASCII/UTF-8 bytes into <paramref name="destination"/> (supports 'D', 'N', 'B', 'P').
+        /// </summary>
+        public bool TryFormatUtf8(Span<byte> destination, out int bytesWritten, ReadOnlySpan<char> format = default)
+        {
+            char fmt = format.IsEmpty ? 'D' : char.ToUpperInvariant(format[0]);
+            int requiredLength = (fmt == 'N') ? 32 : ((fmt == 'B' || fmt == 'P') ? 38 : 36);
+
+            if (destination.Length < requiredLength)
+            {
+                bytesWritten = 0;
+                return false;
+            }
+
+            Span<byte> bytes = stackalloc byte[16];
+            BinaryPrimitives.WriteUInt64BigEndian(bytes.Slice(0, 8), _high);
+            BinaryPrimitives.WriteUInt64BigEndian(bytes.Slice(8, 8), _low);
+
+            const string hexDigits = "0123456789abcdef";
+            int dstIdx = 0;
+
+            if (fmt == 'B') destination[dstIdx++] = (byte)'{';
+            if (fmt == 'P') destination[dstIdx++] = (byte)'(';
+
+            for (int i = 0; i < 16; i++)
+            {
+                if (fmt != 'N' && (i == 4 || i == 6 || i == 8 || i == 10))
+                {
+                    destination[dstIdx++] = (byte)'-';
+                }
+                byte b = bytes[i];
+                destination[dstIdx++] = (byte)hexDigits[b >> 4];
+                destination[dstIdx++] = (byte)hexDigits[b & 0x0F];
+            }
+
+            if (fmt == 'B') destination[dstIdx++] = (byte)'}';
+            if (fmt == 'P') destination[dstIdx++] = (byte)')';
+
+            bytesWritten = dstIdx;
             return true;
         }
 
@@ -299,6 +422,68 @@ namespace ZeroPrimitives.Core.Identifiers
 
             result = new Uuid7(bytes);
             return true;
+        }
+
+        /// <summary>
+        /// Parses a UTF-8 byte span (formats 'D', 'N', 'B', or 'P') into a <see cref="Uuid7"/> without heap allocation.
+        /// </summary>
+        public static bool TryParse(ReadOnlySpan<byte> utf8Input, out Uuid7 result)
+        {
+            result = default;
+            int start = 0;
+            int end = utf8Input.Length - 1;
+            while (start <= end && (utf8Input[start] == ' ' || utf8Input[start] == '\t' || utf8Input[start] == '\r' || utf8Input[start] == '\n'))
+                start++;
+            while (end >= start && (utf8Input[end] == ' ' || utf8Input[end] == '\t' || utf8Input[end] == '\r' || utf8Input[end] == '\n'))
+                end--;
+
+            var trimmed = start <= end ? utf8Input.Slice(start, end - start + 1) : ReadOnlySpan<byte>.Empty;
+            if (trimmed.Length == 38 && ((trimmed[0] == '{' && trimmed[37] == '}') || (trimmed[0] == '(' && trimmed[37] == ')')))
+            {
+                trimmed = trimmed.Slice(1, 36);
+            }
+
+            Span<byte> bytes = stackalloc byte[16];
+            int byteIdx = 0;
+
+            if (trimmed.Length == 36 && trimmed[8] == '-' && trimmed[13] == '-' && trimmed[18] == '-' && trimmed[23] == '-')
+            {
+                for (int i = 0; i < 36; i++)
+                {
+                    if (i == 8 || i == 13 || i == 18 || i == 23) continue;
+
+                    int hi = FromHexByte(trimmed[i]);
+                    int lo = FromHexByte(trimmed[++i]);
+                    if (hi < 0 || lo < 0) return false;
+                    bytes[byteIdx++] = (byte)((hi << 4) | lo);
+                }
+            }
+            else if (trimmed.Length == 32)
+            {
+                for (int i = 0; i < 32; i += 2)
+                {
+                    int hi = FromHexByte(trimmed[i]);
+                    int lo = FromHexByte(trimmed[i + 1]);
+                    if (hi < 0 || lo < 0) return false;
+                    bytes[byteIdx++] = (byte)((hi << 4) | lo);
+                }
+            }
+            else
+            {
+                return false;
+            }
+
+            result = new Uuid7(bytes);
+            return true;
+        }
+
+        [MethodImpl(MethodImplOptions.AggressiveInlining)]
+        private static int FromHexByte(byte b)
+        {
+            if (b >= (byte)'0' && b <= (byte)'9') return b - '0';
+            if (b >= (byte)'a' && b <= (byte)'f') return b - 'a' + 10;
+            if (b >= (byte)'A' && b <= (byte)'F') return b - 'A' + 10;
+            return -1;
         }
 
         [MethodImpl(MethodImplOptions.AggressiveInlining)]

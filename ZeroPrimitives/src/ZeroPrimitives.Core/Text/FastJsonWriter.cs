@@ -307,9 +307,15 @@ namespace ZeroPrimitives.Text
 
         private void WriteNumberRaw(decimal val)
         {
-#if NET8_0_OR_GREATER
             EnsureCapacity(40);
+#if NET8_0_OR_GREATER
             if (val.TryFormat(_buffer.Slice(_pos), out int written, default, CultureInfo.InvariantCulture))
+            {
+                _pos += written;
+                return;
+            }
+#else
+            if (FastFormat.TryFormatDecimalUtf8(val, _buffer.Slice(_pos), out int written))
             {
                 _pos += written;
                 return;

@@ -234,6 +234,26 @@ namespace ZeroPrimitives.Core.Identifiers
         }
 
         /// <summary>
+        /// Converts this ULID into a <see cref="Guid"/> whose bytes are permuted to match SQL Server <c>UNIQUEIDENTIFIER</c> (<c>SqlGuid</c>) sort order.
+        /// </summary>
+        public Guid ToSqlServerGuid()
+        {
+            Span<byte> raw = stackalloc byte[16];
+            TryWriteBytes(raw);
+            return Uuid7.EncodeSqlServerGuid(raw);
+        }
+
+        /// <summary>
+        /// Reconstructs the original <see cref="FastUlid"/> from a SQL Server ordered <see cref="Guid"/> created by <see cref="ToSqlServerGuid"/>.
+        /// </summary>
+        public static FastUlid FromSqlServerGuid(Guid sqlGuid)
+        {
+            Span<byte> raw = stackalloc byte[16];
+            Uuid7.DecodeSqlServerGuid(sqlGuid, raw);
+            return new FastUlid(raw);
+        }
+
+        /// <summary>
         /// Formats this ULID into 26 Crockford Base32 characters in the destination span with 0 heap allocation.
         /// </summary>
         public bool TryFormat(Span<char> destination, out int charsWritten)
@@ -362,14 +382,15 @@ namespace ZeroPrimitives.Core.Identifiers
             return ulid;
         }
 
-        public override string ToString()
+        public override unsafe string ToString()
         {
             Span<char> buffer = stackalloc char[26];
             TryFormat(buffer, out _);
 #if NET8_0_OR_GREATER
             return new string(buffer);
 #else
-            return buffer.ToString();
+            fixed (char* p = buffer)
+                return new string(p, 0, 26);
 #endif
         }
 
