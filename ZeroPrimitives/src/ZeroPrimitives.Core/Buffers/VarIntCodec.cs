@@ -13,6 +13,31 @@ namespace ZeroPrimitives.Buffers
         #region Unsigned 32-bit (VarUInt32)
 
         [MethodImpl(MethodImplOptions.AggressiveInlining)]
+        public static int GetEncodedLength(uint value)
+        {
+            int length = 1;
+            while (value >= 0x80)
+            {
+                value >>= 7;
+                length++;
+            }
+            return length;
+        }
+
+        [MethodImpl(MethodImplOptions.AggressiveInlining)]
+        public static bool TryWriteVarUInt32(Span<byte> destination, uint value, out int bytesWritten)
+        {
+            if (destination.Length < GetEncodedLength(value))
+            {
+                bytesWritten = 0;
+                return false;
+            }
+
+            WriteVarUInt32(destination, value, out bytesWritten);
+            return true;
+        }
+
+        [MethodImpl(MethodImplOptions.AggressiveInlining)]
         public static void WriteVarUInt32(Span<byte> destination, uint value, out int bytesWritten)
         {
             int idx = 0;
@@ -60,6 +85,13 @@ namespace ZeroPrimitives.Buffers
 
         #region Signed 32-bit (ZigZag VarInt32)
 
+        [MethodImpl(MethodImplOptions.AggressiveInlining)]
+        public static bool TryWriteVarInt32(Span<byte> destination, int value, out int bytesWritten)
+        {
+            uint zigZag = (uint)((value << 1) ^ (value >> 31));
+            return TryWriteVarUInt32(destination, zigZag, out bytesWritten);
+        }
+
         /// <summary>
         /// Writes signed 32-bit integer with ZigZag encoding so small negative numbers take few bytes.
         /// </summary>
@@ -86,6 +118,31 @@ namespace ZeroPrimitives.Buffers
         #endregion
 
         #region Unsigned 64-bit (VarUInt64)
+
+        [MethodImpl(MethodImplOptions.AggressiveInlining)]
+        public static int GetEncodedLength(ulong value)
+        {
+            int length = 1;
+            while (value >= 0x80)
+            {
+                value >>= 7;
+                length++;
+            }
+            return length;
+        }
+
+        [MethodImpl(MethodImplOptions.AggressiveInlining)]
+        public static bool TryWriteVarUInt64(Span<byte> destination, ulong value, out int bytesWritten)
+        {
+            if (destination.Length < GetEncodedLength(value))
+            {
+                bytesWritten = 0;
+                return false;
+            }
+
+            WriteVarUInt64(destination, value, out bytesWritten);
+            return true;
+        }
 
         [MethodImpl(MethodImplOptions.AggressiveInlining)]
         public static void WriteVarUInt64(Span<byte> destination, ulong value, out int bytesWritten)
@@ -134,6 +191,13 @@ namespace ZeroPrimitives.Buffers
         #endregion
 
         #region Signed 64-bit (ZigZag VarInt64)
+
+        [MethodImpl(MethodImplOptions.AggressiveInlining)]
+        public static bool TryWriteVarInt64(Span<byte> destination, long value, out int bytesWritten)
+        {
+            ulong zigZag = (ulong)((value << 1) ^ (value >> 63));
+            return TryWriteVarUInt64(destination, zigZag, out bytesWritten);
+        }
 
         [MethodImpl(MethodImplOptions.AggressiveInlining)]
         public static void WriteVarInt64(Span<byte> destination, long value, out int bytesWritten)
