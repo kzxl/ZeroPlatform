@@ -4,6 +4,10 @@ All notable changes to `ZeroPrimitives.Core` are documented in this file.
 
 ## Unreleased
 
+- No changes yet.
+
+## 3.2.0 — 2026-11-27
+
 - Add `ZeroPrimitives.Core.Identifiers.SnowflakeId` (64-bit `BIGINT`-native distributed ID) and thread-safe monotonic `SnowflakeGenerator`.
 - Add `ZeroPrimitives.Cryptography.CheckDigit` (Luhn Mod-10, GS1 GTIN/EAN/SSCC Mod-10, ISO 7064 Mod 97-10 / IBAN, and Damm quasigroup) and `FastXxHash64` / `XxHash64State` (deterministic cross-process hashing with normalized `decimal` support).
 - Add zero-allocation `FastBase64` (standard + Base64Url) and `FastBase32` (Crockford + RFC 4648), `NaturalStringComparer`, `ValueResult<T, TError>`, and `ScaledInt64` (8-byte fixed-point Q4) with SIMD `SimdAggregations.Sum` / `MinMax` over `long`, `int` (widened), and `ScaledInt64`.

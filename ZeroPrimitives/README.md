@@ -1,7 +1,7 @@
 # ZeroPrimitives
 
 [![ZeroPlatform Tier](https://img.shields.io/badge/ZeroPlatform-Tier%200%20(Core%20Foundation)-0284c7.svg)](https://github.com/kzxl/ZeroPlatform)
-[![NuGet Version](https://img.shields.io/badge/nuget-v3.1.2-blue.svg)](https://www.nuget.org/packages/ZeroPrimitives.Core/)
+[![NuGet Version](https://img.shields.io/badge/nuget-v3.2.0-blue.svg)](https://www.nuget.org/packages/ZeroPrimitives.Core/)
 [![License: MIT](https://img.shields.io/badge/License-MIT-blue.svg)](LICENSE)
 [![Zero External Dependencies](https://img.shields.io/badge/Dependencies-0%20External-brightgreen.svg)]()
 [![Tests: 349 Passed](https://img.shields.io/badge/Tests-349%20Passed%20(100%25)-brightgreen.svg)]()
