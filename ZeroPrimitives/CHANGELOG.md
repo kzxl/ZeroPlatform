@@ -7,6 +7,7 @@ All notable changes to `ZeroPrimitives.Core` are documented in this file.
 - FastBinary delegates to BinaryPrimitives (single-instruction loads/stores); short spans now throw ArgumentOutOfRangeException instead of IndexOutOfRangeException.
 - Remove legacy-TFM intermediate string/array allocations in SpanWriter UTF-8 writes, Uuid7.ToString, AlphaSequence.Increment, and FastHash (ArrayPool UTF-8 encoding + FastHex uppercase formatting).
 - Add safe bounds-checked VarIntCodec.GetEncodedLength and TryWriteVarUInt32/TryWriteVarInt32/TryWriteVarUInt64/TryWriteVarInt64 APIs.
+- Enable XML documentation, snupkg symbol packages with embedded SourceLink, package validation against baseline 3.1.2, NativeAOT/trimming compatibility on net8.0+, and dev prerelease suffix for CI packs.
 
 ## 3.1.2 — 2026-11-27
 

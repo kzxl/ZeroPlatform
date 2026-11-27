@@ -6,12 +6,6 @@ using System.Threading;
 
 namespace ZeroPrimitives.Concurrency
 {
-    /// <summary>
-    /// High-throughput, lock-free Single-Producer Single-Consumer (SPSC) bounded FIFO queue.
-    /// Incorporates CPU cache-line padding to prevent False Sharing (L1/L2 cache-line thrashing) between producer and consumer threads.
-    /// Uses unsigned 32-bit (uint) modular sequence arithmetic to guarantee perpetual wrap-around safety (zero integer overflow bugs even after billions of operations).
-    /// </summary>
-    /// <typeparam name="T">Element type.</typeparam>
     [System.Runtime.InteropServices.StructLayout(System.Runtime.InteropServices.LayoutKind.Explicit, Size = 128)]
     internal struct SpscHeadSlot
     {
@@ -30,6 +24,12 @@ namespace ZeroPrimitives.Concurrency
         public uint CachedHead;
     }
 
+    /// <summary>
+    /// High-throughput, lock-free Single-Producer Single-Consumer (SPSC) bounded FIFO queue.
+    /// Incorporates CPU cache-line padding to prevent False Sharing (L1/L2 cache-line thrashing) between producer and consumer threads.
+    /// Uses unsigned 32-bit (uint) modular sequence arithmetic to guarantee perpetual wrap-around safety (zero integer overflow bugs even after billions of operations).
+    /// </summary>
+    /// <typeparam name="T">Element type.</typeparam>
     public sealed class SpscQueue<T>
     {
         private readonly T[] _buffer;

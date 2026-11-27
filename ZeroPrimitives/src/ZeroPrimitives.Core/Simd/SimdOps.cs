@@ -9,7 +9,7 @@ using System.Runtime.Intrinsics.X86;
 namespace ZeroPrimitives.Simd
 {
     /// <summary>
-    /// Unified Hardware Intrinsics & Vectorized Operations engine.
+    /// Unified Hardware Intrinsics &amp; Vectorized Operations engine.
     /// Employs AVX2 / SSE2 non-temporal streaming stores on modern runtimes
     /// with graceful fallback to <see cref="Vector{T}"/> and scalar implementations on legacy runtimes.
     /// </summary>

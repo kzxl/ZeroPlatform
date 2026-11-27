@@ -4,7 +4,7 @@ using System.Runtime.CompilerServices;
 namespace ZeroPrimitives.Buffers
 {
     /// <summary>
-    /// Variable-length integer codec (LEB128 & ZigZag encoding).
+    /// Variable-length integer codec (LEB128 &amp; ZigZag encoding).
     /// Used by Protobuf, SQLite, WebAssembly, and compact telemetry packets.
     /// Encodes small numbers in 1-2 bytes instead of 4-8 bytes.
     /// </summary>

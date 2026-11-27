@@ -1,6 +1,7 @@
 using System;
 using System.Collections.Concurrent;
 using System.Collections.Generic;
+using System.Diagnostics.CodeAnalysis;
 using System.Linq.Expressions;
 using System.Reflection;
 
@@ -10,6 +11,10 @@ namespace ZeroPrimitives.Mapping
     /// Ultra-fast, expression-tree compiled object-to-object shallow mapper.
     /// Eliminates reflection overhead by generating native IL delegates cached per type-pair.
     /// </summary>
+#if NET8_0_OR_GREATER
+    [RequiresUnreferencedCode("FastMapper uses reflection over source and target properties, which may be trimmed.")]
+    [RequiresDynamicCode("FastMapper compiles expression trees at runtime using Expression.Lambda.Compile.")]
+#endif
     public static class FastMapper
     {
         private static readonly ConcurrentDictionary<(Type, Type), Delegate> CopierCache =

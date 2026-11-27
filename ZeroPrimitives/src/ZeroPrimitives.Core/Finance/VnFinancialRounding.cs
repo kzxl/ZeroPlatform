@@ -4,7 +4,7 @@ using System.Runtime.CompilerServices;
 namespace ZeroPrimitives.Finance
 {
     /// <summary>
-    /// Financial calculations and rounding rules according to Vietnamese Accounting Standards (VAS & Circular 200/2014/TT-BTC).
+    /// Financial calculations and rounding rules according to Vietnamese Accounting Standards (VAS &amp; Circular 200/2014/TT-BTC).
     /// Provides banker's rounding, commercial rounding (AwayFromZero), and VAT line-item reconciliation.
     /// </summary>
     public static class VnFinancialRounding

@@ -43,7 +43,7 @@ jobs:
         run: dotnet test ZeroPrimitives/tests/ZeroPrimitives.Tests/ZeroPrimitives.Tests.csproj -c Release --no-build
 
       - name: Pack ZeroPrimitives.Core
-        run: dotnet pack ZeroPrimitives/src/ZeroPrimitives.Core/ZeroPrimitives.Core.csproj -c Release --no-build -o ./nupkgs-primitives
+        run: dotnet pack ZeroPrimitives/src/ZeroPrimitives.Core/ZeroPrimitives.Core.csproj -c Release --no-build -o ./nupkgs-primitives -p:VersionSuffix=dev.${{ github.run_number }}
 
       - name: Verify Package Metadata & Tier-0A Independence
         shell: pwsh

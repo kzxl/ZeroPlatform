@@ -2,6 +2,7 @@ using System;
 using System.Collections.Concurrent;
 using System.Collections.Generic;
 using System.Data;
+using System.Diagnostics.CodeAnalysis;
 using System.Linq.Expressions;
 using System.Reflection;
 
@@ -12,6 +13,10 @@ namespace ZeroPrimitives.Mapping
     /// Compiles Expression Trees into native IL delegates to project IDataReader, IDataRecord, DataTable, and DataRow
     /// into strongly-typed DTOs/POCOs with zero runtime reflection and automatic type coercion via FastConvert.
     /// </summary>
+#if NET8_0_OR_GREATER
+    [RequiresUnreferencedCode("FastTableMapper uses reflection over target DTO properties, which may be trimmed.")]
+    [RequiresDynamicCode("FastTableMapper compiles expression trees and MakeGenericMethod calls at runtime.")]
+#endif
     public static class FastTableMapper
     {
         private static readonly ConcurrentDictionary<(Type TargetType, string SchemaSignature), Delegate> RecordMapperCache =
@@ -316,6 +321,10 @@ namespace ZeroPrimitives.Mapping
 
         #region IEnumerable to DataTable Compilation
 
+#if NET8_0_OR_GREATER
+        [RequiresUnreferencedCode("TableSchemaCache uses reflection over T properties.")]
+        [RequiresDynamicCode("TableSchemaCache compiles expression trees at runtime.")]
+#endif
         private static class TableSchemaCache<T>
         {
             public static readonly string[] ColumnNames;
