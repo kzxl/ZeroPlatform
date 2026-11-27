@@ -1,4 +1,5 @@
 using System;
+using System.Buffers.Binary;
 using System.Runtime.CompilerServices;
 
 namespace ZeroPrimitives.Buffers
@@ -13,47 +14,39 @@ namespace ZeroPrimitives.Buffers
 
         [MethodImpl(MethodImplOptions.AggressiveInlining)]
         public static short ReadInt16LittleEndian(ReadOnlySpan<byte> source)
-            => (short)(source[0] | (source[1] << 8));
+            => BinaryPrimitives.ReadInt16LittleEndian(source);
 
         [MethodImpl(MethodImplOptions.AggressiveInlining)]
         public static ushort ReadUInt16LittleEndian(ReadOnlySpan<byte> source)
-            => (ushort)(source[0] | (source[1] << 8));
+            => BinaryPrimitives.ReadUInt16LittleEndian(source);
 
         [MethodImpl(MethodImplOptions.AggressiveInlining)]
         public static int ReadInt32LittleEndian(ReadOnlySpan<byte> source)
-            => source[0] | (source[1] << 8) | (source[2] << 16) | (source[3] << 24);
+            => BinaryPrimitives.ReadInt32LittleEndian(source);
 
         [MethodImpl(MethodImplOptions.AggressiveInlining)]
         public static uint ReadUInt32LittleEndian(ReadOnlySpan<byte> source)
-            => (uint)(source[0] | (source[1] << 8) | (source[2] << 16) | (source[3] << 24));
+            => BinaryPrimitives.ReadUInt32LittleEndian(source);
 
         [MethodImpl(MethodImplOptions.AggressiveInlining)]
         public static long ReadInt64LittleEndian(ReadOnlySpan<byte> source)
-        {
-            uint lo = ReadUInt32LittleEndian(source);
-            uint hi = ReadUInt32LittleEndian(source.Slice(4));
-            return (long)(((ulong)hi << 32) | lo);
-        }
+            => BinaryPrimitives.ReadInt64LittleEndian(source);
 
         [MethodImpl(MethodImplOptions.AggressiveInlining)]
         public static ulong ReadUInt64LittleEndian(ReadOnlySpan<byte> source)
-        {
-            uint lo = ReadUInt32LittleEndian(source);
-            uint hi = ReadUInt32LittleEndian(source.Slice(4));
-            return ((ulong)hi << 32) | lo;
-        }
+            => BinaryPrimitives.ReadUInt64LittleEndian(source);
 
         [MethodImpl(MethodImplOptions.AggressiveInlining)]
         public static float ReadSingleLittleEndian(ReadOnlySpan<byte> source)
         {
-            int val = ReadInt32LittleEndian(source);
+            int val = BinaryPrimitives.ReadInt32LittleEndian(source);
             return Unsafe.As<int, float>(ref val);
         }
 
         [MethodImpl(MethodImplOptions.AggressiveInlining)]
         public static double ReadDoubleLittleEndian(ReadOnlySpan<byte> source)
         {
-            long val = ReadInt64LittleEndian(source);
+            long val = BinaryPrimitives.ReadInt64LittleEndian(source);
             return Unsafe.As<long, double>(ref val);
         }
 
@@ -63,47 +56,39 @@ namespace ZeroPrimitives.Buffers
 
         [MethodImpl(MethodImplOptions.AggressiveInlining)]
         public static short ReadInt16BigEndian(ReadOnlySpan<byte> source)
-            => (short)((source[0] << 8) | source[1]);
+            => BinaryPrimitives.ReadInt16BigEndian(source);
 
         [MethodImpl(MethodImplOptions.AggressiveInlining)]
         public static ushort ReadUInt16BigEndian(ReadOnlySpan<byte> source)
-            => (ushort)((source[0] << 8) | source[1]);
+            => BinaryPrimitives.ReadUInt16BigEndian(source);
 
         [MethodImpl(MethodImplOptions.AggressiveInlining)]
         public static int ReadInt32BigEndian(ReadOnlySpan<byte> source)
-            => (source[0] << 24) | (source[1] << 16) | (source[2] << 8) | source[3];
+            => BinaryPrimitives.ReadInt32BigEndian(source);
 
         [MethodImpl(MethodImplOptions.AggressiveInlining)]
         public static uint ReadUInt32BigEndian(ReadOnlySpan<byte> source)
-            => (uint)((source[0] << 24) | (source[1] << 16) | (source[2] << 8) | source[3]);
+            => BinaryPrimitives.ReadUInt32BigEndian(source);
 
         [MethodImpl(MethodImplOptions.AggressiveInlining)]
         public static long ReadInt64BigEndian(ReadOnlySpan<byte> source)
-        {
-            uint hi = ReadUInt32BigEndian(source);
-            uint lo = ReadUInt32BigEndian(source.Slice(4));
-            return (long)(((ulong)hi << 32) | lo);
-        }
+            => BinaryPrimitives.ReadInt64BigEndian(source);
 
         [MethodImpl(MethodImplOptions.AggressiveInlining)]
         public static ulong ReadUInt64BigEndian(ReadOnlySpan<byte> source)
-        {
-            uint hi = ReadUInt32BigEndian(source);
-            uint lo = ReadUInt32BigEndian(source.Slice(4));
-            return ((ulong)hi << 32) | lo;
-        }
+            => BinaryPrimitives.ReadUInt64BigEndian(source);
 
         [MethodImpl(MethodImplOptions.AggressiveInlining)]
         public static float ReadSingleBigEndian(ReadOnlySpan<byte> source)
         {
-            int val = ReadInt32BigEndian(source);
+            int val = BinaryPrimitives.ReadInt32BigEndian(source);
             return Unsafe.As<int, float>(ref val);
         }
 
         [MethodImpl(MethodImplOptions.AggressiveInlining)]
         public static double ReadDoubleBigEndian(ReadOnlySpan<byte> source)
         {
-            long val = ReadInt64BigEndian(source);
+            long val = BinaryPrimitives.ReadInt64BigEndian(source);
             return Unsafe.As<long, double>(ref val);
         }
 
@@ -113,62 +98,40 @@ namespace ZeroPrimitives.Buffers
 
         [MethodImpl(MethodImplOptions.AggressiveInlining)]
         public static void WriteInt16LittleEndian(Span<byte> destination, short value)
-        {
-            destination[0] = (byte)value;
-            destination[1] = (byte)(value >> 8);
-        }
+            => BinaryPrimitives.WriteInt16LittleEndian(destination, value);
 
         [MethodImpl(MethodImplOptions.AggressiveInlining)]
         public static void WriteUInt16LittleEndian(Span<byte> destination, ushort value)
-        {
-            destination[0] = (byte)value;
-            destination[1] = (byte)(value >> 8);
-        }
+            => BinaryPrimitives.WriteUInt16LittleEndian(destination, value);
 
         [MethodImpl(MethodImplOptions.AggressiveInlining)]
         public static void WriteInt32LittleEndian(Span<byte> destination, int value)
-        {
-            destination[0] = (byte)value;
-            destination[1] = (byte)(value >> 8);
-            destination[2] = (byte)(value >> 16);
-            destination[3] = (byte)(value >> 24);
-        }
+            => BinaryPrimitives.WriteInt32LittleEndian(destination, value);
 
         [MethodImpl(MethodImplOptions.AggressiveInlining)]
         public static void WriteUInt32LittleEndian(Span<byte> destination, uint value)
-        {
-            destination[0] = (byte)value;
-            destination[1] = (byte)(value >> 8);
-            destination[2] = (byte)(value >> 16);
-            destination[3] = (byte)(value >> 24);
-        }
+            => BinaryPrimitives.WriteUInt32LittleEndian(destination, value);
 
         [MethodImpl(MethodImplOptions.AggressiveInlining)]
         public static void WriteInt64LittleEndian(Span<byte> destination, long value)
-        {
-            WriteUInt32LittleEndian(destination, (uint)value);
-            WriteUInt32LittleEndian(destination.Slice(4), (uint)(value >> 32));
-        }
+            => BinaryPrimitives.WriteInt64LittleEndian(destination, value);
 
         [MethodImpl(MethodImplOptions.AggressiveInlining)]
         public static void WriteUInt64LittleEndian(Span<byte> destination, ulong value)
-        {
-            WriteUInt32LittleEndian(destination, (uint)value);
-            WriteUInt32LittleEndian(destination.Slice(4), (uint)(value >> 32));
-        }
+            => BinaryPrimitives.WriteUInt64LittleEndian(destination, value);
 
         [MethodImpl(MethodImplOptions.AggressiveInlining)]
         public static void WriteSingleLittleEndian(Span<byte> destination, float value)
         {
             int intVal = Unsafe.As<float, int>(ref value);
-            WriteInt32LittleEndian(destination, intVal);
+            BinaryPrimitives.WriteInt32LittleEndian(destination, intVal);
         }
 
         [MethodImpl(MethodImplOptions.AggressiveInlining)]
         public static void WriteDoubleLittleEndian(Span<byte> destination, double value)
         {
             long longVal = Unsafe.As<double, long>(ref value);
-            WriteInt64LittleEndian(destination, longVal);
+            BinaryPrimitives.WriteInt64LittleEndian(destination, longVal);
         }
 
         #endregion
@@ -177,62 +140,40 @@ namespace ZeroPrimitives.Buffers
 
         [MethodImpl(MethodImplOptions.AggressiveInlining)]
         public static void WriteInt16BigEndian(Span<byte> destination, short value)
-        {
-            destination[0] = (byte)(value >> 8);
-            destination[1] = (byte)value;
-        }
+            => BinaryPrimitives.WriteInt16BigEndian(destination, value);
 
         [MethodImpl(MethodImplOptions.AggressiveInlining)]
         public static void WriteUInt16BigEndian(Span<byte> destination, ushort value)
-        {
-            destination[0] = (byte)(value >> 8);
-            destination[1] = (byte)value;
-        }
+            => BinaryPrimitives.WriteUInt16BigEndian(destination, value);
 
         [MethodImpl(MethodImplOptions.AggressiveInlining)]
         public static void WriteInt32BigEndian(Span<byte> destination, int value)
-        {
-            destination[0] = (byte)(value >> 24);
-            destination[1] = (byte)(value >> 16);
-            destination[2] = (byte)(value >> 8);
-            destination[3] = (byte)value;
-        }
+            => BinaryPrimitives.WriteInt32BigEndian(destination, value);
 
         [MethodImpl(MethodImplOptions.AggressiveInlining)]
         public static void WriteUInt32BigEndian(Span<byte> destination, uint value)
-        {
-            destination[0] = (byte)(value >> 24);
-            destination[1] = (byte)(value >> 16);
-            destination[2] = (byte)(value >> 8);
-            destination[3] = (byte)value;
-        }
+            => BinaryPrimitives.WriteUInt32BigEndian(destination, value);
 
         [MethodImpl(MethodImplOptions.AggressiveInlining)]
         public static void WriteInt64BigEndian(Span<byte> destination, long value)
-        {
-            WriteUInt32BigEndian(destination, (uint)(value >> 32));
-            WriteUInt32BigEndian(destination.Slice(4), (uint)value);
-        }
+            => BinaryPrimitives.WriteInt64BigEndian(destination, value);
 
         [MethodImpl(MethodImplOptions.AggressiveInlining)]
         public static void WriteUInt64BigEndian(Span<byte> destination, ulong value)
-        {
-            WriteUInt32BigEndian(destination, (uint)(value >> 32));
-            WriteUInt32BigEndian(destination.Slice(4), (uint)value);
-        }
+            => BinaryPrimitives.WriteUInt64BigEndian(destination, value);
 
         [MethodImpl(MethodImplOptions.AggressiveInlining)]
         public static void WriteSingleBigEndian(Span<byte> destination, float value)
         {
             int intVal = Unsafe.As<float, int>(ref value);
-            WriteInt32BigEndian(destination, intVal);
+            BinaryPrimitives.WriteInt32BigEndian(destination, intVal);
         }
 
         [MethodImpl(MethodImplOptions.AggressiveInlining)]
         public static void WriteDoubleBigEndian(Span<byte> destination, double value)
         {
             long longVal = Unsafe.As<double, long>(ref value);
-            WriteInt64BigEndian(destination, longVal);
+            BinaryPrimitives.WriteInt64BigEndian(destination, longVal);
         }
 
         #endregion

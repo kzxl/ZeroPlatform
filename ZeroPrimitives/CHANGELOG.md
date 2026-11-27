@@ -4,7 +4,7 @@ All notable changes to `ZeroPrimitives.Core` are documented in this file.
 
 ## Unreleased
 
-- No changes yet.
+- FastBinary delegates to BinaryPrimitives (single-instruction loads/stores); short spans now throw ArgumentOutOfRangeException instead of IndexOutOfRangeException.
 
 ## 3.1.2 — 2026-11-27
 
