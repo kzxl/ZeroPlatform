@@ -5,6 +5,7 @@ All notable changes to `ZeroPrimitives.Core` are documented in this file.
 ## Unreleased
 
 - FastBinary delegates to BinaryPrimitives (single-instruction loads/stores); short spans now throw ArgumentOutOfRangeException instead of IndexOutOfRangeException.
+- Remove legacy-TFM intermediate string/array allocations in SpanWriter UTF-8 writes, Uuid7.ToString, AlphaSequence.Increment, and FastHash (ArrayPool UTF-8 encoding + FastHex uppercase formatting).
 
 ## 3.1.2 — 2026-11-27
 

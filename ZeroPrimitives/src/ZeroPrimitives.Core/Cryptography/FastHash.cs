@@ -1,8 +1,9 @@
 using System;
+using System.Buffers;
 using System.Runtime.CompilerServices;
 using System.Security.Cryptography;
 using System.Text;
-using ZeroPrimitives.Text;
+using ZeroPrimitives.Buffers;
 
 namespace ZeroPrimitives.Cryptography
 {
@@ -104,90 +105,105 @@ namespace ZeroPrimitives.Cryptography
 
         #region Cryptographic (MD5, SHA1, SHA256)
 
+        private enum HashAlgorithmKind : byte
+        {
+            Md5 = 0,
+            Sha1 = 1,
+            Sha256 = 2
+        }
+
         /// <summary>
         /// Computes MD5 hash and formats as a 32-character hexadecimal string.
-        /// Zero heap allocation on .NET 8+ for inputs up to 512 bytes.
+        /// Zero heap allocation (excluding returned string) via stack or pooled UTF-8 encoding.
         /// </summary>
         public static string Md5Hex(string input)
-        {
-            if (string.IsNullOrEmpty(input)) return string.Empty;
-
-#if NET8_0_OR_GREATER
-            int maxBytes = Encoding.UTF8.GetMaxByteCount(input.Length);
-            if (maxBytes <= 512)
-            {
-                Span<byte> utf8 = stackalloc byte[maxBytes];
-                int written = Encoding.UTF8.GetBytes(input.AsSpan(), utf8);
-                Span<byte> hash = stackalloc byte[16];
-                MD5.HashData(utf8.Slice(0, written), hash);
-                return ToHex(hash);
-            }
-#endif
-
-            byte[] bytes = Encoding.UTF8.GetBytes(input);
-            using var md5 = MD5.Create();
-            byte[] hashBytes = md5.ComputeHash(bytes);
-            return ToHex(hashBytes);
-        }
+            => ComputeHashHex(input, 16, HashAlgorithmKind.Md5);
 
         /// <summary>
         /// Computes SHA256 hash and formats as a 64-character hexadecimal string.
-        /// Zero heap allocation on .NET 8+ for inputs up to 512 bytes.
+        /// Zero heap allocation (excluding returned string) via stack or pooled UTF-8 encoding.
         /// </summary>
         public static string Sha256Hex(string input)
-        {
-            if (string.IsNullOrEmpty(input)) return string.Empty;
-
-#if NET8_0_OR_GREATER
-            int maxBytes = Encoding.UTF8.GetMaxByteCount(input.Length);
-            if (maxBytes <= 512)
-            {
-                Span<byte> utf8 = stackalloc byte[maxBytes];
-                int written = Encoding.UTF8.GetBytes(input.AsSpan(), utf8);
-                Span<byte> hash = stackalloc byte[32];
-                SHA256.HashData(utf8.Slice(0, written), hash);
-                return ToHex(hash);
-            }
-#endif
-
-            byte[] bytes = Encoding.UTF8.GetBytes(input);
-            using var sha = SHA256.Create();
-            byte[] hashBytes = sha.ComputeHash(bytes);
-            return ToHex(hashBytes);
-        }
+            => ComputeHashHex(input, 32, HashAlgorithmKind.Sha256);
 
         /// <summary>
         /// Computes SHA1 hash and formats as a 40-character hexadecimal string.
-        /// Zero heap allocation on .NET 8+ for inputs up to 512 bytes.
+        /// Zero heap allocation (excluding returned string) via stack or pooled UTF-8 encoding.
         /// </summary>
         public static string Sha1Hex(string input)
+            => ComputeHashHex(input, 20, HashAlgorithmKind.Sha1);
+
+        private static string ComputeHashHex(string input, int hashLength, HashAlgorithmKind kind)
         {
             if (string.IsNullOrEmpty(input)) return string.Empty;
 
-#if NET8_0_OR_GREATER
             int maxBytes = Encoding.UTF8.GetMaxByteCount(input.Length);
+#if NET8_0_OR_GREATER
+            Span<byte> hash = stackalloc byte[hashLength];
             if (maxBytes <= 512)
             {
                 Span<byte> utf8 = stackalloc byte[maxBytes];
                 int written = Encoding.UTF8.GetBytes(input.AsSpan(), utf8);
-                Span<byte> hash = stackalloc byte[20];
-                SHA1.HashData(utf8.Slice(0, written), hash);
+                ComputeHashNet8(utf8.Slice(0, written), hash, kind);
                 return ToHex(hash);
             }
-#endif
 
-            byte[] bytes = Encoding.UTF8.GetBytes(input);
-            using var sha = SHA1.Create();
-            byte[] hashBytes = sha.ComputeHash(bytes);
-            return ToHex(hashBytes);
+            byte[] rented = ArrayPool<byte>.Shared.Rent(maxBytes);
+            try
+            {
+                int written = Encoding.UTF8.GetBytes(input, 0, input.Length, rented, 0);
+                ComputeHashNet8(rented.AsSpan(0, written), hash, kind);
+                return ToHex(hash);
+            }
+            finally
+            {
+                ArrayPool<byte>.Shared.Return(rented);
+            }
+#else
+            byte[] rented = ArrayPool<byte>.Shared.Rent(maxBytes);
+            try
+            {
+                int written = Encoding.UTF8.GetBytes(input, 0, input.Length, rented, 0);
+                using HashAlgorithm alg = kind switch
+                {
+                    HashAlgorithmKind.Md5 => MD5.Create(),
+                    HashAlgorithmKind.Sha1 => SHA1.Create(),
+                    _ => SHA256.Create()
+                };
+                byte[] hashBytes = alg.ComputeHash(rented, 0, written);
+                return ToHex(hashBytes);
+            }
+            finally
+            {
+                ArrayPool<byte>.Shared.Return(rented);
+            }
+#endif
         }
 
+#if NET8_0_OR_GREATER
         [MethodImpl(MethodImplOptions.AggressiveInlining)]
-        private static string ToHex(ReadOnlySpan<byte> hash)
+        private static void ComputeHashNet8(ReadOnlySpan<byte> source, Span<byte> destination, HashAlgorithmKind kind)
+        {
+            switch (kind)
+            {
+                case HashAlgorithmKind.Md5: MD5.HashData(source, destination); break;
+                case HashAlgorithmKind.Sha1: SHA1.HashData(source, destination); break;
+                default: SHA256.HashData(source, destination); break;
+            }
+        }
+#endif
+
+        [MethodImpl(MethodImplOptions.AggressiveInlining)]
+        private static unsafe string ToHex(ReadOnlySpan<byte> hash)
         {
             Span<char> hexChars = stackalloc char[hash.Length * 2];
-            SpanTextOps.BytesToHex(hash, hexChars, lowerCase: false);
-            return hexChars.ToString();
+            FastHex.Encode(hash, hexChars, lowercase: false);
+#if NET8_0_OR_GREATER
+            return new string(hexChars);
+#else
+            fixed (char* p = hexChars)
+                return new string(p, 0, hexChars.Length);
+#endif
         }
 
         #endregion

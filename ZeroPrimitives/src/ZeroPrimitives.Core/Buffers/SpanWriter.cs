@@ -529,22 +529,33 @@ namespace ZeroPrimitives.Buffers
         }
 
         [MethodImpl(MethodImplOptions.AggressiveInlining)]
-        public int WriteStringUtf8(ReadOnlySpan<char> chars)
+        public unsafe int WriteStringUtf8(ReadOnlySpan<char> chars)
         {
 #if NET8_0_OR_GREATER
             int written = Encoding.UTF8.GetBytes(chars, RemainingSpan);
             _pos += written;
             return written;
 #else
-            string s = chars.ToString();
-            byte[] bytes = Encoding.UTF8.GetBytes(s);
-            WriteBytes(bytes);
-            return bytes.Length;
+            if (chars.IsEmpty) return 0;
+
+            fixed (char* pc = chars)
+            {
+                int needed = Encoding.UTF8.GetByteCount(pc, chars.Length);
+                if (needed > Remaining)
+                    ThrowHelper.ThrowRequestedLengthExceedsBuffer(nameof(chars));
+
+                fixed (byte* pb = RemainingSpan)
+                {
+                    int written = Encoding.UTF8.GetBytes(pc, chars.Length, pb, Remaining);
+                    _pos += written;
+                    return written;
+                }
+            }
 #endif
         }
 
         [MethodImpl(MethodImplOptions.AggressiveInlining)]
-        public bool TryWriteStringUtf8(ReadOnlySpan<char> chars, out int bytesWritten)
+        public unsafe bool TryWriteStringUtf8(ReadOnlySpan<char> chars, out int bytesWritten)
         {
             if (chars.IsEmpty)
             {
@@ -561,15 +572,22 @@ namespace ZeroPrimitives.Buffers
             bytesWritten = 0;
             return false;
 #else
-            string s = chars.ToString();
-            byte[] bytes = Encoding.UTF8.GetBytes(s);
-            if (TryWriteBytes(bytes))
+            fixed (char* pc = chars)
             {
-                bytesWritten = bytes.Length;
-                return true;
+                int needed = Encoding.UTF8.GetByteCount(pc, chars.Length);
+                if (needed > Remaining)
+                {
+                    bytesWritten = 0;
+                    return false;
+                }
+
+                fixed (byte* pb = RemainingSpan)
+                {
+                    bytesWritten = Encoding.UTF8.GetBytes(pc, chars.Length, pb, Remaining);
+                    _pos += bytesWritten;
+                    return true;
+                }
             }
-            bytesWritten = 0;
-            return false;
 #endif
         }
 

@@ -100,7 +100,7 @@ namespace ZeroPrimitives.Text
         /// Uses stack allocation for strings up to 64 characters to eliminate array allocations.
         /// </summary>
         [MethodImpl(MethodImplOptions.AggressiveInlining)]
-        public static string Increment(ReadOnlySpan<char> input)
+        public static unsafe string Increment(ReadOnlySpan<char> input)
         {
             input = SpanTextOps.TrimAsciiWhitespace(input);
             if (input.IsEmpty) return "A";
@@ -114,7 +114,8 @@ namespace ZeroPrimitives.Text
 #if NET8_0_OR_GREATER
                     return new string(buffer.Slice(0, written));
 #else
-                    return new string(buffer.Slice(0, written).ToArray());
+                    fixed (char* p = buffer)
+                        return new string(p, 0, written);
 #endif
                 }
             }

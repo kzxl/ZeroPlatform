@@ -49,5 +49,24 @@ namespace ZeroPrimitives.Tests
             string hash = FastHash.Sha1Hex("hello");
             Assert.Equal("AAF4C61DDCC5E8A2DABEDE0F3B482CD9AEA9434D", hash);
         }
+
+        [Fact]
+        public void CryptographicHex_LargePooledInputs_MatchBclOutputs()
+        {
+            string large = new string('x', 2000);
+            byte[] utf8 = Encoding.UTF8.GetBytes(large);
+
+            using var sha256 = System.Security.Cryptography.SHA256.Create();
+            string expectedSha256 = BitConverter.ToString(sha256.ComputeHash(utf8)).Replace("-", "");
+            Assert.Equal(expectedSha256, FastHash.Sha256Hex(large));
+
+            using var md5 = System.Security.Cryptography.MD5.Create();
+            string expectedMd5 = BitConverter.ToString(md5.ComputeHash(utf8)).Replace("-", "");
+            Assert.Equal(expectedMd5, FastHash.Md5Hex(large));
+
+            using var sha1 = System.Security.Cryptography.SHA1.Create();
+            string expectedSha1 = BitConverter.ToString(sha1.ComputeHash(utf8)).Replace("-", "");
+            Assert.Equal(expectedSha1, FastHash.Sha1Hex(large));
+        }
     }
 }

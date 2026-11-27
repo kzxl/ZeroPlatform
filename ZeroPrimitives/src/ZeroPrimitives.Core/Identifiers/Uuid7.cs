@@ -231,21 +231,31 @@ namespace ZeroPrimitives.Core.Identifiers
             return true;
         }
 
-        public override string ToString()
+        public override unsafe string ToString()
         {
             Span<char> chars = stackalloc char[36];
             TryFormat(chars, out int written, "D".AsSpan());
-            return new string(chars.Slice(0, written).ToArray());
+#if NET8_0_OR_GREATER
+            return new string(chars.Slice(0, written));
+#else
+            fixed (char* p = chars)
+                return new string(p, 0, written);
+#endif
         }
 
-        public string ToString(string? format)
+        public unsafe string ToString(string? format)
         {
             var fmtSpan = format.AsSpan();
             char fmt = fmtSpan.IsEmpty ? 'D' : char.ToUpperInvariant(fmtSpan[0]);
             int len = (fmt == 'N') ? 32 : ((fmt == 'B' || fmt == 'P') ? 38 : 36);
             Span<char> chars = stackalloc char[len];
             TryFormat(chars, out int written, fmtSpan);
-            return new string(chars.Slice(0, written).ToArray());
+#if NET8_0_OR_GREATER
+            return new string(chars.Slice(0, written));
+#else
+            fixed (char* p = chars)
+                return new string(p, 0, written);
+#endif
         }
 
         public static bool TryParse(ReadOnlySpan<char> input, out Uuid7 result)
