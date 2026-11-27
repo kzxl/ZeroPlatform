@@ -5,6 +5,12 @@ on:
     tags:
       - 'v*'
   workflow_dispatch:
+    inputs:
+      skip_primitives_nuget_check:
+        description: 'Skip checking whether ZeroPrimitives.Core version is already published on NuGet.org'
+        required: false
+        type: boolean
+        default: false
 
 permissions:
   contents: read
@@ -38,6 +44,26 @@ jobs:
       - name: Run Integration Tests
         run: dotnet test tests/ZeroPlatform.Tests.Integration/ZeroPlatform.Tests.Integration.csproj -c Release --no-build
 
+      - name: Verify ZeroPrimitives.Core Published on NuGet.org
+        if: ${{ !inputs.skip_primitives_nuget_check }}
+        shell: pwsh
+        run: |
+          $propsPath = "ZeroPrimitives/Directory.Build.props"
+          $propsContent = Get-Content -Path $propsPath -Raw
+          if ($propsContent -notmatch "<VersionPrefix\s+Condition=""'\$\(VersionPrefix\)' == ''"">([^<]+)</VersionPrefix>") {
+            Write-Error "Could not locate default <VersionPrefix> in $propsPath."
+            exit 1
+          }
+          $expectedVersion = $Matches[1].Trim().ToLowerInvariant()
+          $indexUrl = "https://api.nuget.org/v3-flatcontainer/zeroprimitives.core/index.json"
+          Write-Host "Checking NuGet.org for ZeroPrimitives.Core $expectedVersion..."
+          $indexJson = Invoke-RestMethod -Uri $indexUrl -Method Get
+          if ($indexJson.versions -notcontains $expectedVersion) {
+            Write-Error "ZeroPrimitives.Core $expectedVersion is not yet published on NuGet.org. Tag and publish 'primitives-v$expectedVersion' first before publishing ZeroPlatform."
+            exit 1
+          }
+          Write-Host "Verified: ZeroPrimitives.Core $expectedVersion is already published on NuGet.org."
+
       - name: Pack All Subsystems
         run: dotnet pack ZeroPlatform.slnx -c Release --no-build -o ./nupkgs
 
@@ -58,7 +84,8 @@ jobs:
             Write-Error "No valid NuGet credentials found. Please configure NuGet Trusted Publishing for kzxl/ZeroPlatform or provide NUGET_API_KEY secret."
             exit 1
           }
-          $packages = Get-ChildItem -Path ./nupkgs -Filter *.nupkg
+          Write-Host "Excluding ZeroPrimitives.Core (published independently via publish-primitives.yml on primitives-v* tags)."
+          $packages = Get-ChildItem -Path ./nupkgs -Filter *.nupkg | Where-Object { $_.Name -notlike 'ZeroPrimitives.Core.*.nupkg' }
           Write-Host "Found $($packages.Count) packages to push."
           foreach ($pkg in $packages) {
             Write-Host "Pushing $($pkg.Name)..."

@@ -35,6 +35,6 @@ jobs:
 
       - name: Run Foundation Core Tests
         run: |
-          dotnet test ZeroPrimitives/tests/ZeroPrimitives.Tests/ZeroPrimitives.Tests.csproj -c Release --no-build -f net8.0
+          dotnet test ZeroPrimitives/tests/ZeroPrimitives.Tests/ZeroPrimitives.Tests.csproj -c Release --no-build
           dotnet test ZeroConcurrency/tests/ZeroConcurrency.Tests/ZeroConcurrency.Tests.csproj -c Release --no-build -f net8.0
           dotnet test ZeroSecurity/tests/ZeroSecurity.Tests/ZeroSecurity.Tests.csproj -c Release --no-build -f net8.0

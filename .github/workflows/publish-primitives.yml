@@ -1,0 +1,148 @@
+name: Publish ZeroPrimitives Package
+
+on:
+  push:
+    tags:
+      - 'primitives-v*'
+  workflow_dispatch:
+
+permissions:
+  contents: read
+  id-token: write
+
+jobs:
+  publish:
+    name: Build, Test, Pack & Publish ZeroPrimitives.Core
+    runs-on: windows-latest
+    if: github.repository == 'kzxl/ZeroPlatform'
+
+    steps:
+      - name: Checkout Code
+        uses: actions/checkout@v4
+        with:
+          fetch-depth: 0
+
+      - name: Setup .NET SDK
+        uses: actions/setup-dotnet@v4
+        with:
+          dotnet-version: |
+            8.0.x
+            9.0.x
+
+      - name: Validate Version Consistency
+        shell: pwsh
+        run: |
+          $propsPath = "ZeroPrimitives/Directory.Build.props"
+          $propsContent = Get-Content -Path $propsPath -Raw
+          if ($propsContent -notmatch "<VersionPrefix\s+Condition=""'\$\(VersionPrefix\)' == ''"">([^<]+)</VersionPrefix>") {
+            Write-Error "Could not locate default <VersionPrefix> in $propsPath."
+            exit 1
+          }
+          $versionPrefix = $Matches[1].Trim()
+          Write-Host "Configured ZeroPrimitives VersionPrefix: $versionPrefix"
+
+          if ("${{ github.ref_type }}" -eq "tag") {
+            $tagName = "${{ github.ref_name }}"
+            $tagVersion = $tagName -replace '^primitives-v', ''
+            if ($tagVersion -eq $versionPrefix) {
+              Write-Host "Tag $tagName matches VersionPrefix $versionPrefix."
+            } elseif ($tagVersion -like "$versionPrefix-*") {
+              $suffix = $tagVersion.Substring($versionPrefix.Length + 1)
+              if ([string]::IsNullOrWhiteSpace($suffix)) {
+                Write-Error "Invalid prerelease tag '$tagName'."
+                exit 1
+              }
+              Write-Host "Tag $tagName matches VersionPrefix $versionPrefix with prerelease suffix '$suffix'."
+              "VERSION_SUFFIX=$suffix" | Out-File -FilePath $env:GITHUB_ENV -Encoding utf8 -Append
+            } else {
+              Write-Error "Tag '$tagName' ($tagVersion) does not match VersionPrefix '$versionPrefix' in $propsPath."
+              exit 1
+            }
+          }
+
+      - name: Restore ZeroPrimitives
+        run: dotnet restore ZeroPrimitives/ZeroPrimitives.slnx
+
+      - name: Build ZeroPrimitives (Release)
+        run: dotnet build ZeroPrimitives/ZeroPrimitives.slnx -c Release --no-restore
+
+      - name: Run ZeroPrimitives Tests (net8.0 & net462)
+        run: dotnet test ZeroPrimitives/tests/ZeroPrimitives.Tests/ZeroPrimitives.Tests.csproj -c Release --no-build
+
+      - name: Pack ZeroPrimitives.Core
+        shell: pwsh
+        run: |
+          $packArgs = @(
+            'pack',
+            'ZeroPrimitives/src/ZeroPrimitives.Core/ZeroPrimitives.Core.csproj',
+            '-c', 'Release',
+            '--no-build',
+            '-o', './nupkgs-primitives'
+          )
+          if ($env:VERSION_SUFFIX -and $env:VERSION_SUFFIX.Trim() -ne '') {
+            $packArgs += "-p:VersionSuffix=$($env:VERSION_SUFFIX.Trim())"
+          }
+          & dotnet @packArgs
+          if ($LASTEXITCODE -ne 0) { exit $LASTEXITCODE }
+
+      - name: Verify Package Metadata & Tier-0A Independence
+        shell: pwsh
+        run: |
+          Add-Type -AssemblyName System.IO.Compression.FileSystem
+          $nupkg = Get-ChildItem -Path ./nupkgs-primitives -Filter 'ZeroPrimitives.Core.*.nupkg' | Select-Object -First 1
+          if (-not $nupkg) {
+            Write-Error "ZeroPrimitives.Core nupkg was not generated."
+            exit 1
+          }
+          $zip = [System.IO.Compression.ZipFile]::OpenRead($nupkg.FullName)
+          try {
+            $entry = $zip.Entries | Where-Object { $_.FullName -like '*.nuspec' } | Select-Object -First 1
+            if (-not $entry) {
+              Write-Error "Missing .nuspec in $($nupkg.Name)"
+              exit 1
+            }
+            $reader = New-Object System.IO.StreamReader($entry.Open())
+            try {
+              [xml]$nuspec = $reader.ReadToEnd()
+            } finally {
+              $reader.Dispose()
+            }
+            $zeroDeps = @($nuspec.package.metadata.dependencies.group.dependency | Where-Object { $_.id -like 'Zero*' })
+            if ($zeroDeps.Count -gt 0) {
+              $names = ($zeroDeps | ForEach-Object { $_.id }) -join ', '
+              Write-Error "Tier-0A invariant violated: ZeroPrimitives.Core has internal Zero* dependencies: $names"
+              exit 1
+            }
+            Write-Host "Verified $($nupkg.Name) (version=$($nuspec.package.metadata.version), Zero* deps=0)."
+          } finally {
+            $zip.Dispose()
+          }
+
+      - name: NuGet Login (Trusted Publishing OIDC)
+        id: nuget-login
+        continue-on-error: true
+        uses: NuGet/login@v1
+        with:
+          user: kzxl
+
+      - name: Push ZeroPrimitives.Core to NuGet.org
+        shell: pwsh
+        run: |
+          $apiKey = "${{ steps.nuget-login.outputs.NUGET_API_KEY }}"
+          if (-not $apiKey -or $apiKey.Trim() -eq "") {
+            $apiKey = "${{ secrets.NUGET_API_KEY }}"
+          }
+          if (-not $apiKey -or $apiKey.Trim() -eq "") {
+            Write-Error "No valid NuGet credentials found. Please configure NuGet Trusted Publishing for kzxl/ZeroPlatform or provide NUGET_API_KEY secret."
+            exit 1
+          }
+          $packages = Get-ChildItem -Path ./nupkgs-primitives -Filter 'ZeroPrimitives.Core.*.nupkg'
+          if ($packages.Count -eq 0) {
+            Write-Error "No ZeroPrimitives.Core package found to push."
+            exit 1
+          }
+          foreach ($pkg in $packages) {
+            Write-Host "Pushing $($pkg.Name)..."
+            dotnet nuget push $pkg.FullName --api-key $apiKey --source https://api.nuget.org/v3/index.json --skip-duplicate
+            if ($LASTEXITCODE -ne 0) { exit $LASTEXITCODE }
+          }

@@ -1,9 +1,10 @@
 <Project>
   <PropertyGroup>
-    <Version>3.1.0</Version>
-    <AssemblyVersion>3.1.0.0</AssemblyVersion>
-    <FileVersion>3.1.0.0</FileVersion>
-    <InformationalVersion>3.1.0</InformationalVersion>
+    <PlatformVersion Condition="'$(PlatformVersion)' == ''">3.1.0</PlatformVersion>
+    <VersionPrefix Condition="'$(VersionPrefix)' == ''">$(PlatformVersion)</VersionPrefix>
+    <AssemblyVersion Condition="'$(AssemblyVersion)' == ''">3.1.0.0</AssemblyVersion>
+    <FileVersion Condition="'$(FileVersion)' == ''">$(VersionPrefix).0</FileVersion>
+    <IncludeSourceRevisionInInformationalVersion>true</IncludeSourceRevisionInInformationalVersion>
     <Authors>Phong Võ, ZeroPlatform Contributors</Authors>
     <Company>ZeroUniverse</Company>
     <Copyright>Copyright © 2026 Phong Võ</Copyright>

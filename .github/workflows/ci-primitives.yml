@@ -1,0 +1,84 @@
+name: CI ZeroPrimitives
+
+on:
+  push:
+    branches: [ master ]
+    paths:
+      - 'ZeroPrimitives/**'
+      - 'Directory.Build.props'
+      - '.github/workflows/ci-primitives.yml'
+  pull_request:
+    branches: [ master ]
+    paths:
+      - 'ZeroPrimitives/**'
+      - 'Directory.Build.props'
+      - '.github/workflows/ci-primitives.yml'
+  workflow_dispatch:
+
+jobs:
+  build-and-test:
+    name: Build, Test & Pack ZeroPrimitives (Windows)
+    runs-on: windows-latest
+
+    steps:
+      - name: Checkout Code
+        uses: actions/checkout@v4
+        with:
+          fetch-depth: 0
+
+      - name: Setup .NET SDK
+        uses: actions/setup-dotnet@v4
+        with:
+          dotnet-version: |
+            8.0.x
+            9.0.x
+
+      - name: Restore ZeroPrimitives
+        run: dotnet restore ZeroPrimitives/ZeroPrimitives.slnx
+
+      - name: Build ZeroPrimitives (Release)
+        run: dotnet build ZeroPrimitives/ZeroPrimitives.slnx -c Release --no-restore
+
+      - name: Run ZeroPrimitives Tests (net8.0 & net462)
+        run: dotnet test ZeroPrimitives/tests/ZeroPrimitives.Tests/ZeroPrimitives.Tests.csproj -c Release --no-build
+
+      - name: Pack ZeroPrimitives.Core
+        run: dotnet pack ZeroPrimitives/src/ZeroPrimitives.Core/ZeroPrimitives.Core.csproj -c Release --no-build -o ./nupkgs-primitives
+
+      - name: Verify Package Metadata & Tier-0A Independence
+        shell: pwsh
+        run: |
+          Add-Type -AssemblyName System.IO.Compression.FileSystem
+          $nupkg = Get-ChildItem -Path ./nupkgs-primitives -Filter 'ZeroPrimitives.Core.*.nupkg' | Select-Object -First 1
+          if (-not $nupkg) {
+            Write-Error "ZeroPrimitives.Core nupkg was not generated."
+            exit 1
+          }
+          $zip = [System.IO.Compression.ZipFile]::OpenRead($nupkg.FullName)
+          try {
+            $entry = $zip.Entries | Where-Object { $_.FullName -like '*.nuspec' } | Select-Object -First 1
+            if (-not $entry) {
+              Write-Error "Missing .nuspec in $($nupkg.Name)"
+              exit 1
+            }
+            $reader = New-Object System.IO.StreamReader($entry.Open())
+            try {
+              [xml]$nuspec = $reader.ReadToEnd()
+            } finally {
+              $reader.Dispose()
+            }
+            $pkgId = $nuspec.package.metadata.id
+            if ($pkgId -ne 'ZeroPrimitives.Core') {
+              Write-Error "Unexpected PackageId '$pkgId' (expected 'ZeroPrimitives.Core')."
+              exit 1
+            }
+            $zeroDeps = @($nuspec.package.metadata.dependencies.group.dependency | Where-Object { $_.id -like 'Zero*' })
+            if ($zeroDeps.Count -gt 0) {
+              $names = ($zeroDeps | ForEach-Object { $_.id }) -join ', '
+              Write-Error "Tier-0A invariant violated: ZeroPrimitives.Core has internal Zero* dependencies: $names"
+              exit 1
+            }
+            Write-Host "Verified $($nupkg.Name) (id=$pkgId, version=$($nuspec.package.metadata.version), Zero* deps=0)."
+          } finally {
+            $zip.Dispose()
+          }
