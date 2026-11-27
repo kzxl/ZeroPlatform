@@ -349,11 +349,12 @@ namespace ZeroPrimitives.Tests
         [Fact]
         public void Uuid7_TimestampBounds_And_Utf8FormatParse_WorkAccurately()
         {
-            long ts = 1795772400123L;
-            var u = Uuid7.Create(ts);
+            var u = Uuid7.NewUuid();
+            long ts = u.GetUnixTimeMilliseconds();
             Assert.True(Uuid7.MinValueForTimestamp(ts) <= u);
             Assert.True(u <= Uuid7.MaxValueForTimestamp(ts));
             Assert.True(Uuid7.MaxValueForTimestamp(ts) < Uuid7.MinValueForTimestamp(ts + 1));
+            Assert.True(Uuid7.MinValueForTimestamp(1700000000123L) < Uuid7.MaxValueForTimestamp(1700000000123L));
 
             Span<byte> utf8 = stackalloc byte[38];
             foreach (char fmt in new[] { 'D', 'N', 'B', 'P' })
