@@ -7,7 +7,6 @@
 [![Release: v3.1.0](https://img.shields.io/badge/Release-v3.1.0-blue.svg)](https://github.com/kzxl/ZeroPlatform/releases)
 [![License: MIT](https://img.shields.io/badge/License-MIT-brightgreen.svg)](LICENSE)
 [![.NET Multi-Targeting](https://img.shields.io/badge/.NET-8.0%20%7C%204.6.2%20%7C%20Standard%202.0-purple.svg)](https://dotnet.microsoft.com/)
-[![CI Build & Verify](https://github.com/kzxl/ZeroPlatform/actions/workflows/ci.yml/badge.svg)](https://github.com/kzxl/ZeroPlatform/actions/workflows/ci.yml)
 [![Architecture: Sovereign Monorepo](https://img.shields.io/badge/Architecture-Sovereign%20Monorepo-0f172a.svg)](docs/architect/platform-architecture.md)
 [![Subsystems: 40 Modules](https://img.shields.io/badge/Subsystems-40%20Modules-blueviolet.svg)](docs/ZERO_PLATFORM_ECOSYSTEM.md)
 [![Zero External Dependencies](https://img.shields.io/badge/Dependencies-0%20(Pure%20C%23)-brightgreen.svg)]()
