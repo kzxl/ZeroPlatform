@@ -12,7 +12,7 @@
 [![Zero External Dependencies](https://img.shields.io/badge/Dependencies-0%20(Pure%20C%23)-brightgreen.svg)]()
 [![NuGet Packages](https://img.shields.io/badge/NuGet-55%20Packages-004880.svg)](https://www.nuget.org/profiles/kzxl)
 
-**ZeroPlatform** is a sovereign, zero-external-dependency enterprise .NET ecosystem engineered for industrial automation, high-speed time-series persistence, computer vision, digital signal processing (DSP), edge AI inference, and hardware-accelerated HMI/SCADA visual studio controls.
+**ZeroPlatform** is a sovereign, zero-external-dependency enterprise & industrial .NET ecosystem engineered for ERP core engines, industrial automation, high-speed time-series persistence, computer vision, digital signal processing (DSP), edge AI inference, and hardware-accelerated HMI/SCADA visual studio controls.
 
 As of **v3.0.0**, ZeroPlatform is unified as a **Sovereign Monorepo** containing all **40 autonomous subsystems** organized into a strict **6-Tier Directed Acyclic Graph (DAG)**.
 
@@ -100,7 +100,7 @@ graph TD
 ### Tier 0: Core Foundation (The Bedrock - Zero Dependencies)
 | Subsystem | Module Directory | Key Capabilities |
 | :--- | :--- | :--- |
-| **`ZeroPrimitives`** | [`ZeroPrimitives/`](ZeroPrimitives/) | Pure C# zero-allocation primitive conversions, SSE4.2 CRC32C, unmanaged polymorphic struct pooling (`StructArenaPool`), span/pointer parsers, fast hex/base64, compiled object mapper. |
+| **`ZeroPrimitives`** | [`ZeroPrimitives/`](ZeroPrimitives/) | Pure C# Tier-0A foundation: zero-allocation span/UTF-8 parsing & formatting, `DecimalMath`, `ProportionalAllocator`, `ScaledInt64`, `CompactDate`/`DateRange`, `Uuid7` (SQL Server ordering)/`FastUlid`/`SnowflakeId`, `StringInternPool`, `FastCsvWriter`, `FastBase64`/`Base32`/`Hex`, `FastXxHash64`, `CheckDigit`, SSE4.2 CRC32C, SIMD aggregations, and compiled object mapping. |
 | **`ZeroConcurrency`** | [`ZeroConcurrency/`](ZeroConcurrency/) | Pure C# lock-free SPSC/MPMC ring buffers, execution-context bypassing schedulers, zero-allocation pooled `ValueTask` sources, and Go-like CSP channels. |
 | **`ZeroSecurity`** | [`ZeroSecurity/`](ZeroSecurity/) | Pure C# cryptographic suite: BLAKE3/FastSha256, HMAC, HKDF, PBKDF2, Cuckoo/Bloom Filter, X25519 ECDH, ChaCha20/Poly1305. |
 | **`ZeroText`** | [`ZeroText/`](ZeroText/) | Pure C# zero-allocation text algorithms, fast regex, Knuth-Morris-Pratt (KMP) substring search, and Vietnamese diacritics removal normalizer. |
